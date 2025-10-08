@@ -1,0 +1,14 @@
+set(FHECO_SOURCE_FILES ${FHECO_SOURCE_FILES}
+    ${CMAKE_CURRENT_LIST_DIR}/gen_func.cpp
+)
+
+install(
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/constants.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/gen_func.hpp
+
+    DESTINATION
+        ${FHECO_INCLUDES_INSTALL_DIR}/code_gen
+)
+
+set(FHECO_SOURCE_FILES ${FHECO_SOURCE_FILES} PARENT_SCOPE)
