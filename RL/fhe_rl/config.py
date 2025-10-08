@@ -5,6 +5,7 @@ Contains model paths, tokenizer settings, and other configuration parameters
 
 import os
 from pathlib import Path
+import torch
 
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent  # Go up to RL/ directory
@@ -27,7 +28,7 @@ TOKENIZER_CONFIG = {
 
 # Agent configuration
 AGENT_CONFIG = {
-    "device": "cpu",
+    "device": "cuda" if torch.cuda.is_available() else "cpu",
 }
 
 def get_model_path(model_key):

@@ -50,7 +50,7 @@ def load_embedding_model_dynamic(checkpoint_path=None, device=DEVICE):
     embeddings_model.eval()
     return embeddings_model
 
-def load_embedding_model_bpe(checkpoint_path=None, device="cpu"):
+def load_embedding_model_bpe(checkpoint_path=None, device=DEVICE):
     # Load state dict first to extract vocab size
     state_dict = torch.load(checkpoint_path, map_location=device, weights_only=True)
     new_sd = {k[len("module.") :] if k.startswith("module.") else k: v for k, v in state_dict.items()}
