@@ -6,6 +6,13 @@ Contains model paths, tokenizer settings, and other configuration parameters
 import os
 from pathlib import Path
 import torch
+import enum
+
+
+class RLAlgorithm(enum.Enum):
+    PPO = "PPO"
+    LAGRANGIAN_PPO = "LAGRANGIAN_PPO"
+
 
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent  # Go up to RL/ directory
@@ -29,6 +36,7 @@ TOKENIZER_CONFIG = {
 # Agent configuration
 AGENT_CONFIG = {
     "device": "cuda" if torch.cuda.is_available() else "cpu",
+    "algorithm": RLAlgorithm.LAGRANGIAN_PPO,
 }
 
 def get_model_path(model_key):
@@ -69,6 +77,12 @@ def get_device():
     """
     return AGENT_CONFIG["device"]
 
+def get_rl_algorithm() -> RLAlgorithm:
+    """
+    Get the configured RL algorithm
+    """
+    return AGENT_CONFIG["algorithm"]
+
 def print_config():
     """
     Print the current configuration
@@ -77,6 +91,7 @@ def print_config():
     print(f"Tokenizer type: {get_tokenizer_type()}")
     print(f"Default vocab size: {get_vocab_size()}")
     print(f"Device: {get_device()}")
+    print(f"RL Algorithm: {get_rl_algorithm().value}")
     print("\nModel paths:")
     for key, path in MODEL_PATHS.items():
         status = "✓" if path.exists() else "✗"

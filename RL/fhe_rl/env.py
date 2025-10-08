@@ -120,10 +120,15 @@ class fheEnv(gym.Env):
                 "l": self.steps,
                 "t": None
             }
+
+
+        noise = 0 #TODO: Calculate the expression's noise
+            
+
         return {
             "observation": embedding,
             "action_mask": self.get_action_mask()
-        }, reward, terminated, truncated, {"expression": self.expression}
+        }, reward, terminated, truncated, {"expression": self.expression, "noise": noise}
     
     def _valid_end_action(self,expr: str) -> bool:
         expr_tree = parse_sexpr(expr)
