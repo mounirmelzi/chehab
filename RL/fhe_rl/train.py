@@ -94,7 +94,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
 
 def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
-    expressions = load_expressions(expressions_file, benchmarks)
+    expressions = load_expressions(expressions_file)
     max_positions = 16
     rules_list  = create_rules("rules.txt")
     rules_list["END"] = None
@@ -161,10 +161,17 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     # Lagrangian PPO training ============== [Start] ==============
 
-    lambda_penalty = 0.1
-    noise_threshold = 5.0
-    lagrange_iterations = 50
     tensorboard_writer = SummaryWriter(tensorboard_log_dir)
+
+    lambda_penalty = 0.1
+    env.set_lambda_penalty(lambda_penalty)
+    val_env.set_lambda_penalty(lambda_penalty)
+
+    noise_threshold = 100.0
+
+    lagrange_iterations = total_timesteps // 2048 # n_steps
+    lagrange_iterations = total_timesteps // num_envs
+    lagrange_iterations = total_timesteps // 4
 
     for iteration in range(lagrange_iterations):  # outer Lagrange loop
         model.learn(
