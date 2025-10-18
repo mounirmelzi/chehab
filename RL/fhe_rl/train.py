@@ -169,9 +169,10 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     noise_threshold = 100.0
 
-    lagrange_iterations = total_timesteps // 2048 # n_steps
-    lagrange_iterations = total_timesteps // num_envs
-    lagrange_iterations = total_timesteps // 4
+    lagrange_iterations = total_timesteps
+    lagrange_iterations //= 2048 # n_steps
+    lagrange_iterations //= num_envs
+    lagrange_iterations //= 2
 
     for iteration in range(lagrange_iterations):  # outer Lagrange loop
         model.learn(
