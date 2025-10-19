@@ -16,3 +16,6 @@ class LagrangianVecEnvWrapper(VecEnvWrapper):
             rewards[env_index] = rewards[env_index] - (self.lambda_penalty * noise)
             info["lambda_penalty"] = self.lambda_penalty
         return obs, rewards, dones, infos
+
+    def reset(self):
+        return self.venv.reset()
