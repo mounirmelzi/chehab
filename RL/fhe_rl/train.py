@@ -1,4 +1,5 @@
 import os
+import math
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.monitor import Monitor
 from .env    import fheEnv
@@ -12,7 +13,9 @@ from stable_baselines3.common.callbacks import EvalCallback
 from .config import get_rl_algorithm, RLAlgorithm
 from .wrappers import LagrangianVecEnvWrapper
 from torch.utils.tensorboard import SummaryWriter
-
+from pathlib import Path
+DATA_DIR = Path(__file__).resolve().parent / "datasets"
+RL_DIR = Path(__file__).resolve().parents[1]  # .../RL
 
 def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
     match get_rl_algorithm():
@@ -24,11 +27,15 @@ def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 
             train_ppo_agent(expressions_file, embeddings_model, total_timesteps, num_envs)
 
 
-def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
-    benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
-    expressions = load_expressions(expressions_file, benchmarks)
+def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 500_000, num_envs: int = 8):
+    try:
+        total_timesteps = int(os.getenv("TOTAL_TIMESTEPS", str(total_timesteps)))
+    except Exception:
+        pass
+    benchmarks = load_expressions(str(DATA_DIR / "benchmarks.txt"))
+    expressions = load_expressions(expressions_file)
     max_positions = 16
-    rules_list  = create_rules("rules.txt")
+    rules_list  = create_rules(str(RL_DIR / "rules.txt"))
     rules_list["END"] = None
     job_id = os.environ.get("SLURM_JOB_ID", "jobid")
     run_name = f"model_{job_id}"
@@ -62,6 +69,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
             "value_hidden_dims":    [256, 128, 64],
         }
     }
+    print(f"[START] Algo=PPO total_timesteps={total_timesteps} n_steps={model_params['n_steps']} num_envs={num_envs} lr={model_params['learning_rate']}", flush=True)
     model = PPO(**model_params)
     log_training_details(
         model_params,
@@ -92,11 +100,16 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
     model.save(run_name)
 
 
-def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
-    benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
+def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 500_000, num_envs: int = 8):
+    try:
+        total_timesteps = int(os.getenv("TOTAL_TIMESTEPS", str(total_timesteps)))
+    except Exception:
+        pass
+    benchmarks = load_expressions(str(DATA_DIR / "benchmarks.txt")) 
     expressions = load_expressions(expressions_file)
     max_positions = 16
-    rules_list  = create_rules("rules.txt")
+    RULES_PATH = RL_DIR / "rules.txt"
+    rules_list  = create_rules(str(RULES_PATH))
     rules_list["END"] = None
     job_id = os.environ.get("SLURM_JOB_ID", "jobid")
     run_name = f"model_{job_id}"
@@ -169,9 +182,33 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     noise_threshold = 100.0
 
-    lagrange_iterations = total_timesteps // 2048 # n_steps
-    lagrange_iterations = total_timesteps // num_envs
-    lagrange_iterations = total_timesteps // 4
+
+    try:
+        denom_factor = int(os.getenv("LAGRANGE_DENOM_FACTOR", "1"))
+        denom_factor = max(1, denom_factor)
+    except Exception:
+        denom_factor = 1
+    
+    lagrange_iterations = max(1, total_timesteps // (2048 * num_envs * denom_factor))
+
+    
+    # fix lambda (disable updates) if was specified
+    fix_lambda_env = os.getenv("FIX_LAMBDA")
+    freeze_lambda = False
+    if fix_lambda_env is not None:
+        try:
+            lambda_penalty = float(fix_lambda_env)
+            freeze_lambda = True
+        except Exception:
+            freeze_lambda = False
+    env.set_lambda_penalty(lambda_penalty)
+    val_env.set_lambda_penalty(lambda_penalty)
+
+    print(f"[START] Algo=LAGRANGIAN_PPO total_timesteps={total_timesteps} n_steps={model_params['n_steps']} num_envs={num_envs} denom_factor={denom_factor} lagrange_iterations={lagrange_iterations} lambda_fixed={freeze_lambda} lambda_init={lambda_penalty}", flush=True)
+
+
+
+    
 
     for iteration in range(lagrange_iterations):  # outer Lagrange loop
         model.learn(
@@ -195,13 +232,14 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
             total_noise += ep_noise
         avg_noise = total_noise / num_episodes
 
-        # Lagrange update
-        if avg_noise > noise_threshold:
-            lambda_penalty += 0.01 * (avg_noise - noise_threshold)
-        else:
-            lambda_penalty = max(0, lambda_penalty - 0.01)
+        # Lagrange update (unless frozen)
+        if not freeze_lambda:
+            if avg_noise > noise_threshold:
+                lambda_penalty += 0.01 * (avg_noise - noise_threshold)
+            else:
+                lambda_penalty = max(0, lambda_penalty - 0.01)
 
-        # Update lambda_penalty in both training and validation envs
+        # Apply current lambda to envs
         env.set_lambda_penalty(lambda_penalty)
         val_env.set_lambda_penalty(lambda_penalty)
 
@@ -209,6 +247,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         print(f"[Iter {iteration}] Avg noise: {avg_noise:.2f}, λ: {lambda_penalty:.3f}")
         tensorboard_writer.add_scalar("Lagrange/lambda_penalty", lambda_penalty, iteration)
         tensorboard_writer.add_scalar("Lagrange/avg_noise", avg_noise, iteration)
+        model.save(f"{run_name}_iter_{iteration}_real")
 
     # Lagrangian PPO training ============== [End] ==============
 

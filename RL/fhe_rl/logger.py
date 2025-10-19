@@ -5,6 +5,11 @@ import pandas as pd
 TRAINING_LOG_FILE = "job_logs.xlsx"
 TEST_LOG_FILE = "test_results.xlsx"
 
+def _training_log_path(job_id: str) -> str:
+    job_str = str(job_id) if job_id else "nojob"
+    return f"job_logs_{job_str}.xlsx"
+
+
 def log_training_details(model_params, job_id, num_data, num_actions, total_timesteps, output_model_name, notes=""):
     log_entry = {
         "Job ID": job_id,
@@ -24,13 +29,22 @@ def log_training_details(model_params, job_id, num_data, num_actions, total_time
         "Notes": notes
     }
     
-    if not os.path.exists(TRAINING_LOG_FILE):
+    log_path = _training_log_path(job_id)
+    if not os.path.exists(log_path):
         df = pd.DataFrame(columns=log_entry.keys())
     else:
-        df = pd.read_excel(TRAINING_LOG_FILE)
-    df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
-    df.to_excel(TRAINING_LOG_FILE, index=False)
-    print(f"Logged training details to {TRAINING_LOG_FILE}")
+        try:
+            df = pd.read_excel(log_path)
+        except Exception:
+            # fallback if file is corrupted/non-excel
+            df = pd.DataFrame(columns=log_entry.keys())
+    # Avoid concat with empty/all-NA frames to prevent FutureWarning
+    if df.empty:
+        df = pd.DataFrame([log_entry])
+    else:
+        df.loc[len(df)] = log_entry
+    df.to_excel(log_path, index=False)
+    print(f"Logged training details to {log_path}")
 
 def log_test_results(results, sheet_name="TestResults"):
     """

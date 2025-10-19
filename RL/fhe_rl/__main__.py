@@ -11,6 +11,8 @@ from .config import (
     get_model_path, get_tokenizer_type, 
     print_config
 )
+from pathlib import Path
+DATA_DIR = Path(__file__).resolve().parent / "datasets"
 
 
 def parse_arguments(args=None):
@@ -98,13 +100,13 @@ def main(args=None):
     # ────────────────────────────── TRAIN ─────────────────────────────
     if mode == "train":
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        train_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, total_timesteps=500_000)
+        train_agent(str(DATA_DIR / "benchmarks.txt"), embeddings, total_timesteps=500_000)
 
     # ─────────────────────────────── TEST ─────────────────────────────
     elif mode == "test":
         agent_zip = get_model_path("agent_model")
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip)
+        test_agent(str(DATA_DIR / "benchmarks.txt"), embeddings, agent_zip)
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":

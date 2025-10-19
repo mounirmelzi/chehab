@@ -1,4 +1,5 @@
 import numpy as np
+from RL.pytrs.noise_estimator import estimate_expression_noise
 import gymnasium as gym
 from gymnasium import spaces
 from pytrs import parse_sexpr, calculate_cost, Expr, Const, Var, Op,expr_to_str
@@ -101,11 +102,13 @@ class fheEnv(gym.Env):
                 reward = self.calculate_final_reward()
         info = {"expression": self.expression}
         reward_color = GREEN if reward >= 0 else RED
+        noise = estimate_expression_noise(self.expression)["noise_used"]
         print(f"{BOLD}{MAGENTA}New expression{RESET}: {YELLOW}{self.expression}{RESET}")
         print(f"{BOLD}{MAGENTA}New cost      {RESET}: {RED}{self.current_cost}{RESET}")
         print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
         print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
         print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
+        print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{noise}{RESET}")
         print(f"{CYAN}{'-'*100}{RESET}")
         embedding = self._embed_expression(self.expression)
         if embedding is None:
@@ -121,9 +124,7 @@ class fheEnv(gym.Env):
                 "t": None
             }
 
-
-        noise = 0 #TODO: Calculate the expression's noise
-            
+        
 
         return {
             "observation": embedding,

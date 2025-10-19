@@ -9,6 +9,10 @@ class LagrangianVecEnvWrapper(VecEnvWrapper):
     def set_lambda_penalty(self, lambda_penalty):
         self.lambda_penalty = lambda_penalty
 
+    def reset(self, *args, **kwargs):
+        # delegate; SB3 VecEnv.reset returns obs (keep pass-through)
+        return self.venv.reset(*args, **kwargs)
+
     def step_wait(self):
         obs, rewards, dones, infos = self.venv.step_wait()
         for env_index, info in enumerate(infos):
