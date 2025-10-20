@@ -2,8 +2,10 @@ import os
 import datetime
 import pandas as pd
 
+
 TRAINING_LOG_FILE = "job_logs.xlsx"
 TEST_LOG_FILE = "test_results.xlsx"
+
 
 def log_training_details(model_params, job_id, num_data, num_actions, total_timesteps, output_model_name, notes=""):
     log_entry = {
@@ -27,10 +29,19 @@ def log_training_details(model_params, job_id, num_data, num_actions, total_time
     if not os.path.exists(TRAINING_LOG_FILE):
         df = pd.DataFrame(columns=log_entry.keys())
     else:
-        df = pd.read_excel(TRAINING_LOG_FILE)
-    df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
+        try:
+            df = pd.read_excel(TRAINING_LOG_FILE)
+        except Exception:
+            df = pd.DataFrame(columns=log_entry.keys())
+
+    if df.empty:
+        df = pd.DataFrame([log_entry])
+    else:
+        df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
+
     df.to_excel(TRAINING_LOG_FILE, index=False)
     print(f"Logged training details to {TRAINING_LOG_FILE}")
+
 
 def log_test_results(results, sheet_name="TestResults"):
     """

@@ -98,7 +98,7 @@ def main(args=None):
     # ────────────────────────────── TRAIN ─────────────────────────────
     if mode == "train":
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        train_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, total_timesteps=1_000_000)
+        train_agent("./fhe_rl/datasets/benchmarks.txt", embeddings)
 
     # ─────────────────────────────── TEST ─────────────────────────────
     elif mode == "test":

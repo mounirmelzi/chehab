@@ -24,9 +24,9 @@ def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 
             train_ppo_agent(expressions_file, embeddings_model, total_timesteps, num_envs)
 
 
-def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
+def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int = 8):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
-    expressions = load_expressions(expressions_file, benchmarks)
+    expressions = load_expressions(expressions_file)
     max_positions = 16
     rules_list  = create_rules("rules.txt")
     rules_list["END"] = None
@@ -92,7 +92,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
     model.save(run_name)
 
 
-def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
+def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int = 8):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
     expressions = load_expressions(expressions_file)
     max_positions = 16
@@ -114,11 +114,16 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     val_env = LagrangianVecEnvWrapper(val_env) # Use the Lagrangian wrapper
 
     ent_schedule = linear_schedule(0.1)
+
+    noise_threshold = 100.0
+    denom_factor = 4
+    n_steps = 2048
+
     model_params = {
         "policy": HierarchicalMaskablePolicy,
         "env": env,
         "learning_rate": 1e-4,
-        "n_steps": 2048,
+        "n_steps": n_steps,
         "batch_size": 256,
         "gamma": 0.99,
         "gae_lambda": 0.98,
@@ -138,6 +143,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         }
     }
     model = PPO(**model_params)
+
     log_training_details(
         model_params,
         job_id,
@@ -145,8 +151,9 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes="2 level hierarchical PPO max steps 75 and 8 envs"
+        notes=f"Lagrangian PPO: noise_threshold={noise_threshold} denom_factor={denom_factor}"
     )
+
     num_benchmarks = len(benchmarks)
     eval_callback = EvalCallback(
         val_env, 
@@ -167,14 +174,10 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     env.set_lambda_penalty(lambda_penalty)
     val_env.set_lambda_penalty(lambda_penalty)
 
-    noise_threshold = 100.0
+    lagrange_iterations = total_timesteps // ((n_steps * num_envs) * denom_factor)
+    lagrange_iterations = max(1, lagrange_iterations)
 
-    lagrange_iterations = total_timesteps
-    lagrange_iterations //= 2048 # n_steps
-    lagrange_iterations //= num_envs
-    lagrange_iterations //= 2
-
-    for iteration in range(lagrange_iterations):  # outer Lagrange loop
+    for _ in range(lagrange_iterations):  # outer Lagrange loop
         model.learn(
             total_timesteps=total_timesteps // lagrange_iterations, 
             reset_num_timesteps=False,
@@ -185,8 +188,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
         # Evaluate average noise across validation env
         total_noise = 0
-        num_episodes = len(benchmarks)
-        for _ in range(num_episodes):
+        for _ in range(num_benchmarks):
             obs = val_env.reset()
             done, ep_noise = False, 0
             while not done:
@@ -194,7 +196,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
                 obs, reward, done, info = val_env.step(action)
                 ep_noise += info[0].get("noise", 0.0)
             total_noise += ep_noise
-        avg_noise = total_noise / num_episodes
+        avg_noise = total_noise / num_benchmarks
 
         # Lagrange update
         if avg_noise > noise_threshold:
@@ -207,9 +209,12 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         val_env.set_lambda_penalty(lambda_penalty)
 
         # Logs
-        print(f"[Iter {iteration}] Avg noise: {avg_noise:.2f}, λ: {lambda_penalty:.3f}")
-        tensorboard_writer.add_scalar("Lagrange/lambda_penalty", lambda_penalty, iteration)
-        tensorboard_writer.add_scalar("Lagrange/avg_noise", avg_noise, iteration)
+        print(f"[Step {model.num_timesteps}] Avg noise: {avg_noise:.2f}, λ: {lambda_penalty:.3f}")
+        tensorboard_writer.add_scalar("Lagrange/lambda_penalty", lambda_penalty, model.num_timesteps)
+        tensorboard_writer.add_scalar("Lagrange/avg_noise", avg_noise, model.num_timesteps)
+        model.save(f"{run_name}__step_{model.num_timesteps}")
+
+    tensorboard_writer.close()
 
     # Lagrangian PPO training ============== [End] ==============
 
