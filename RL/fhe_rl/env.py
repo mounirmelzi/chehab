@@ -6,11 +6,8 @@ import torch
 from .config import get_tokenizer_type
 
 if get_tokenizer_type() == "bpe":
-    
     from .TRAE_bpe import get_expression_cls_embedding
-    
 else:
-    
     from .TRAE import get_expression_cls_embedding
 
 
@@ -77,6 +74,7 @@ class fheEnv(gym.Env):
         terminated = False
         truncated = False
         reward = 0
+
         print(f"\n{CYAN}{'-'*100}{RESET}")
         print(f"{BOLD}{MAGENTA}Old expression{RESET}: {YELLOW}{self.expression}{RESET}")
         print(f"{BOLD}{MAGENTA}Old cost      {RESET}: {RED}{self.current_cost}{RESET}")
@@ -99,10 +97,14 @@ class fheEnv(gym.Env):
             if (self.steps >= self.max_steps):
                 terminated = True
                 reward = self.calculate_final_reward()
-        info = {"expression": self.expression}
-        reward_color = GREEN if reward >= 0 else RED
 
-        noise = estimate_expression_noise(self.expression)["noise_used"]
+        info = {"expression": self.expression}
+
+        noise = estimate_expression_noise(self.expression)
+        noise = noise["noise_used"]
+        info["noise"] = noise
+
+        reward_color = GREEN if reward >= 0 else RED
 
         print(f"{BOLD}{MAGENTA}New expression{RESET}: {YELLOW}{self.expression}{RESET}")
         print(f"{BOLD}{MAGENTA}New cost      {RESET}: {RED}{self.current_cost}{RESET}")
@@ -111,6 +113,7 @@ class fheEnv(gym.Env):
         print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
         print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{noise}{RESET}")
         print(f"{CYAN}{'-'*100}{RESET}")
+
         embedding = self._embed_expression(self.expression)
         if embedding is None:
             terminated = True
@@ -128,7 +131,7 @@ class fheEnv(gym.Env):
         return {
             "observation": embedding,
             "action_mask": self.get_action_mask()
-        }, reward, terminated, truncated, {"expression": self.expression, "noise": noise}
+        }, reward, terminated, truncated, info
     
     def _valid_end_action(self,expr: str) -> bool:
         expr_tree = parse_sexpr(expr)
