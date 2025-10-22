@@ -180,7 +180,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     env.set_lambda_penalty(lambda_penalty)
     val_env.set_lambda_penalty(lambda_penalty)
 
-    noise_threshold = 100.0
+    noise_threshold = 200.0
 
 
     try:
