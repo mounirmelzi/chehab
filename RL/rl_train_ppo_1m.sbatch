@@ -7,7 +7,7 @@
 #SBATCH -n 1
 #SBATCH -c 8
 #SBATCH --reservation=c2
-#SBATCH -t 3-00:00:00
+#SBATCH -t 7-00:00:00
 
 set +u
 source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
