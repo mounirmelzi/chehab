@@ -103,6 +103,7 @@ class fheEnv(gym.Env):
         info = {"expression": self.expression}
         reward_color = GREEN if reward >= 0 else RED
         noise = estimate_expression_noise(self.expression)["noise_used"]
+        info["noise"] = noise
         print(f"{BOLD}{MAGENTA}New expression{RESET}: {YELLOW}{self.expression}{RESET}")
         print(f"{BOLD}{MAGENTA}New cost      {RESET}: {RED}{self.current_cost}{RESET}")
         print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
@@ -129,7 +130,7 @@ class fheEnv(gym.Env):
         return {
             "observation": embedding,
             "action_mask": self.get_action_mask()
-        }, reward, terminated, truncated, {"expression": self.expression, "noise": noise}
+        }, reward, terminated, truncated, info
     
     def _valid_end_action(self,expr: str) -> bool:
         expr_tree = parse_sexpr(expr)

@@ -45,14 +45,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
     val_env = DummyVecEnv([
     lambda: Monitor(fheEnv(rules_list, benchmarks, max_positions=max_positions,embeddings_model=embeddings_model))
     ])
-    # Entropy schedule: start high (0.2) and decay to 0.05 over ~70% of training,
-    # then hold at 0.05 to stabilize.
-    def entropy_schedule(progress_remaining: float) -> float:
-        # progress_remaining ∈ [1.0 → 0.0]
-        if progress_remaining <= 0.3:
-            return 0.05
-        # linear from 0.2 at pr=1.0 to 0.05 at pr=0.3
-        return 0.05 + (0.2 - 0.05) * ((progress_remaining - 0.3) / 0.7)
+    ent_schedule = linear_schedule(0.1)
     model_params = {
         "policy": HierarchicalMaskablePolicy,
         "env": env,
@@ -64,7 +57,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
         "n_epochs": 15,
         "clip_range": 0.1,
         "clip_range_vf": 0.2,
-        "ent_coef": 0.2,
+        "ent_coef": 0.1,
         "verbose": 1,
         "tensorboard_log": tensorboard_log_dir,
         "policy_kwargs": {
@@ -102,7 +95,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
         total_timesteps=total_timesteps, 
         log_interval=1, 
         progress_bar=True, 
-        callback=[eval_callback, EntCoefScheduler(entropy_schedule)]
+        callback=[eval_callback,EntCoefScheduler(ent_schedule)]
     )
     model.save(run_name)
 
@@ -133,10 +126,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     ])
     val_env = LagrangianVecEnvWrapper(val_env) # Use the Lagrangian wrapper
 
-    def entropy_schedule(progress_remaining: float) -> float:
-        if progress_remaining <= 0.3:
-            return 0.05
-        return 0.05 + (0.2 - 0.05) * ((progress_remaining - 0.3) / 0.7)
+    ent_schedule = linear_schedule(0.1)
     model_params = {
         "policy": HierarchicalMaskablePolicy,
         "env": env,
@@ -148,7 +138,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         "n_epochs": 15,
         "clip_range": 0.1,
         "clip_range_vf": 0.2,
-        "ent_coef": 0.2,
+        "ent_coef": 0.1,
         "verbose": 1,
         "tensorboard_log": tensorboard_log_dir,
         "policy_kwargs": {
@@ -186,14 +176,21 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     tensorboard_writer = SummaryWriter(tensorboard_log_dir)
 
-    # Lambda warmup: start smaller and ramp in the first few outer iterations
-    base_lambda_init = 0.02  # gentler than 0.1 to avoid early collapse
-    warmup_iters = 3         # scale up over first 3 outer iterations
-    lambda_penalty = base_lambda_init
+    lambda_penalty = 0.1
     env.set_lambda_penalty(lambda_penalty)
     val_env.set_lambda_penalty(lambda_penalty)
 
-    noise_threshold = 200.0
+    # Constraint curriculum: budget schedule from BUDGET_START -> BUDGET_FINAL
+    try:
+        budget_start = float(os.getenv("BUDGET_START", "200"))
+    except Exception:
+        budget_start = 200.0
+    try:
+        budget_final = float(os.getenv("BUDGET_FINAL", str(budget_start)))
+    except Exception:
+        budget_final = budget_start
+    env.set_budget(budget_start)
+    val_env.set_budget(budget_start)
 
 
     try:
@@ -217,30 +214,30 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     env.set_lambda_penalty(lambda_penalty)
     val_env.set_lambda_penalty(lambda_penalty)
 
-    print(f"[START] Algo=LAGRANGIAN_PPO total_timesteps={total_timesteps} n_steps={model_params['n_steps']} num_envs={num_envs} denom_factor={denom_factor} lagrange_iterations={lagrange_iterations} lambda_fixed={freeze_lambda} lambda_init={lambda_penalty}", flush=True)
+    print(f"[START] Algo=LAGRANGIAN_PPO total_timesteps={total_timesteps} n_steps={model_params['n_steps']} num_envs={num_envs} denom_factor={denom_factor} lagrange_iterations={lagrange_iterations} lambda_fixed={freeze_lambda} lambda_init={lambda_penalty} budget_start={budget_start} budget_final={budget_final}", flush=True)
 
 
 
     
 
-    # Smaller λ controller gain to reduce overshoot
-    lambda_gain = 0.005
-
     for iteration in range(lagrange_iterations):  # outer Lagrange loop
-        # Apply warmup scaling to the effective lambda seen by envs
-        warmup_scale = 1.0 if warmup_iters <= 0 else min(1.0, (iteration + 1) / warmup_iters)
-        effective_lambda = lambda_penalty * warmup_scale
-        env.set_lambda_penalty(effective_lambda)
-        val_env.set_lambda_penalty(effective_lambda)
+        # linearly decay budget across outer iterations
+        if lagrange_iterations > 1:
+            frac = iteration / (lagrange_iterations - 1)
+            current_budget = budget_start + (budget_final - budget_start) * frac
+        else:
+            current_budget = budget_final
+        env.set_budget(current_budget)
+        val_env.set_budget(current_budget)
         model.learn(
             total_timesteps=total_timesteps // lagrange_iterations, 
             reset_num_timesteps=False,
             log_interval=1, 
             progress_bar=True, 
-        callback=[eval_callback, EntCoefScheduler(entropy_schedule)]
+            callback=[eval_callback, EntCoefScheduler(ent_schedule)]
         )
 
-        # Evaluate average noise across validation env
+        # Evaluate average noise across validation env (sum of per-step noise, preserved for continuity)
         total_noise = 0
         num_episodes = len(benchmarks)
         for _ in range(num_episodes):
@@ -256,21 +253,21 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         # Lagrange update (unless frozen)
         if not freeze_lambda:
             if avg_noise > noise_threshold:
-                lambda_penalty += lambda_gain * (avg_noise - noise_threshold)
+                lambda_penalty += 0.01 * (avg_noise - noise_threshold)
             else:
-                lambda_penalty = max(0, lambda_penalty - lambda_gain)
+                lambda_penalty = max(0, lambda_penalty - 0.01)
 
         # Apply current lambda to envs
-        env.set_lambda_penalty(lambda_penalty * warmup_scale)
-        val_env.set_lambda_penalty(lambda_penalty * warmup_scale)
+        env.set_lambda_penalty(lambda_penalty)
+        val_env.set_lambda_penalty(lambda_penalty)
 
         # Logs
-        print(f"[Iter {iteration}] Avg noise: {avg_noise:.2f}, λ(base)={lambda_penalty:.3f}, λ(eff)={effective_lambda:.3f}")
+        print(f"[Iter {iteration}] budget={current_budget:.1f} Avg noise: {avg_noise:.2f}, λ: {lambda_penalty:.3f}")
         tensorboard_writer.add_scalar("Lagrange/lambda_penalty", lambda_penalty, iteration)
         tensorboard_writer.add_scalar("Lagrange/avg_noise", avg_noise, iteration)
+        tensorboard_writer.add_scalar("Lagrange/budget", current_budget, iteration)
         model.save(f"{run_name}_iter_{iteration}_real")
 
     # Lagrangian PPO training ============== [End] ==============
 
     model.save(run_name)
-
