@@ -1,37 +1,32 @@
 #!/bin/bash
-#SBATCH -J chehab_lag_terminal_den4
-#SBATCH -o chehab_lag_terminal_den4.%j.out
-#SBATCH -e chehab_lag_terminal_den4.%j.err
+#SBATCH -J chehab_lag_terminal_den2
+#SBATCH -o chehab_lag_terminal_den2.%j.out
+#SBATCH -e chehab_lag_terminal_den2.%j.err
 #SBATCH -p compute
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -c 8
 #SBATCH -t 7-00:00:00
 
+set +u
 source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
 conda activate chehab
+set -u
 
 export PYTHONUNBUFFERED=1
-export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
-
-export PROJ_ROOT=/scratch/mxa5343/chehab-constr/chehab
+export NETID=mxa5343
+export PROJ_ROOT="/scratch/${NETID}/chehab-constr/chehab"
 cd "$PROJ_ROOT"
-export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:$PYTHONPATH"
+export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:${PYTHONPATH:-}"
 
-# Training config
-export TOTAL_TIMESTEPS=500000
+# Experiment: Lagrangian PPO with Terminal-Only Penalty (denom=2)
+# Method: Terminal-Only Penalty
+# - Only penalizes at episode end if final expression noise > budget (200)
+# - No per-step penalties during exploration - agent can explore freely
+# - Uses final expression noise (not cumulative) for penalty calculation
+# - Penalty = λ × max(0, final_noise - budget) / budget
+# - Expected: Longer episodes, better exploration, constraint compliance at end
+# - LAGRANGE_DENOM_FACTOR=2 means less frequent λ updates (every ~62k steps)
+
 export LAGRANGE_DENOM_FACTOR=2
-export EXP_TAG=lag_terminal_den4_reduced
-
-echo "[JOB] tag=$EXP_TAG tt=$TOTAL_TIMESTEPS denom=$LAGRANGE_DENOM_FACTOR dataset=RL/fhe_rl/datasets/reduced_benchmarks.txt"
-
-stdbuf -oL -eL python -u - <<'PY'
-from RL.fhe_rl.__main__ import load_embeddings_from_config, DATA_DIR
-from RL.fhe_rl.train import train_lagrangian_ppo_agent
-
-emb, _ = load_embeddings_from_config("dynamic")
-expr_file = str(DATA_DIR / "reduced_benchmarks.txt")
-
-# TOTAL_TIMESTEPS and LAGRANGE_DENOM_FACTOR are read inside train_lagrangian_ppo_agent
-train_lagrangian_ppo_agent(expr_file, emb)
-PY
+stdbuf -oL -eL python -u -m RL.fhe_rl train 2>&1 | tee -a run_lag_terminal_den2.log
