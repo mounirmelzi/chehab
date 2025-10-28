@@ -11,7 +11,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize,DummyVe
 from .callbacks import linear_schedule, EntCoefScheduler
 from stable_baselines3.common.callbacks import EvalCallback
 from .config import get_rl_algorithm, RLAlgorithm
-from .wrappers import LagrangianVecEnvWrapper
+from .wrappers import LagrangianVecEnvWrapper, SuccessBonusKPenaltyWrapper
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 DATA_DIR = Path(__file__).resolve().parent / "datasets"
@@ -118,13 +118,20 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     env = SubprocVecEnv([
         make_env for _ in range(num_envs)
-    ], start_method='spawn')    
-    env = LagrangianVecEnvWrapper(env) # Use the Lagrangian wrapper
+    ], start_method='spawn')
+    constraint_wrapper = os.getenv("CONSTRAINT_WRAPPER", "terminal").lower()
+    if constraint_wrapper == "success_k":
+        env = SuccessBonusKPenaltyWrapper(env)
+    else:
+        env = LagrangianVecEnvWrapper(env)
 
     val_env = DummyVecEnv([
         lambda: Monitor(fheEnv(rules_list, benchmarks, max_positions=max_positions,embeddings_model=embeddings_model))
     ])
-    val_env = LagrangianVecEnvWrapper(val_env) # Use the Lagrangian wrapper
+    if constraint_wrapper == "success_k":
+        val_env = SuccessBonusKPenaltyWrapper(val_env)
+    else:
+        val_env = LagrangianVecEnvWrapper(val_env)
 
     ent_schedule = linear_schedule(0.1)
     model_params = {
@@ -179,6 +186,16 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     lambda_penalty = 0.1
     env.set_lambda_penalty(lambda_penalty)
     val_env.set_lambda_penalty(lambda_penalty)
+    # If success_k, allow setting K via env
+    if constraint_wrapper == "success_k":
+        try:
+            k_consecutive = int(os.getenv("K_CONSECUTIVE", "3"))
+        except Exception:
+            k_consecutive = 3
+        if hasattr(env, "set_k"):
+            env.set_k(k_consecutive)
+        if hasattr(val_env, "set_k"):
+            val_env.set_k(k_consecutive)
 
     # Constraint curriculum: budget schedule from BUDGET_START -> BUDGET_FINAL
     try:
@@ -214,7 +231,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     env.set_lambda_penalty(lambda_penalty)
     val_env.set_lambda_penalty(lambda_penalty)
 
-    print(f"[START] Algo=LAGRANGIAN_PPO total_timesteps={total_timesteps} n_steps={model_params['n_steps']} num_envs={num_envs} denom_factor={denom_factor} lagrange_iterations={lagrange_iterations} lambda_fixed={freeze_lambda} lambda_init={lambda_penalty} budget_start={budget_start} budget_final={budget_final}", flush=True)
+    print(f"[START] Algo=LAGRANGIAN_PPO total_timesteps={total_timesteps} n_steps={model_params['n_steps']} num_envs={num_envs} denom_factor={denom_factor} lagrange_iterations={lagrange_iterations} lambda_fixed={freeze_lambda} lambda_init={lambda_penalty} wrapper={constraint_wrapper} budget_start={budget_start} budget_final={budget_final}", flush=True)
 
 
 
