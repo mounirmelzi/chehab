@@ -1,1 +1,4 @@
 rl_venv/
+tensorboard/
+eval/
+old_test_results/

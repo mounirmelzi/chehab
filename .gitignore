@@ -51,3 +51,5 @@ egraphs/target/**
 __pycache__/
 *.pyo
 *.pyd
+
+/logs

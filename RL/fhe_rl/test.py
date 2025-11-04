@@ -70,10 +70,6 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
                 "Steps": steps,
                 "Initial Noise Used": initial_noise_info["noise_used"],
                 "Final Noise Used": last_noise_info["noise_used"],
-                "Initial Remaining Budget": initial_noise_info["remaining_budget"],
-                "Final Remaining Budget": last_noise_info["remaining_budget"],
-                "Initial Violated Flag": initial_noise_info["violated"],
-                "Final Violated Flag": last_noise_info["violated"],
             }
         )
 

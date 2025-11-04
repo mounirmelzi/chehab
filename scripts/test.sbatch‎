@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#SBATCH --reservation=c2
+#SBATCH -p compute
+#SBATCH --mem 64GB
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 1
+#SBATCH -t 1-00:00:00
+
+#SBATCH -J test
+#SBATCH -o logs/output.test.txt
+#SBATCH -e logs/error.test.txt
+
+
+source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
+conda activate chehabEnv
+
+cd RL
+stdbuf -oL -eL python -m fhe_rl --tokenizer_type dynamic test

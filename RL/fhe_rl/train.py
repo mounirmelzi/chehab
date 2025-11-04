@@ -14,7 +14,7 @@ from .wrappers import LagrangianVecEnvWrapper
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 1_000_000, num_envs: int = 8):
+def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 2_000_000, num_envs: int = 8):
     match get_rl_algorithm():
         case RLAlgorithm.PPO:
             train_ppo_agent(expressions_file, embeddings_model, total_timesteps, num_envs)
@@ -26,7 +26,7 @@ def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 
 
 def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int = 8):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
-    expressions = load_expressions(expressions_file)
+    expressions = load_expressions(expressions_file, benchmarks)
     max_positions = 16
     rules_list  = create_rules("rules.txt")
     rules_list["END"] = None
@@ -94,7 +94,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
 
 def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int = 8):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
-    expressions = load_expressions(expressions_file)
+    expressions = load_expressions(expressions_file, benchmarks)
     max_positions = 16
     rules_list  = create_rules("rules.txt")
     rules_list["END"] = None
@@ -115,9 +115,13 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     ent_schedule = linear_schedule(0.1)
 
-    noise_threshold = 100.0
+    noise_threshold = 300.0
+    lagrange_delay = 0
     denom_factor = 4
     n_steps = 2048
+
+    env.set_noise_threshold(noise_threshold)
+    val_env.set_noise_threshold(noise_threshold)
 
     model_params = {
         "policy": HierarchicalMaskablePolicy,
@@ -151,7 +155,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes=f"Lagrangian PPO: noise_threshold={noise_threshold} denom_factor={denom_factor}"
+        notes=f"Lagrangian PPO [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay}): noise_threshold={noise_threshold} denom_factor={denom_factor}"
     )
 
     num_benchmarks = len(benchmarks)
@@ -177,7 +181,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     lagrange_iterations = total_timesteps // ((n_steps * num_envs) * denom_factor)
     lagrange_iterations = max(1, lagrange_iterations)
 
-    for _ in range(lagrange_iterations):  # outer Lagrange loop
+    for lagrange_iteration in range(lagrange_iterations):  # outer Lagrange loop
         model.learn(
             total_timesteps=total_timesteps // lagrange_iterations, 
             reset_num_timesteps=False,
@@ -198,25 +202,22 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
             total_noise += ep_noise
         avg_noise = total_noise / num_benchmarks
 
-        # Lagrange update
-        if avg_noise > noise_threshold:
-            lambda_penalty += 0.01 * (avg_noise - noise_threshold)
-        else:
-            lambda_penalty = max(0, lambda_penalty - 0.01)
+        if lagrange_iteration >= lagrange_delay: # Delay lambda penalty updates
+            # Lagrange update
+            if avg_noise > noise_threshold:
+                lambda_penalty += 0.01 * (avg_noise - noise_threshold)
+            else:
+                lambda_penalty = max(0, lambda_penalty - 0.01)
 
-        # Update lambda_penalty in both training and validation envs
-        env.set_lambda_penalty(lambda_penalty)
-        val_env.set_lambda_penalty(lambda_penalty)
+            # Update lambda_penalty in both training and validation envs
+            env.set_lambda_penalty(lambda_penalty)
+            val_env.set_lambda_penalty(lambda_penalty)
 
         # Logs
         print(f"[Step {model.num_timesteps}] Avg noise: {avg_noise:.2f}, λ: {lambda_penalty:.3f}")
         tensorboard_writer.add_scalar("Lagrange/lambda_penalty", lambda_penalty, model.num_timesteps)
         tensorboard_writer.add_scalar("Lagrange/avg_noise", avg_noise, model.num_timesteps)
-        model.save(f"{run_name}__step_{model.num_timesteps}")
 
     tensorboard_writer.close()
 
     # Lagrangian PPO training ============== [End] ==============
-
-    model.save(run_name)
-
