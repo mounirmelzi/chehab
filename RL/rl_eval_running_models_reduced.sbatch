@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -J chehab_eval_running_reduced
-#SBATCH -o chehab_eval_running_reduced.%j.out
-#SBATCH -e chehab_eval_running_reduced.%j.err
+#SBATCH -J chehab_eval_reduced
+#SBATCH -o chehab_eval_reduced.%j.out
+#SBATCH -e chehab_eval_reduced.%j.err
 #SBATCH -p compute
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -c 4
-#SBATCH -t 0-01:30:00
+#SBATCH -t 0-01:00:00
 
 source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
 conda activate chehab
@@ -18,18 +18,6 @@ export PROJ_ROOT=/scratch/mxa5343/chehab-constr/chehab
 cd "$PROJ_ROOT"
 export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:$PYTHONPATH"
 
-wait_for_file() {
-  local path="$1"
-  local max_wait="$2"
-  local slept=0
-  while [ $slept -lt $max_wait ]; do
-    [ -f "$path" ] && return 0
-    sleep 30
-    slept=$((slept+30))
-  done
-  return 1
-}
-
 DATASET_PY='
 from RL.fhe_rl.__main__ import load_embeddings_from_config, DATA_DIR
 from RL.fhe_rl.test import test_agent
@@ -39,25 +27,19 @@ test_agent(str(DATA_DIR/"reduced_benchmarks.txt"), emb, MODEL_ZIP)
 
 run_test () {
   local LABEL="$1"
-  local JOBID="$2"
-  local BEST="$PROJ_ROOT/eval/best_model_model_${JOBID}/best_model.zip"
-  local OUT_XLS="test_results_${LABEL}_reduced.xlsx"
+  local MODEL_ZIP="$2"
+  local OUT_XLS="test_results_reduced_${LABEL}.xlsx"
 
-  # prefer best_model.zip, else latest checkpoint; no waiting
-  local ZIP="$BEST"
-  [ ! -f "$ZIP" ] && ZIP=$(ls -1t "$PROJ_ROOT"/model_${JOBID}_iter_*_real.zip 2>/dev/null | head -1)
-
-  if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
-    echo "[SKIP] $LABEL: no best or checkpoint found yet"
+  if [ ! -f "$MODEL_ZIP" ]; then
+    echo "[SKIP] $LABEL missing: $MODEL_ZIP"
     return
   fi
 
-  echo "[RUN] $LABEL -> $ZIP"
+  echo "[RUN] $LABEL -> $MODEL_ZIP"
+  # override SLURM_JOB_ID for sheet naming in Excel
   SLURM_JOB_ID="$LABEL" python -u - <<PY
-from RL.fhe_rl.__main__ import load_embeddings_from_config, DATA_DIR
-from RL.fhe_rl.test import test_agent
-emb,_=load_embeddings_from_config("dynamic")
-test_agent(str(DATA_DIR/"reduced_benchmarks.txt"), emb, r"""$ZIP""")
+MODEL_ZIP="$MODEL_ZIP"
+$DATASET_PY
 PY
 
   if [ -f test_results.xlsx ]; then
@@ -68,12 +50,16 @@ PY
   fi
 }
 
-# Running jobs to evaluate (unique labels)
-run_test "lag_successk_den2"      "12542361"
-run_test "lag_terminal_curr_den2" "12542330"
-run_test "lag_terminal_den4_a"    "12542323"
-run_test "lag_terminal_den4_b"    "12542118"
+# Test the newly completed models (with best_model.zip)
+run_test "lag_terminal_den2"           "$PROJ_ROOT/eval/best_model_model_12683646/best_model.zip"
+run_test "lag_terminal_den1"           "$PROJ_ROOT/eval/best_model_model_12683648/best_model.zip"
+run_test "lag_terminal_den2_240"        "$PROJ_ROOT/eval/best_model_model_12683654/best_model.zip"
+run_test "lag_terminal_den2_300"       "$PROJ_ROOT/eval/best_model_model_12683663/best_model.zip"
+run_test "lag_perstep_curr_den1"       "$PROJ_ROOT/eval/best_model_model_12683683/best_model.zip"
+run_test "lag_successk_den2"           "$PROJ_ROOT/eval/best_model_model_12683708/best_model.zip"
+run_test "lag_excess_den2_240"         "$PROJ_ROOT/eval/best_model_model_12683747/best_model.zip"
+run_test "lag_excess_den2_300"         "$PROJ_ROOT/eval/best_model_model_12683761/best_model.zip"
 
 echo
 echo "[RESULTS]"
-ls -1 "$PROJ_ROOT"/test_results_*_reduced.xlsx 2>/dev/null || echo "No Excel files produced."
+ls -1 "$PROJ_ROOT"/test_results_reduced_*.xlsx 2>/dev/null || echo "No Excel files produced."

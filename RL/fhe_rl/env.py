@@ -41,13 +41,17 @@ class fheEnv(gym.Env):
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
+        self.budget_options = [240, 300, 1000000]  # Fixed budget options
+        self.budget_dim = len(self.budget_options)  # One-hot encoding dimension
+        self.budget = None  # Current budget for this episode
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
         self.action_space = spaces.Discrete(len(self.rules.keys()) * self.max_positions)
+        # Observation space includes embedding (256) + budget one-hot (3) = 259
         self.observation_space = spaces.Dict({
             "observation": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(self.embedding_dim,), dtype=np.float32
+                low=-np.inf, high=np.inf, shape=(self.embedding_dim + self.budget_dim,), dtype=np.float32
             ),
             "action_mask": spaces.Box(0, 1, (len(self.rules.keys()) * self.max_positions,), np.float32)
         })
@@ -64,6 +68,8 @@ class fheEnv(gym.Env):
         self.initial_expression = self.expression
         self.steps = 0
         self.initial_cost = self.current_cost = self.get_cost(self.expression)
+        # Randomly select a budget from the options
+        self.budget = np.random.choice(self.budget_options)
         return {
             "observation": self._embed_expression(self.expression),
             "action_mask": self.get_action_mask()
@@ -104,6 +110,7 @@ class fheEnv(gym.Env):
         reward_color = GREEN if reward >= 0 else RED
         noise = estimate_expression_noise(self.expression)["noise_used"]
         info["noise"] = noise
+        info["budget"] = self.budget  # Add budget to info for logging/wrappers
         print(f"{BOLD}{MAGENTA}New expression{RESET}: {YELLOW}{self.expression}{RESET}")
         print(f"{BOLD}{MAGENTA}New cost      {RESET}: {RED}{self.current_cost}{RESET}")
         print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
@@ -177,7 +184,16 @@ class fheEnv(gym.Env):
             emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)
         if emb is None:
             return None
-        return emb.squeeze(0).cpu().numpy().astype(np.float32)
+        emb_np = emb.squeeze(0).cpu().numpy().astype(np.float32)
+        
+        # Create one-hot encoding for budget
+        budget_one_hot = np.zeros(self.budget_dim, dtype=np.float32)
+        budget_idx = self.budget_options.index(self.budget)
+        budget_one_hot[budget_idx] = 1.0
+        
+        # Append budget one-hot to embedding
+        combined_emb = np.concatenate([emb_np, budget_one_hot], axis=0)
+        return combined_emb
     
     def get_action_mask(self) -> np.ndarray:
         mask = np.zeros(len(self.rules.keys()) * self.max_positions, dtype=np.float32)
@@ -194,4 +210,3 @@ class fheEnv(gym.Env):
                 mask[start:start + valid_positions] = 1.0
         return mask
     
-

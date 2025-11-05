@@ -51,13 +51,9 @@ PY
 }
 
 # Known constrained runs (exact paths)
-run_test "lag_excess_den4"        "$PROJ_ROOT/eval/best_model_model_12493999/best_model.zip"
-run_test "lag_entropy_warmup_den4" "$PROJ_ROOT/eval/best_model_model_12494155/best_model.zip"
-run_test "lag_living_bonus_den4"   "$PROJ_ROOT/eval/best_model_model_12494168/best_model.zip"
+run_test "chehab_lag_successk_den2_k5"        "$PROJ_ROOT/eval/best_model_model_12722527/best_model.zip"
+run_test "chehab_lag_successk_den2"       "$PROJ_ROOT/eval/best_model_model_12721724/best_model.zip"
 
-# Optional PPO 1M (set path if different)
-PPO_1M_ZIP="$PROJ_ROOT/eval/best_model_model_12457801/best_model.zip"
-run_test "ppo_1m" "$PPO_1M_ZIP"
 
 echo
 echo "[RESULTS]"

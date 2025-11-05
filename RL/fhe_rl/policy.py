@@ -8,10 +8,16 @@ import numpy as np
 class CustomFeaturesExtractor(nn.Module):
     def __init__(self, observation_space, features_dim: int = 256):
         super().__init__()
+        # Observation now includes embedding (256) + budget one-hot (3) = 259
         self._embed_dim = observation_space["observation"].shape[0]
-        self._features_dim = features_dim
+        # Use the full dimension directly (259) - no projection needed
+        # The policy will work with 259-dim vectors directly
+        self._features_dim = self._embed_dim  # Use actual observation dimension
+    
     def forward(self, obs_dict):
+        # Return the observation directly without projection
         return obs_dict["observation"]
+    
     @property
     def features_dim(self):
         return self._features_dim
@@ -23,16 +29,19 @@ class HierarchicalMaskablePolicy(nn.Module):
         super().__init__()
         self.rule_dim: int       = kwargs.pop("rule_dim", 5)
         self.max_positions: int  = kwargs.pop("max_positions", 32)
-        features_dim: int       = kwargs.pop("features_dim", 256)
+        features_dim: int       = kwargs.pop("features_dim", 256)  # Default, but encoder will use actual obs dim
         lr: float               = kwargs.pop("lr", 3e-4)
         rule_hidden_dims        = kwargs.pop("rule_hidden_dims", [128, 128])
         pos_hidden_dims         = kwargs.pop("pos_hidden_dims", [128, 128])
         value_hidden_dims       = kwargs.pop("value_hidden_dims", [256, 128, 64])
 
+        # Create encoder first - it will automatically detect the observation dimension (259)
         self.encoder = CustomFeaturesExtractor(observation_space, features_dim)
-        self.rule_head = mlp(features_dim, rule_hidden_dims, self.rule_dim, layernorm=True)
-        self.pos_head  = mlp(features_dim + self.rule_dim, pos_hidden_dims, self.max_positions, layernorm=True)
-        self.value_net = mlp(features_dim, value_hidden_dims, 1, layernorm=True)
+        # Use the actual features_dim from encoder (which will be 259)
+        actual_features_dim = self.encoder.features_dim
+        self.rule_head = mlp(actual_features_dim, rule_hidden_dims, self.rule_dim, layernorm=True)
+        self.pos_head  = mlp(actual_features_dim + self.rule_dim, pos_hidden_dims, self.max_positions, layernorm=True)
+        self.value_net = mlp(actual_features_dim, value_hidden_dims, 1, layernorm=True)
 
         actor_params  = list(self.encoder.parameters()) + list(self.rule_head.parameters()) + list(self.pos_head.parameters())
         critic_params = self.value_net.parameters()

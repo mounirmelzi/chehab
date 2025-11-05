@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J chehab_lag_successk_den2
-#SBATCH -o chehab_lag_successk_den2.%j.out
-#SBATCH -e chehab_lag_successk_den2.%j.err
+#SBATCH -J chehab_lag_successk_den2_k3_llm_data
+#SBATCH -o chehab_lag_successk_den2_k3_llm_data.%j.out
+#SBATCH -e chehab_lag_successk_den2_k3_llm_data.%j.err
 #SBATCH -p compute
 #SBATCH -N 1
 #SBATCH -n 1
@@ -24,6 +24,6 @@ export LAGRANGE_DENOM_FACTOR=2
 export CONSTRAINT_WRAPPER=success_k
 export K_CONSECUTIVE=3
 export BUDGET_START=5000
-export BUDGET_FINAL=200
+export BUDGET_FINAL=240
 
-stdbuf -oL -eL python -u -m RL.fhe_rl train 2>&1 | tee -a run_lag_successk_den2.log
+stdbuf -oL -eL python -u -m RL.fhe_rl train 2>&1 | tee -a run_lag_successk_den2_k3_llm_data.log
