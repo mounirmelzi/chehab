@@ -21,13 +21,19 @@ export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:$PYTHONPATH"
 DATASET_PY='
 from RL.fhe_rl.__main__ import load_embeddings_from_config, DATA_DIR
 from RL.fhe_rl.test import test_agent
+import os
 emb,_=load_embeddings_from_config("dynamic")
-test_agent(str(DATA_DIR/"benchmarks.txt"), emb, MODEL_ZIP)
+# Get test budget from environment variable (for models trained with budget feature)
+test_budget = os.getenv("TEST_BUDGET")
+if test_budget:
+    test_budget = float(test_budget)
+test_agent(str(DATA_DIR/"benchmarks.txt"), emb, MODEL_ZIP, test_budget=test_budget)
 '
 
 run_test () {
   local LABEL="$1"
   local MODEL_ZIP="$2"
+  local TEST_BUDGET="${3:-}"  # Optional budget parameter
   local OUT_XLS="test_results_${LABEL}.xlsx"
 
   if [ ! -f "$MODEL_ZIP" ]; then
@@ -36,8 +42,12 @@ run_test () {
   fi
 
   echo "[RUN] $LABEL -> $MODEL_ZIP"
+  if [ -n "$TEST_BUDGET" ]; then
+    echo "  Using budget: $TEST_BUDGET"
+  fi
   # override SLURM_JOB_ID for sheet naming in Excel
-  SLURM_JOB_ID="$LABEL" python -u - <<PY
+  # Pass TEST_BUDGET as environment variable if provided
+  SLURM_JOB_ID="$LABEL" TEST_BUDGET="$TEST_BUDGET" python -u - <<PY
 MODEL_ZIP="$MODEL_ZIP"
 $DATASET_PY
 PY
@@ -50,9 +60,13 @@ PY
   fi
 }
 
-# Known constrained runs (exact paths)
-run_test "chehab_lag_successk_den2_k5"        "$PROJ_ROOT/eval/best_model_model_12722527/best_model.zip"
-run_test "chehab_lag_successk_den2"       "$PROJ_ROOT/eval/best_model_model_12721724/best_model.zip"
+# Test models with budget feature
+# Format: run_test "label" "model_path" "budget" (budget is optional, use 240, 300, or 1000000)
+# If budget is not specified, it will be randomly selected for each expression
+
+# Models trained with budget feature (from chehab-constr)
+run_test "budget_feature_12761154_budget1000" "$PROJ_ROOT/eval/best_model_model_12761154/best_model.zip" "1000"
+run_test "budget_feature_12763203_budget1000000" "$PROJ_ROOT/eval/best_model_model_12763203/best_model.zip" "1000000"
 
 
 echo

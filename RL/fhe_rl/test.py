@@ -13,7 +13,7 @@ import os
 import torch
 
 
-def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
+def test_agent(expressions_file: str, embeddings_model, model_filepath: str, test_budget: float = None):
     expressions = load_expressions(expressions_file)
     RL_DIR = Path(__file__).resolve().parents[1]
     rules_list = create_rules(str(RL_DIR / "rules.txt"))
@@ -39,6 +39,12 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
     model = model.load(model_filepath)
 
     for _ in range(len(expressions)):
+        # Set budget if specified (for models trained with budget feature)
+        if test_budget is not None:
+            wrapper = env.envs[0]
+            fhe_env = wrapper.env
+            fhe_env.set_test_budget(test_budget)
+        
         obs = env.reset()
 
         wrapper = env.envs[0]
@@ -46,6 +52,7 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
 
         test_expr = fhe_env.initial_expression
         initial_cost = fhe_env.initial_cost
+        budget_used = fhe_env.budget  # Get the budget that was used (set in reset)
         initial_noise_info = estimate_expression_noise(parse_sexpr(test_expr))
 
         done = False
@@ -73,7 +80,7 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
                 "Steps": steps,
                 "Initial Noise Used": initial_noise_info["noise_used"],
                 "Final Noise Used": last_noise_info["noise_used"],
-                
+                "Budget Used": budget_used,
             }
         )
 

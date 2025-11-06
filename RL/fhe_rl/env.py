@@ -44,6 +44,7 @@ class fheEnv(gym.Env):
         self.budget_options = [240, 300, 1000000]  # Fixed budget options
         self.budget_dim = len(self.budget_options)  # One-hot encoding dimension
         self.budget = None  # Current budget for this episode
+        self.test_budget = None  # Budget to use for testing (if set, overrides random selection)
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
@@ -68,8 +69,11 @@ class fheEnv(gym.Env):
         self.initial_expression = self.expression
         self.steps = 0
         self.initial_cost = self.current_cost = self.get_cost(self.expression)
-        # Randomly select a budget from the options
-        self.budget = np.random.choice(self.budget_options)
+        # Use test_budget if set, otherwise randomly select a budget from the options
+        if self.test_budget is not None:
+            self.budget = self.test_budget
+        else:
+            self.budget = np.random.choice(self.budget_options)
         return {
             "observation": self._embed_expression(self.expression),
             "action_mask": self.get_action_mask()
@@ -177,6 +181,16 @@ class fheEnv(gym.Env):
     
     def get_cost(self, expr: str) -> float:
         return calculate_cost(parse_sexpr(expr))
+    
+    def set_test_budget(self, budget: float):
+        """Set a specific budget to use for testing (overrides random selection in reset)."""
+        if budget not in self.budget_options:
+            raise ValueError(f"Budget {budget} not in budget_options {self.budget_options}")
+        self.test_budget = float(budget)
+    
+    def clear_test_budget(self):
+        """Clear the test budget, resume random selection."""
+        self.test_budget = None
     
     def _embed_expression(self, expr: str) -> np.ndarray:
         expr_tree = parse_sexpr(expr)
