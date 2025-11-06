@@ -37,13 +37,15 @@ class fheEnv(gym.Env):
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
+        self.noise_threshold = 300.0  # Default threshold, can be set via set_noise_threshold
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
         self.action_space = spaces.Discrete(len(self.rules.keys()) * self.max_positions)
+        # Observation space: embedding (256) + remaining budget (1) = 257
         self.observation_space = spaces.Dict({
             "observation": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(self.embedding_dim,), dtype=np.float32
+                low=-np.inf, high=np.inf, shape=(self.embedding_dim + 1,), dtype=np.float32  # +1 for remaining budget
             ),
             "action_mask": spaces.Box(0, 1, (len(self.rules.keys()) * self.max_positions,), np.float32)
         })
@@ -172,13 +174,29 @@ class fheEnv(gym.Env):
     def get_cost(self, expr: str) -> float:
         return calculate_cost(parse_sexpr(expr))
     
+    def set_noise_threshold(self, noise_threshold: float):
+        """Set the noise budget threshold for constraint calculations."""
+        self.noise_threshold = float(noise_threshold)
+    
     def _embed_expression(self, expr: str) -> np.ndarray:
         expr_tree = parse_sexpr(expr)
         with torch.no_grad():
             emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)
         if emb is None:
             return None
-        return emb.squeeze(0).cpu().numpy().astype(np.float32)
+        emb_np = emb.squeeze(0).cpu().numpy().astype(np.float32)
+        
+        # Calculate remaining budget and append as feature
+        noise_info = estimate_expression_noise(expr)
+        current_noise = noise_info.get("noise_used", 0.0)
+        remaining_budget = self.noise_threshold - current_noise
+        # Normalize by threshold for better learning (scale to [0, 1] range approximately)
+        # If threshold is very large, normalize to avoid huge values
+        normalized_remaining = remaining_budget / max(self.noise_threshold, 1.0)
+        
+        # Append remaining budget as a scalar feature
+        combined_emb = np.concatenate([emb_np, np.array([normalized_remaining], dtype=np.float32)], axis=0)
+        return combined_emb
     
     def get_action_mask(self) -> np.ndarray:
         mask = np.zeros(len(self.rules.keys()) * self.max_positions, dtype=np.float32)

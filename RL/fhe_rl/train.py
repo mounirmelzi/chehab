@@ -10,7 +10,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize,DummyVe
 from .callbacks import linear_schedule, EntCoefScheduler
 from stable_baselines3.common.callbacks import EvalCallback
 from .config import get_rl_algorithm, RLAlgorithm
-from .wrappers import LagrangianVecEnvWrapper
+from .wrappers import LagrangianVecEnvWrapper, LagrangianPerStepViolationWrapper, LagrangianAlwaysOnDoneWrapper, LagrangianAlwaysPerStepWrapper
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -103,25 +103,55 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     tensorboard_log_dir = f"./tensorboard/{run_name}"
     def make_env(): return Monitor(fheEnv(rules_list, expressions, max_positions=max_positions, embeddings_model=embeddings_model))
 
-    env = SubprocVecEnv([
-        make_env for _ in range(num_envs)
-    ], start_method='spawn')    
-    env = LagrangianVecEnvWrapper(env) # Use the Lagrangian wrapper
-
-    val_env = DummyVecEnv([
-        lambda: Monitor(fheEnv(rules_list, benchmarks, max_positions=max_positions,embeddings_model=embeddings_model))
-    ])
-    val_env = LagrangianVecEnvWrapper(val_env) # Use the Lagrangian wrapper
-
-    ent_schedule = linear_schedule(0.1)
-
     noise_threshold = 300.0
     lagrange_delay = 0
     denom_factor = 4
     n_steps = 2048
+    
+    # Create environment factory with noise threshold
+    def make_env_with_threshold():
+        env_instance = Monitor(fheEnv(rules_list, expressions, max_positions=max_positions, embeddings_model=embeddings_model))
+        env_instance.env.set_noise_threshold(noise_threshold)  # Set threshold on underlying env
+        return env_instance
+    
+    env = SubprocVecEnv([
+        make_env_with_threshold for _ in range(num_envs)
+    ], start_method='spawn')
+    
+    # Select wrapper based on environment variable for ablation studies
+    wrapper_type = os.getenv("LAGRANGIAN_WRAPPER", "default")  # default, per_step_violation, always_on_done, always_per_step
+    if wrapper_type == "per_step_violation":
+        env = LagrangianPerStepViolationWrapper(env)  # Ablation 1: Penalize on all steps when violation
+    elif wrapper_type == "always_on_done":
+        env = LagrangianAlwaysOnDoneWrapper(env)  # Ablation 2: Always penalize at episode end (no violation check)
+    elif wrapper_type == "always_per_step":
+        env = LagrangianAlwaysPerStepWrapper(env)  # Ablation 3: Always penalize on all steps (no checks)
+    else:
+        env = LagrangianVecEnvWrapper(env)  # Default: Penalize only on done + violation
 
+    # Create validation environment with noise threshold
+    def make_val_env():
+        val_env_instance = Monitor(fheEnv(rules_list, benchmarks, max_positions=max_positions,embeddings_model=embeddings_model))
+        val_env_instance.env.set_noise_threshold(noise_threshold)  # Set threshold on underlying env
+        return val_env_instance
+    
+    val_env = DummyVecEnv([make_val_env])
+    
+    # Use same wrapper for validation
+    if wrapper_type == "per_step_violation":
+        val_env = LagrangianPerStepViolationWrapper(val_env)
+    elif wrapper_type == "always_on_done":
+        val_env = LagrangianAlwaysOnDoneWrapper(val_env)
+    elif wrapper_type == "always_per_step":
+        val_env = LagrangianAlwaysPerStepWrapper(val_env)
+    else:
+        val_env = LagrangianVecEnvWrapper(val_env)
+
+    # Set threshold on wrappers (for penalty calculations)
     env.set_noise_threshold(noise_threshold)
     val_env.set_noise_threshold(noise_threshold)
+
+    ent_schedule = linear_schedule(0.1)
 
     model_params = {
         "policy": HierarchicalMaskablePolicy,
@@ -155,7 +185,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes=f"Lagrangian PPO [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay}): noise_threshold={noise_threshold} denom_factor={denom_factor}"
+        notes=f"Lagrangian PPO wrapper={wrapper_type} [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay}): noise_threshold={noise_threshold} denom_factor={denom_factor}"
     )
 
     num_benchmarks = len(benchmarks)

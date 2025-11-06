@@ -14,7 +14,7 @@
 
 
 source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
-conda activate chehabEnv
+conda activate chehab
 
 cd RL
 stdbuf -oL -eL python -m fhe_rl --tokenizer_type dynamic test
