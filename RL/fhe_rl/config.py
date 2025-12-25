@@ -14,6 +14,13 @@ class RLAlgorithm(enum.Enum):
     LAGRANGIAN_PPO = "LAGRANGIAN_PPO"
 
 
+class BudgetStrategy(enum.Enum):
+    NONE = "none"
+    ONE_HOT = "one_hot"
+    BUDGET_THRESHOLD = "budget_threshold"
+    REMAINING_BUDGET = "remaining_budget"
+
+
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent  # Go up to RL/ directory
 FHE_RL_DIR = Path(__file__).parent
@@ -38,6 +45,16 @@ AGENT_CONFIG = {
     "device": "cuda" if torch.cuda.is_available() else "cpu",
     "algorithm": RLAlgorithm.LAGRANGIAN_PPO,
 }
+
+# Budget strategy configuration
+DEFAULT_BUDGET_STRATEGY = os.getenv("BUDGET_STRATEGY", BudgetStrategy.NONE.value)
+BUDGET_OPTIONS = [200, 250, 300, 350, 400, 500, 600, 700, 1000, 9_000_000]
+MIN_DYNAMIC_BUDGET = 100.0
+MAX_DYNAMIC_BUDGET = 1000.0
+INFINITE_BUDGET_THRESHOLD = 1000.0  # >1000 is infinite/unconstrained
+INFINITE_BUDGET_VALUE = 9_000_000.0
+INFINITE_BUDGET_LABEL = "infinite"
+DEFAULT_INFINITE_PROB = float(os.getenv("DYNAMIC_BUDGET_INFINITE_PROB", "0.15"))
 
 def get_model_path(model_key):
     """
@@ -83,6 +100,35 @@ def get_rl_algorithm() -> RLAlgorithm:
     """
     return AGENT_CONFIG["algorithm"]
 
+
+def get_budget_strategy() -> BudgetStrategy:
+    """
+    Return the active budget strategy (env var overrides config).
+    """
+    value = os.getenv("BUDGET_STRATEGY", DEFAULT_BUDGET_STRATEGY)
+    try:
+        return BudgetStrategy(value)
+    except ValueError:
+        return BudgetStrategy.NONE
+
+
+def parse_budget_list(budget_str: str):
+    """
+    Parse comma-separated budgets (supports 'inf'/'infinite').
+    """
+    if not budget_str:
+        return []
+    entries = []
+    for token in budget_str.split(","):
+        cleaned = token.strip().lower()
+        if not cleaned:
+            continue
+        if cleaned in {"inf", "infinite", "unlimited"}:
+            entries.append(INFINITE_BUDGET_VALUE)
+        else:
+            entries.append(float(cleaned))
+    return entries
+
 def print_config():
     """
     Print the current configuration
@@ -92,6 +138,7 @@ def print_config():
     print(f"Default vocab size: {get_vocab_size()}")
     print(f"Device: {get_device()}")
     print(f"RL Algorithm: {get_rl_algorithm().value}")
+    print(f"Budget Strategy: {get_budget_strategy().value}")
     print("\nModel paths:")
     for key, path in MODEL_PATHS.items():
         status = "✓" if path.exists() else "✗"

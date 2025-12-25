@@ -9,7 +9,9 @@ from .utils import load_embeddings
 from .TRAE_bpe import BPETokenizer  # Import for pickle compatibility
 from .config import (
     get_model_path, get_tokenizer_type, 
-    print_config
+    print_config,
+    parse_budget_list,
+    BudgetStrategy,
 )
 
 
@@ -37,9 +39,29 @@ def parse_arguments(args=None):
     
     # Train command
     train_parser = subparsers.add_parser('train', help='Train the agent')
+    train_parser.add_argument(
+        '--budget_strategy',
+        choices=[strategy.value for strategy in BudgetStrategy],
+        default=None,
+        help='Override budget strategy for this training run'
+    )
     
     # Test command
     test_parser = subparsers.add_parser('test', help='Test the agent')
+    test_parser.add_argument('--model_path', type=str, default=None, 
+                           help='Path to model .zip file (overrides config)')
+    test_parser.add_argument(
+        '--budget_strategy',
+        choices=[strategy.value for strategy in BudgetStrategy],
+        default=None,
+        help='Override budget strategy for this test run'
+    )
+    test_parser.add_argument(
+        '--budgets',
+        type=str,
+        default=None,
+        help='Comma separated list of budgets to evaluate (use "inf" for infinite)'
+    )
     
     # Run command
     run_parser = subparsers.add_parser('run', help='Run the agent')
@@ -97,14 +119,34 @@ def main(args=None):
 
     # ────────────────────────────── TRAIN ─────────────────────────────
     if mode == "train":
+        if parsed_args.budget_strategy:
+            os.environ["BUDGET_STRATEGY"] = parsed_args.budget_strategy
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
         train_agent("./fhe_rl/datasets/final_llm_dataset.txt", embeddings)
 
     # ─────────────────────────────── TEST ─────────────────────────────
     elif mode == "test":
+        if parsed_args.budget_strategy:
+            os.environ["BUDGET_STRATEGY"] = parsed_args.budget_strategy
+
+        # Use model_path from args if provided, otherwise from config
+        if hasattr(parsed_args, 'model_path') and parsed_args.model_path:
+            agent_zip = parsed_args.model_path
+        else:
+            # Try environment variable first, then config
+            agent_zip = os.getenv("MODEL_PATH", None)
+            if not agent_zip:
         agent_zip = get_model_path("agent_model")
+        budget_list = parse_budget_list(parsed_args.budgets) if parsed_args.budgets else None
+        
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip)
+        test_agent(
+            "./fhe_rl/datasets/benchmarks.txt",
+            embeddings,
+            agent_zip,
+            budgets=budget_list,
+            budget_strategy_override=parsed_args.budget_strategy,
+        )
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":

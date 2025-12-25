@@ -12,9 +12,20 @@
 #SBATCH -o logs/output.test.txt
 #SBATCH -e logs/error.test.txt
 
+# Set MODEL_PATH environment variable to test a specific model
+# Example: export MODEL_PATH="/scratch/mxa5343/chehab-constr-picked-agent/chehab/RL/eval/best_model_model_12767812/best_model.zip"
+# Or pass via command line: sbatch --export=MODEL_PATH=/path/to/model.zip scripts/test.sbatch
 
 source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
 conda activate chehab
 
-cd RL
+export PROJ_ROOT="/scratch/mxa5343/chehab-constr-picked-agent/chehab"
+cd "$PROJ_ROOT/RL"
+export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:$PYTHONPATH"
+
+# Use MODEL_PATH if set, otherwise use --model_path argument if provided
+if [ -n "$MODEL_PATH" ]; then
+    stdbuf -oL -eL python -m fhe_rl --tokenizer_type dynamic test --model_path "$MODEL_PATH"
+else
 stdbuf -oL -eL python -m fhe_rl --tokenizer_type dynamic test
+fi

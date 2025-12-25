@@ -1,0 +1,115 @@
+\subsection{Constrained Reinforcement Learning Formulation}
+
+We formulate the FHE vectorization optimization as a constrained reinforcement learning problem. The objective is to learn a policy $\pi_\theta$ that maximizes the expected cost reduction while ensuring that the noise consumption remains within a specified budget.
+
+\subsubsection{Problem Formulation}
+
+Let $\mathcal{E}$ denote the set of FHE expressions to be optimized. For each expression $e \in \mathcal{E}$, the agent interacts with the environment by selecting a sequence of rewriting rules $\tau = (a_1, a_2, \ldots, a_T)$, where $a_t$ represents the application of a rewriting rule at step $t$, and $T$ is the episode length. The state $s_t$ at step $t$ is the current expression after applying rules $(a_1, \ldots, a_{t-1})$.
+
+The base reward function $r(s_t, a_t)$ measures the cost reduction achieved by applying action $a_t$ in state $s_t$:
+
+\begin{equation}
+r(s_t, a_t) = \begin{cases}
+\frac{c(s_t) - c(s_{t+1})}{c(s_t)} & \text{if } t < T \\
+\frac{c(s_0) - c(s_T)}{c(s_0)} \times 100 & \text{if } t = T
+\end{cases}
+\label{eq:base-reward}
+\tag{7}
+\end{equation}
+
+where $c(s)$ denotes the cost of expression $s$, $s_0$ is the initial expression, and $s_{t+1}$ is the expression after applying action $a_t$ in state $s_t$.
+
+The noise constraint requires that the final noise consumption $n(s_T)$ does not exceed a threshold $\bar{n}$:
+
+\begin{equation}
+n(s_T) \leq \bar{n}
+\label{eq:noise-constraint}
+\tag{8}
+\end{equation}
+
+where $n(s)$ denotes the noise consumption of expression $s$ computed along the longest path in the computation graph.
+
+\subsubsection{Lagrangian PPO Formulation}
+
+We employ Lagrangian PPO to solve the constrained optimization problem. The constrained RL objective is:
+
+\begin{equation}
+\max_{\pi_\theta} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{T} \gamma^t r(s_t, a_t) \right] \quad \text{subject to} \quad \mathbb{E}_{\tau \sim \pi_\theta} \left[ \max(0, n(s_T) - \bar{n}) \right] \leq 0
+\label{eq:constrained-objective}
+\tag{9}
+\end{equation}
+
+where $\gamma \in [0,1]$ is the discount factor and $\pi_\theta$ is a policy parameterized by $\theta$.
+
+The Lagrangian relaxation of this problem is:
+
+\begin{equation}
+\mathcal{L}(\theta, \lambda) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{T} \gamma^t r(s_t, a_t) - \lambda \max(0, n(s_T) - \bar{n}) \right]
+\label{eq:lagrangian}
+\tag{10}
+\end{equation}
+
+where $\lambda \geq 0$ is the Lagrange multiplier (penalty coefficient).
+
+We solve this using a primal-dual approach, alternating between:
+\begin{enumerate}
+\item \textbf{Primal update:} Optimize the policy $\pi_\theta$ using PPO to maximize the Lagrangian $\mathcal{L}(\theta, \lambda)$.
+\item \textbf{Dual update:} Update the Lagrange multiplier $\lambda$ based on constraint violation.
+\end{enumerate}
+
+\subsubsection{Reward Shaping with Lagrangian Penalty}
+
+In practice, we incorporate the constraint violation directly into the reward signal through reward shaping. The modified reward $\tilde{r}(s_t, a_t)$ is:
+
+\begin{equation}
+\tilde{r}(s_t, a_t) = \begin{cases}
+r(s_t, a_t) & \text{if } t < T \\
+r(s_T, a_T) - \lambda \cdot \delta & \text{if } t = T \text{ and } \delta > 0
+\end{cases}
+\label{eq:modified-reward}
+\tag{11}
+\end{equation}
+
+where $\delta = n(s_T) - \bar{n}$ is the constraint violation. This formulation applies the penalty only at episode termination when a violation occurs ($\delta > 0$), allowing the agent to explore freely during the episode while being penalized for final constraint violations. The penalty is proportional to the magnitude of the violation.
+
+\subsubsection{Lagrange Multiplier Update}
+
+The Lagrange multiplier $\lambda$ is updated iteratively based on the average constraint violation observed on a validation set $\mathcal{E}_{\text{val}}$:
+
+\begin{equation}
+\lambda^{(k+1)} = \begin{cases}
+\lambda^{(k)} + \alpha \cdot \left( \bar{n}_{\text{val}}^{(k)} - \bar{n} \right) & \text{if } \bar{n}_{\text{val}}^{(k)} > \bar{n} \\
+\max\left(0, \lambda^{(k)} - \alpha\right) & \text{otherwise}
+\end{cases}
+\label{eq:lambda-update}
+\tag{12}
+\end{equation}
+
+where $\lambda^{(k)}$ is the multiplier at iteration $k$, $\alpha = 0.01$ is the learning rate for the multiplier update, and $\bar{n}_{\text{val}}^{(k)} = \frac{1}{|\mathcal{E}_{\text{val}}|} \sum_{e \in \mathcal{E}_{\text{val}}} n(s_T^{(e)})$ is the average noise consumption on the validation set at iteration $k$. The update is performed after every $K$ policy optimization steps, where $K$ is determined by the number of environment steps per Lagrange iteration.
+
+This update rule increases $\lambda$ when the constraint is violated (encouraging more conservative policies) and decreases it when the constraint is satisfied (allowing more aggressive optimization). The multiplier is constrained to be non-negative.
+
+\subsubsection{PPO Policy Optimization}
+
+The policy $\pi_\theta$ is optimized using Proximal Policy Optimization (PPO) with the clipped objective:
+
+\begin{equation}
+L^{\text{CLIP}}(\theta) = \mathbb{E}_t \left[ \min\left( r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
+\label{eq:ppo-clip}
+\tag{13}
+\end{equation}
+
+where $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)}$ is the importance sampling ratio, $\hat{A}_t$ is the advantage estimate computed using Generalized Advantage Estimation (GAE), and $\epsilon$ is the clipping parameter.
+
+The value function $V_\phi(s)$ is learned to minimize:
+
+\begin{equation}
+L^{\text{VF}}(\phi) = \mathbb{E}_t \left[ \left( V_\phi(s_t) - \hat{R}_t \right)^2 \right]
+\label{eq:value-loss}
+\tag{14}
+\end{equation}
+
+where $\hat{R}_t$ is the return estimate computed using the modified rewards $\tilde{r}(s_t, a_t)$.
+
+The complete training procedure alternates between policy optimization (using PPO with modified rewards) and Lagrange multiplier updates (based on validation performance), ensuring that the learned policy balances cost optimization with noise constraint satisfaction.
+

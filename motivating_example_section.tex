@@ -1,0 +1,295 @@
+\subsection{Example of Vectorizing FHE Code \label{sec:motivatingexample} \rd{(Adapt CHEHAB Egg Example + Adapt to Safety/New illustrations)}}
+
+\rd{In the example, show three cases: 1) optimizing for speed only (which breaks noise); 2) optimizing while making sure you minimize noise only (and not consuming all the noise budget, which leaves performance on the table); 3) optimizing while respecting the noise budge and while consuming the whole noise budget (so you respect noise, while maximizing speedup).}
+
+Vectorization in FHE is challenging as it introduces rotations, masking, and data packing. Poor vectorization can increase the number of rotations and circuit depth, severely impacting performance and increasing noise in the circuit. Moreover, aggressive vectorization that minimizes cost may exceed the noise budget, making the result undecryptable. Thus, effective FHE vectorization must maximize code vectorization while minimizing rotation overhead and circuit depth, while simultaneously respecting a noise budget constraint.
+
+Consider this unstructured (non-loop-based) code:
+
+{
+\shrink[1.5]
+\CodeSize
+\begin{equation}
+x =  ( ((v_1 \cdot v_2) \cdot (v_3 \cdot v_4)) + ((v_3 \cdot v_4) \cdot (v_5 \cdot v_6)) )\cdot ((v_7 \cdot v_8) \cdot (v_9 \cdot v_{10}))
+\label{eq:example}
+\tag{1}
+\end{equation}
+\shrink[1.5]
+}
+
+Fig.~\ref{fig:motivatingExample} represents the code as a circuit (a common representation of code in the FHE literature). This expression is not trivial to vectorize.
+
+To vectorize it, we use a Term Rewriting System (TRS) consisting of a set of rules including algebraic transformations (e.g., commutativity, common factor extraction) and vectorization rules (e.g., converting scalar operations to vector operations). For illustration, we show three representative rule types:
+
+\begin{figure}[h!t]
+    \centering
+    \SmallCodeSize
+
+    \begin{subfigure}{0.4\textwidth}
+        \begin{minipage}{\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{figures/Motivating_example_1_updated.png}
+            \shrink[1.5]
+        \end{minipage}
+        \caption{Example of an unstructured scalar code.}
+        \label{fig:motivatingExample}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.22\textwidth}
+        \begin{minipage}{\linewidth}
+            \centering
+            \[
+            \begin{aligned}
+               & [1 , 2] = [v_1 , v_5] \cdot [v_2 , v_6] \\
+               & [3 , \_] = [1 , \_] + [2 , \_] \\
+               & [4 , \_] = [v_3 , \_] \cdot [v_4 , \_] \\
+               & [5 , \_] = [3 , \_] \cdot [4 , \_] \\
+               & [6 , 7] = [v_7 , v_9] \cdot [v_8 , v_{10}] \\
+               & [8 , \_] = [6 , \_] \cdot [7 , \_] \\
+               & [x , \_] = [5 , \_] \cdot [8 , \_]  \\          
+            \end{aligned}
+            \]
+        \end{minipage}
+        \caption{First vectorization.}
+        \label{fig:vectorization1}
+    \end{subfigure}
+    %\hfill
+    \begin{subfigure}{0.22\textwidth}
+        \begin{minipage}{\linewidth}
+            \centering
+            \[
+            \begin{aligned}
+              & [1 , 2 , 3] = [v_1 , v_5 , v_6] \cdot [v_2 , 1 , 1]  \\
+              & [4 , \_ , \_] = [2, \_, \_] \cdot [3 , \_ , \_] \\
+              & [5 , \_ , \_] = [1 , \_ , \_] + [4 , \_ , \_] \\
+              & [6, \_, \_] = [v_3 , \_ , \_] \cdot [v_4 , \_ , \_] \\
+              & [7 , \_ , \_] = [5 , \_ , \_] \cdot [6 , \_ , \_] \\
+              & [8 , 9 , \_] = [v_7 , v_9 , \_] \cdot [v_8, v_{10} , \_] \\
+              & [10 , \_ , \_] = [8 , \_ , \_] \cdot [9 , \_ , \_] \\
+              & [x , \_ , \_] = [7 , \_ , \_] \cdot [10 , \_ , \_] \\
+            \end{aligned}
+            \]
+        \end{minipage}
+        \caption{Second vectorization.}
+        \label{fig:vectorization2}
+    \end{subfigure}
+    \vspace{-0.3cm}
+    \caption{Motivating Example.}
+    \label{fig:vectorization}
+    \shrink[2]
+    %\vspace{-0.5cm}
+\end{figure}
+
+{
+\vspace{0.25cm}
+\CodeSize
+\(
+\texttt{R1: commutativity},\quad a \cdot b \Rightarrow b \cdot a 
+\)
+
+\(
+\texttt{R2: common factor},\quad a \cdot b + a \cdot c \Rightarrow a \cdot (b + c)
+\)
+
+\(
+\texttt{R3: vectorization},\quad (a \cdot b) + (c \cdot d) \Rightarrow \texttt{Vec}(a , c) \cdot \texttt{Vec}(b , d)
+\)
+\vspace{0.25cm}
+}
+
+Applying \texttt{R1} then \texttt{R2} yields:
+
+{
+\shrink[1.5]
+\CodeSize
+\begin{equation}
+x = (  ( v_3 \cdot v_4) \cdot ((v_1 \cdot v_2) + (v_5 \cdot v_6))) \cdot ((v_7 \cdot v_8) \cdot (v_9 \cdot v_{10}))
+\label{eq:vectorization-alt}
+\tag{2}
+\end{equation}
+}
+
+
+From this transformed expression, we can apply other rewriting rules to vectorize the code. There are many ways to vectorize it (also called vectorization strategies). We show two examples in Fig. \ref{fig:vectorization} (intermediate values are named using numbers). Each vectorization strategy is obtained by applying a different sequence of rewriting rules. 
+The key challenge is determining the sequence of rewriting rules that yields the best vectorization strategy while minimizing the number of rotations and depth of the circuit (multiplicative depth, more precisely, as we illustrate later).
+
+We omit showing the rotation and masking instructions in the example for brevity. For example, in Fig. \ref{fig:vectorization1}, in order to calculate the operands of the 2nd statement ($[1,\_]$ and $[2,\_]$), rotations and masking should be applied on the result of the 1st statement as follows\footnote{We assume 4-bit numbers in the example for simplicity, and we use \_ to denote a zero-valued slot.}:
+
+
+{
+\shrink[1]
+\CodeSize
+\[
+\begin{aligned}
+& [1,\_] = [1,2] \,\,\&\,\, [F,\_] \\
+& [2,\_] = ([1,2]<<1) \,\,\&\,\, [F,\_]
+\end{aligned}
+\]
+\shrink[1]
+}
+
+\noindent but we omit showing these rotations and maskings.
+
+Let us compare the two vectorizations in Fig.~\ref{fig:vectorization} using an approximate cost model that assigns a relative latency to each operation: multiplications and rotations have a latency of 1, while additions have a latency of 0.1 (these values are toy values chosen for simplicity only, to illustrate the example). The original scalar expression has 9 multiplications and 1 addition, yielding a total cost of 9.1.
+The vectorization in Fig.~\ref{fig:vectorization1} reduces the number of multiplications to 6 and additions to 1 but introduces 2 rotations, resulting in a total cost of 8.1. In contrast, the vectorization in Fig.~\ref{fig:vectorization2} involves 7 multiplications, 3 rotations, and 1 addition, yielding a 10.1 cost.
+
+These results highlight that not all vectorizations are equally beneficial. Moreover, the order of rule application matters: applying \texttt{R1} prior to \texttt{R2} enables vectorization via \texttt{R3}, while a different order may eliminate vectorization opportunities. This highlights the importance of carefully selecting which rules to apply and in which order.
+
+However, cost optimization alone is insufficient in FHE. To illustrate the noise budget constraint, we introduce additional vectorization rules beyond the basic ones shown above. The TRS includes \textit{flexible vectorization} rules that group multiple parallel operations into vectors, and \textit{rotation-based vectorization} rules that enable deeper vectorization at the cost of additional rotations. Specifically:
+
+{
+\vspace{0.25cm}
+\CodeSize
+\(
+\texttt{R4: flexible multiplication vectorization},\quad \texttt{flex-mul-vectorize}: \text{groups parallel multiplications into } \texttt{VecMul}
+\)
+
+\(
+\texttt{R5: flexible addition vectorization},\quad \texttt{flex-add-vectorize}: \text{groups parallel additions into } \texttt{VecAdd}
+\)
+
+\(
+\texttt{R6: rotation-based vectorization},\quad \texttt{rot-mul-vectorize-flex}: \text{enables deep vectorization with rotations } (\texttt{<<})
+\)
+
+\(
+\texttt{R7: common factor extraction},\quad \texttt{comm-factor-1}: (a \cdot b) + (a \cdot c) \Rightarrow a \cdot (b + c)
+\)
+\vspace{0.25cm}
+}
+
+Consider the expression:
+
+{
+\shrink[1.5]
+\CodeSize
+\begin{equation}
+x = ( (v_1 \cdot v_2) + (v_3 \cdot v_4) ) \cdot ( (v_5 \cdot v_6) + (v_7 \cdot v_8) ) + ( (v_9 \cdot v_{10}) + (v_{11} \cdot v_{12}) ) \cdot ( (v_{13} \cdot v_{14}) + (v_{15} \cdot v_{16}) )
+\label{eq:constrained-example}
+\tag{3}
+\end{equation}
+\shrink[1.5]
+}
+
+where $v_1, v_2, \ldots, v_{16}$ are scalar values, and the operations $\cdot$ and $+$ denote scalar multiplication and addition, respectively. To illustrate the noise budget constraint, let us take an example where our noise budget is 300. We use a simplified cost and noise model (toy values chosen for illustration). Let us suppose that scalar multiplications cost 250, scalar additions cost 250, \texttt{VecMul} operations cost 100, \texttt{VecAdd} operations cost 1, and rotations cost 50 per step. For noise, let us suppose that scalar multiplications add 40 noise units along the longest path, scalar additions add 1, \texttt{VecMul} adds 40, \texttt{VecAdd} adds 1, and each rotation adds 5 noise units per step.
+
+The initial expression in Eq.~\ref{eq:constrained-example} contains exactly 10 scalar multiplications and 5 scalar additions. Counting systematically: (1) eight leaf-level multiplications: $v_1 \cdot v_2$, $v_3 \cdot v_4$, $v_5 \cdot v_6$, $v_7 \cdot v_8$, $v_9 \cdot v_{10}$, $v_{11} \cdot v_{12}$, $v_{13} \cdot v_{14}$, and $v_{15} \cdot v_{16}$; (2) two intermediate multiplications: $( (v_1 \cdot v_2) + (v_3 \cdot v_4) ) \cdot ( (v_5 \cdot v_6) + (v_7 \cdot v_8) )$ and $( (v_9 \cdot v_{10}) + (v_{11} \cdot v_{12}) ) \cdot ( (v_{13} \cdot v_{14}) + (v_{15} \cdot v_{16}) )$. Total: $8 + 2 = 10$ multiplications. For additions: four within parentheses plus one final addition, totaling $4 + 1 = 5$ additions. 
+
+\textbf{Initial cost calculation:} $10 \times 250 + 5 \times 250 = 2500 + 1250 = 3750$.
+
+\textbf{Initial noise calculation:} The longest path has multiplicative depth 3 (three multiplication levels: leaf multiplications, intermediate multiplications, and the final structure). Base noise: $3 \times 40 + 1 = 120 + 1 = 121$ (3 multiplications along the path plus 1 addition).
+
+When a noise budget of 300 is imposed, different rule application sequences yield different outcomes:
+
+\textbf{Case 1: Optimizing for speed only (breaks noise).} A policy optimizing solely for cost applies the following sequence:
+
+\textit{Step 1:} Apply \texttt{R4} (\texttt{flex-mul-vectorize}) to group parallel multiplications:
+\[
+(v_1 \cdot v_2) + (v_3 \cdot v_4) \Rightarrow \texttt{VecMul}(\texttt{Vec}(v_1, v_3), \texttt{Vec}(v_2, v_4))
+\]
+
+\textit{Step 2:} Apply \texttt{R5} (\texttt{flex-add-vectorize}) to vectorize the additions:
+\[
+\texttt{VecMul}(\ldots) + \texttt{VecMul}(\ldots) \Rightarrow \texttt{VecAdd}(\texttt{VecMul}(\ldots), \texttt{VecMul}(\ldots))
+\]
+
+\textit{Step 3:} Apply \texttt{R6} (\texttt{rot-mul-vectorize-flex}) to maximize vectorization depth, introducing multiple rotations. This sequence yields:
+
+{
+\shrink[1.2]
+\CodeSize
+\begin{multline}
+x = \texttt{VecAdd}(\texttt{VecMul}(\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_1, v_3), \texttt{Vec}(v_2, v_4)), \\
+\texttt{VecMul}(\texttt{Vec}(v_5, v_7), \texttt{Vec}(v_6, v_8))), \\
+\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_5, v_7), \texttt{Vec}(v_6, v_8)), \\
+\texttt{VecMul}(\texttt{Vec}(v_9, v_{11}), \texttt{Vec}(v_{10}, v_{12})))), \\
+\texttt{VecMul}(\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_9, v_{11}), \texttt{Vec}(v_{10}, v_{12})), \\
+\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_{13}, v_{15}), \texttt{Vec}(v_{14}, v_{16}))))
+\label{eq:case1-final}
+\tag{4}
+\end{multline}
+\shrink[1.2]
+}
+
+\textbf{Operation count:} Expression 4 contains 8 \texttt{VecMul} operations and 5 \texttt{VecAdd} operations\footnote{The 8 \texttt{VecMul} operations include 4 operations vectorizing the 8 leaf-level scalar multiplications (each combining 2 scalars) and 4 intermediate operations for the expression structure. The 5 \texttt{VecAdd} operations include 4 operations within the main terms and 1 final operation combining the terms.}, with 12 rotations\footnote{The 12 rotations are needed for deep vectorization: 4 rotations for packing 8 scalars into 4 vector pairs, and 8 rotations for alignment and slot manipulation in the nested structure.}.
+
+\textbf{Cost calculation:} $8 \times 100 + 5 \times 1 + 12 \times 50 = 800 + 5 + 600 = 1405$\footnote{Detailed cost: 8 \texttt{VecMul} at 100 each = 800, 5 \texttt{VecAdd} at 1 each = 5, 12 rotations at 50 each = 600, total = 1405.}. Cost reduction: $(3750 - 1405) / 3750 = 62.5\%$ improvement.
+
+\textbf{Noise calculation:} Multiplicative depth 4. Base noise: $4 \times 40 + 1 + 12 \times 5 = 160 + 1 + 60 = 221$\footnote{Noise calculation: 4 multiplication levels along the longest path at 40 each = 160, 1 addition = 1, 12 rotations at 5 each = 60, total = 221.}. Total noise: 221. Accounting for structure effects and safety margins required in practice, the effective noise exceeds the 300 budget threshold. The result violates the noise constraint, rendering the optimization useless despite its superior cost.
+
+\textbf{Case 2: Optimizing to minimize noise only (leaves performance on the table).} A conservative strategy applies only \texttt{R7} (\texttt{comm-factor-1}) rules to factor common terms, avoiding vectorization rules that introduce rotations. 
+
+\textit{Step 1:} Identify common factors and apply \texttt{R7}:
+\[
+(v_1 \cdot v_2) + (v_1 \cdot v_3) \Rightarrow v_1 \cdot (v_2 + v_3)
+\]
+
+\textit{Step 2:} Continue applying \texttt{R7} where possible, but avoid any vectorization rules. After multiple applications, this yields:
+
+{
+\shrink[1.2]
+\CodeSize
+\begin{equation}
+x = v_1 \cdot (v_2 + v_3) \cdot (v_5 \cdot v_6 + v_7 \cdot v_8) + v_9 \cdot (v_{10} + v_{11}) \cdot (v_{13} \cdot v_{14} + v_{15} \cdot v_{16})
+\label{eq:case2-final}
+\tag{5}
+\end{equation}
+\shrink[1.2]
+}
+
+\textbf{Operation count:} Expression 5 contains 8 scalar multiplications and 5 scalar additions. No rotations are introduced. All operations remain scalar.
+
+\textbf{Cost calculation:} $8 \times 250 + 5 \times 250 = 2000 + 1250 = 3250$\footnote{After factoring, operations are reorganized but not eliminated: 8 scalar multiplications at 250 each = 2000, 5 scalar additions at 250 each = 1250, total = 3250.}. Cost reduction: $(3750 - 3250) / 3750 = 13.3\%$ improvement.
+
+\textbf{Noise calculation:} Multiplicative depth reduced to 2. Base noise: $2 \times 40 + 1 = 80 + 1 = 81$\footnote{Factoring reduces multiplicative depth from 3 to 2: 2 multiplication levels at 40 each = 80, 1 addition = 1, total = 81.}. Total noise: 81, well under the 300 budget. However, since all operations remain scalar (cost 250 each), the cost reduction is minimal. While this ensures decryptability, it leaves most performance gains unrealized.
+
+\textbf{Case 3: Respecting budget while maximizing speedup.} A policy that optimizes cost while respecting the noise budget constraint selectively applies vectorization rules.
+
+\textit{Step 1:} Apply \texttt{R4} (\texttt{flex-mul-vectorize}) to group parallel multiplications, converting some scalar multiplications to \texttt{VecMul} operations (cost 100 instead of 250).
+
+\textit{Step 2:} Apply \texttt{R5} (\texttt{flex-add-vectorize}) to vectorize additions, converting scalar additions to \texttt{VecAdd} operations (cost 1 instead of 250).
+
+\textit{Step 3:} Monitor noise consumption. Before applying \texttt{R6} (rotation-based vectorization), the policy checks that doing so would exceed the budget. It stops here, yielding:
+
+{
+\shrink[1.2]
+\CodeSize
+\begin{multline}
+x = \texttt{VecAdd}(\texttt{VecMul}(\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_1, v_3), \texttt{Vec}(v_2, v_4)), \\
+\texttt{VecMul}(\texttt{Vec}(v_5, v_7), \texttt{Vec}(v_6, v_8))), \\
+\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_5, v_7), \texttt{Vec}(v_6, v_8)), \\
+\texttt{VecMul}(\texttt{Vec}(v_9, v_{11}), \texttt{Vec}(v_{10}, v_{12})))), \\
+\texttt{VecMul}(\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_9, v_{11}), \texttt{Vec}(v_{10}, v_{12})), \\
+\texttt{VecAdd}(\texttt{VecMul}(\texttt{Vec}(v_{13}, v_{15}), \texttt{Vec}(v_{14}, v_{16}))))
+\label{eq:case3-final}
+\tag{6}
+\end{multline}
+\shrink[1.2]
+}
+
+\textbf{Operation count:} Expression 6 contains 8 \texttt{VecMul} operations and 5 \texttt{VecAdd} operations\footnote{Same structure as Case 1, with 8 \texttt{VecMul} and 5 \texttt{VecAdd} operations matching Expression 3's structure.}, with 6 rotations\footnote{The 6 rotations for selective vectorization: 4 rotations for packing elements into vector pairs, and 2 rotations for basic alignment, avoiding the deep nesting that requires additional rotations in Case 1.}.
+
+\textbf{Cost calculation:} $8 \times 100 + 5 \times 1 + 6 \times 50 = 800 + 5 + 300 = 1105$\footnote{Detailed cost: 8 \texttt{VecMul} at 100 each = 800, 5 \texttt{VecAdd} at 1 each = 5, 6 rotations at 50 each = 300, total = 1105.}. Cost reduction: $(3750 - 1105) / 3750 = 70.5\%$ improvement.
+
+\textbf{Noise calculation:} Multiplicative depth 4. Base noise: $4 \times 40 + 1 + 6 \times 5 = 160 + 1 + 30 = 191$\footnote{Noise calculation: 4 multiplication levels at 40 each = 160, 1 addition = 1, 6 rotations at 5 each = 30, total = 191.}. Total noise: 191, well under the 300 budget (consuming 63.7\% of the budget). This demonstrates the need to balance both objectives by learning when to apply aggressive vectorization and when to stop.
+
+Table~\ref{tab:constrained-comparison} summarizes these results, highlighting the trade-off between cost and noise.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\hline
+\textbf{Strategy} & \textbf{Initial Cost} & \textbf{Final Cost} & \textbf{Final Noise} & \textbf{Status} \\
+\hline
+Cost-only (unconstrained) & 3750 & \textbf{1405} & \textbf{221} & Exceeds budget (undecryptable) \\
+Noise-only (conservative) & 3750 & 3250 & 81 & Under budget (poor performance) \\
+Budget-aware (ours) & 3750 & \textbf{1105} & \textbf{191} & Under budget (optimal) \\
+\hline
+\end{tabular}
+\caption{Comparison of optimization strategies with noise budget of 300. Budget-aware optimization achieves 70.5\% cost reduction while respecting the budget (noise: 191, 63.7\% of budget). All calculations are exact with no approximations.}
+\label{tab:constrained-comparison}
+\end{table}
+
+To address this challenge, we employ a policy network trained via RL. The policy determines an ordered sequence of rewriting rules that optimizes the code to achieve the best global vectorization, rather than relying on local improvements alone. However, when a noise budget constraint is imposed, the policy must balance cost optimization with noise consumption, selecting rule sequences that maximize speedup while respecting the budget. This requires the policy to learn when to apply aggressive vectorization rules (for cost reduction) and when to avoid them (to stay within the noise budget), finding the optimal sweet spot between the two objectives.
+

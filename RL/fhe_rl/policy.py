@@ -5,15 +5,39 @@ from typing import Dict, Tuple
 import gymnasium as gym
 from typing import Any, Dict, Tuple, Union
 import numpy as np 
+from .config import get_budget_strategy, BudgetStrategy
+
+
 class CustomFeaturesExtractor(nn.Module):
     def __init__(self, observation_space, features_dim: int = 256):
         super().__init__()
-        # Observation now includes embedding (256) + remaining budget (1) = 257
-        self._embed_dim = observation_space["observation"].shape[0]
-        # Use actual observation dimension (will be 257)
-        self._features_dim = self._embed_dim
+        self.budget_strategy = get_budget_strategy()
+        self.total_obs_dim = observation_space["observation"].shape[0]
+        self.expression_dim = min(256, self.total_obs_dim)
+
+        if self.budget_strategy in (BudgetStrategy.BUDGET_THRESHOLD, BudgetStrategy.REMAINING_BUDGET):
+            # Expect observation = [expression (256), budget_features (2)]
+            self.expression_dim = self.total_obs_dim - 2
+            self.budget_embedder = nn.Sequential(
+                nn.Linear(2, 16),
+                nn.ReLU(),
+                nn.Linear(16, 8),
+                nn.ReLU()
+            )
+            self._features_dim = self.expression_dim + 8
+        else:
+            self.budget_embedder = None
+            self._features_dim = self.total_obs_dim
+
     def forward(self, obs_dict):
-        return obs_dict["observation"]
+        obs = obs_dict["observation"]
+        if self.budget_strategy in (BudgetStrategy.BUDGET_THRESHOLD, BudgetStrategy.REMAINING_BUDGET):
+            expr = obs[:, :self.expression_dim]
+            budget_features = obs[:, self.expression_dim:self.expression_dim + 2]
+            budget_emb = self.budget_embedder(budget_features)
+            return torch.cat([expr, budget_emb], dim=1)
+        return obs
+
     @property
     def features_dim(self):
         return self._features_dim

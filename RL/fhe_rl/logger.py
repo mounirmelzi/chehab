@@ -1,6 +1,7 @@
 import os
 import datetime
 import pandas as pd
+from .config import get_budget_strategy
 
 
 TRAINING_LOG_FILE = "job_logs.xlsx"
@@ -23,6 +24,7 @@ def log_training_details(model_params, job_id, num_data, num_actions, total_time
         "total_timesteps": total_timesteps,
         "Output Model Name": output_model_name,
         "TensorBoard Log Dir": model_params.get("tensorboard_log", ""),
+        "Budget Strategy": get_budget_strategy().value,
         "Notes": notes
     }
     
@@ -37,7 +39,7 @@ def log_training_details(model_params, job_id, num_data, num_actions, total_time
     if df.empty:
         df = pd.DataFrame([log_entry])
     else:
-        df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
+    df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
 
     df.to_excel(TRAINING_LOG_FILE, index=False)
     print(f"Logged training details to {TRAINING_LOG_FILE}")

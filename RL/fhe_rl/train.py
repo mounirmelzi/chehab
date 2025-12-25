@@ -9,12 +9,12 @@ from .logger import log_training_details
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize,DummyVecEnv
 from .callbacks import linear_schedule, EntCoefScheduler
 from stable_baselines3.common.callbacks import EvalCallback
-from .config import get_rl_algorithm, RLAlgorithm
+from .config import get_rl_algorithm, RLAlgorithm, get_budget_strategy
 from .wrappers import LagrangianVecEnvWrapper, LagrangianPerStepViolationWrapper, LagrangianAlwaysOnDoneWrapper, LagrangianAlwaysPerStepWrapper
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 2_000_000, num_envs: int = 8):
+def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 5_000_000, num_envs: int = 8):
     match get_rl_algorithm():
         case RLAlgorithm.PPO:
             train_ppo_agent(expressions_file, embeddings_model, total_timesteps, num_envs)
@@ -70,7 +70,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes="2 level hierarchical PPO max steps 75 and 8 envs"
+        notes=f"Hierarchical PPO | budget_strategy={get_budget_strategy().value}"
     )
     num_benchmarks = len(benchmarks)
     eval_callback = EvalCallback(
@@ -103,10 +103,14 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     tensorboard_log_dir = f"./tensorboard/{run_name}"
     def make_env(): return Monitor(fheEnv(rules_list, expressions, max_positions=max_positions, embeddings_model=embeddings_model))
 
-    noise_threshold = 300.0
-    lagrange_delay = 0
-    denom_factor = 4
+    noise_threshold = float(os.getenv("NOISE_BUDGET", "300.0"))
+    lagrange_delay = int(os.getenv("LAGRANGE_DELAY", "0"))
+    denom_factor = int(os.getenv("DENOM_FACTOR", "2"))  # Lower = more frequent lambda updates
     n_steps = 2048
+    
+    # Allow overriding total_timesteps via environment variable
+    if "TOTAL_TIMESTEPS" in os.environ:
+        total_timesteps = int(os.getenv("TOTAL_TIMESTEPS"))
     
     # Create environment factory with noise threshold
     def make_env_with_threshold():
@@ -185,7 +189,8 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes=f"Lagrangian PPO wrapper={wrapper_type} [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay}): noise_threshold={noise_threshold} denom_factor={denom_factor}"
+        notes=f"Lagrangian PPO wrapper={wrapper_type} budget_strategy={get_budget_strategy().value} "
+              f"Delayed({lagrange_delay}) noise_threshold={noise_threshold} denom_factor={denom_factor}"
     )
 
     num_benchmarks = len(benchmarks)

@@ -13,11 +13,20 @@ class LagrangianVecEnvWrapper(VecEnvWrapper):
     def set_noise_threshold(self, noise_threshold):
         self.noise_threshold = noise_threshold
 
+    @staticmethod
+    def _threshold_from_info(info, default_threshold):
+        if info.get("budget_is_infinite"):
+            return None
+        return info.get("noise_threshold", info.get("budget", default_threshold))
+
     def step_wait(self):
         obs, rewards, dones, infos = self.venv.step_wait()
         for env_index, info in enumerate(infos):
             noise = info.get("noise", 0.0)
-            delta = noise - self.noise_threshold
+            threshold = self._threshold_from_info(info, self.noise_threshold)
+            if threshold is None:
+                continue  # Infinite budget => no penalty
+            delta = noise - threshold
             ON_DONE, ON_VIOLATION = dones[env_index], delta > 0
             if ON_DONE and ON_VIOLATION:
                 rewards[env_index] = rewards[env_index] - (self.lambda_penalty * delta)
@@ -49,7 +58,10 @@ class LagrangianPerStepViolationWrapper(VecEnvWrapper):
         obs, rewards, dones, infos = self.venv.step_wait()
         for env_index, info in enumerate(infos):
             noise = info.get("noise", 0.0)
-            delta = noise - self.noise_threshold
+            threshold = LagrangianVecEnvWrapper._threshold_from_info(info, self.noise_threshold)
+            if threshold is None:
+                continue
+            delta = noise - threshold
             ON_VIOLATION = delta > 0
             # Penalize on ALL steps when violation occurs (removed ON_DONE check)
             if ON_VIOLATION:
@@ -85,7 +97,10 @@ class LagrangianAlwaysOnDoneWrapper(VecEnvWrapper):
         obs, rewards, dones, infos = self.venv.step_wait()
         for env_index, info in enumerate(infos):
             noise = info.get("noise", 0.0)
-            delta = noise - self.noise_threshold
+            threshold = LagrangianVecEnvWrapper._threshold_from_info(info, self.noise_threshold)
+            if threshold is None:
+                continue
+            delta = noise - threshold
             ON_DONE = dones[env_index]
             # Always penalize at episode end (removed ON_VIOLATION check)
             # delta can be negative (bonus) or positive (penalty)
@@ -122,7 +137,10 @@ class LagrangianAlwaysPerStepWrapper(VecEnvWrapper):
         obs, rewards, dones, infos = self.venv.step_wait()
         for env_index, info in enumerate(infos):
             noise = info.get("noise", 0.0)
-            delta = noise - self.noise_threshold
+            threshold = LagrangianVecEnvWrapper._threshold_from_info(info, self.noise_threshold)
+            if threshold is None:
+                continue
+            delta = noise - threshold
             # Always penalize on ALL steps (removed both ON_DONE and ON_VIOLATION checks)
             # delta can be negative (bonus) or positive (penalty)
             rewards[env_index] = rewards[env_index] - (self.lambda_penalty * delta)
