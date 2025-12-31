@@ -438,6 +438,7 @@ void gen_main_code(fheco::param_select::EncParams params,param_select::EncParams
         batch_encoder, decryptor, encrypted_outputs, encoded_outputs, func_slot_count, obtained_clear_outputs);
       print_encrypted_outputs_info(context, decryptor, encrypted_outputs, clog);
       cout <<"execution_time_(ms): "<<elapsed.count() <<"\n"<<std::flush;
+      print_variables_values(obtained_clear_outputs, std::cout);
     }
     )"
     }; 
