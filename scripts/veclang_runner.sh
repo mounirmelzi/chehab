@@ -5,7 +5,7 @@ cse=1
 const_folding=1
 
 cd ../RL
-python -m veclang_runner.generator --veclang_expression_file "path/to/expression.txt"
+python -m veclang_runner.generator --veclang_expression_file "veclang_runner/temp/expression.txt"
 
 cd ..
 cmake -S . -B build
