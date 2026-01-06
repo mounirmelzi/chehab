@@ -37,3 +37,5 @@ add_subdirectory(benchmarks/poly_reg)
 add_subdirectory(benchmarks/polynomials_coyote)
 add_subdirectory(benchmarks/poly_derivative)
 add_subdirectory(benchmarks/discrete_cosin_transform)
+
+add_subdirectory(RL/veclang_runner)
