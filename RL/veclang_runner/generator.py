@@ -17,10 +17,9 @@ class Files(StrEnum):
     FHE_IO_EXAMPLE = "fhe_io_example.txt"
 
 
-def resolve_inputs(node: Expr, inputs: list[str]):
+def resolve_inputs(node: Expr, inputs: set[str]):
     if isinstance(node, Var):
-        name = node.name
-        inputs.append(name)
+        inputs.add(node.name)
         return
 
     if isinstance(node, Op):
@@ -43,7 +42,7 @@ if __name__ == "__main__":
     expression_str = expressions[0]
     expression_parsed = parse_sexpr(expression_str)
 
-    inputs: list[str] = []
+    inputs: set[str] = set()
     resolve_inputs(expression_parsed, inputs)
 
     # Generate vectorized_code.txt

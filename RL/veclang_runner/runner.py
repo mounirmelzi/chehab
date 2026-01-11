@@ -28,46 +28,43 @@ class VeclangRunner:
 
     @property
     def stats(self) -> dict:
-        if self._stats:
-            return self._stats
-        self.run()
         return self._stats
 
     def run(self, *, cse=1, const_folding=1) -> None:
         cwd = os.getcwd()
+        try:
+            run_command(
+                f"python -m veclang_runner.generator --veclang_expression_file {self._expression}"
+            )
 
-        run_command(
-            f"python -m veclang_runner.generator --veclang_expression_file {self._expression}"
-        )
+            os.chdir("..")
 
-        os.chdir("..")
+            run_command("cmake -S . -B build")
 
-        run_command("cmake -S . -B build")
+            os.chdir("build")
 
-        os.chdir("build")
+            run_command("make")
 
-        run_command("make")
+            os.chdir("RL/veclang_runner")
 
-        os.chdir("RL/veclang_runner")
+            result = run_command(f"./veclang_runner {cse} {const_folding}")
+            self._parse_compiler_outputs(stdout=result.stdout)
 
-        result = run_command(f"./veclang_runner {cse} {const_folding}")
-        self._parse_compiler_outputs(stdout=result.stdout)
+            os.chdir("he")
 
-        os.chdir("he")
+            with open(self.GENERATED_CPP_FILE) as file:
+                self._parse_generated_cpp_file(file_content=file.read())
 
-        with open(self.GENERATED_CPP_FILE) as file:
-            self._parse_generated_cpp_file(file_content=file.read())
+            run_command("cmake -S . -B build")
 
-        run_command("cmake -S . -B build")
+            os.chdir("build")
 
-        os.chdir("build")
+            run_command("make")
 
-        run_command("make")
-
-        result = run_command("./main")
-        self._parse_execution_outputs(result.stdout)
-
-        os.chdir(cwd)
+            result = run_command("./main")
+            self._parse_execution_outputs(result.stdout)
+        finally:
+            os.chdir(cwd)
 
     def _parse_compiler_outputs(self, stdout: str) -> None:
         depth_match = re.search(r"max:\s*\((\d+),\s*(\d+)\)", stdout)
