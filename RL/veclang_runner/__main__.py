@@ -5,7 +5,7 @@ import csv
 
 
 class Files(StrEnum):
-    EXPRESSIONS_FILE = "fhe_rl/datasets/benchmarks.txt"
+    EXPRESSIONS_FILE = "fhe_rl/datasets/final_llm_dataset.txt"
     EXPRESSION_FILE = "veclang_runner/temp/expression.txt"
     STATS_FILE = "veclang_runner/temp/stats.csv"
 
@@ -25,12 +25,17 @@ COLUMNS = [
 
 
 if __name__ == "__main__":
+    expressions = load_expressions(Files.EXPRESSIONS_FILE)
     with open(Files.STATS_FILE, mode="w", newline="") as stats_file:
         writer = csv.writer(stats_file)
         writer.writerow(COLUMNS)
-        for expression in load_expressions(Files.EXPRESSIONS_FILE):
+        for expression in expressions:
             with open(Files.EXPRESSION_FILE, "w") as expression_file:
                 expression_file.write(expression)
             runner = VeclangRunner(Files.EXPRESSION_FILE)
-            writer.writerow([runner.stats[column] for column in COLUMNS])
+            try:
+                runner.run()
+            except Exception:
+                continue
+            writer.writerow(runner.stats.get(column) for column in COLUMNS)
             stats_file.flush()
