@@ -2,7 +2,7 @@ from .logger import log_test_results
 from stable_baselines3 import PPO
 import sys, importlib
 from .utils import load_expressions, load_embeddings, create_rules
-from pytrs import parse_sexpr, estimate_expression_noise
+from pytrs import parse_sexpr, NoiseEstimator
 from .env import fheEnv
 from .policy import HierarchicalMaskablePolicy
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
@@ -34,6 +34,7 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
     model = PPO(policy=HierarchicalMaskablePolicy, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
+    noise_estimator = NoiseEstimator()
 
     for _ in range(len(expressions)):
         obs = env.reset()
@@ -43,7 +44,7 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
 
         test_expr = fhe_env.initial_expression
         initial_cost = fhe_env.initial_cost
-        initial_noise_info = estimate_expression_noise(parse_sexpr(test_expr))
+        initial_noise = noise_estimator.estimate(parse_sexpr(test_expr))
 
         done = False
         steps = 0
@@ -59,7 +60,7 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
             done = bool(dones[0])
             steps += 1
 
-        last_noise_info = estimate_expression_noise(parse_sexpr(last_expr))
+        last_noise = noise_estimator.estimate(parse_sexpr(last_expr))
 
         results.append(
             {
@@ -68,8 +69,8 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
                 "Initial Cost": initial_cost,
                 "Final Cost": last_cost,
                 "Steps": steps,
-                "Initial Noise Used": initial_noise_info["noise_used"],
-                "Final Noise Used": last_noise_info["noise_used"],
+                "Initial Noise Used": initial_noise,
+                "Final Noise Used": last_noise,
             }
         )
 
