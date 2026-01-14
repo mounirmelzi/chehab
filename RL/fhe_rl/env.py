@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from pytrs import parse_sexpr, calculate_cost, estimate_expression_noise, Expr, Const, Var, Op,expr_to_str
+from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, Expr, Const, Var, Op,expr_to_str
 import torch
 from .config import get_tokenizer_type
 
@@ -31,6 +31,7 @@ class fheEnv(gym.Env):
         super().__init__()
         self.rules = rules_list
         self.expressions = expressions
+        self.noise_estimator = NoiseEstimator()
         self.max_positions = max_positions
         self.embeddings_model = embeddings_model
         self.max_steps =    75
@@ -100,8 +101,7 @@ class fheEnv(gym.Env):
 
         info = {"expression": self.expression}
 
-        noise = estimate_expression_noise(self.expression)
-        noise = noise["noise_used"]
+        noise = self.noise_estimator.estimate(self.expression)
         info["noise"] = noise
 
         reward_color = GREEN if reward >= 0 else RED
