@@ -126,6 +126,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     model_params = {
         "policy": HierarchicalMaskablePolicy,
         "env": env,
+        "seed": 42,
         "learning_rate": 1e-4,
         "n_steps": n_steps,
         "batch_size": 256,
