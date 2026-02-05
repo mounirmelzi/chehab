@@ -6,9 +6,10 @@ from .env import fheEnv
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize,SubprocVecEnv
 from .policy import HierarchicalMaskablePolicy
 import sys, importlib
-
 from stable_baselines3.common.monitor import Monitor
-def run_agent(expressions_file: str,embeddings_model, model_filepath: str,output_file: str):
+
+
+def run_agent(expressions_file: str,embeddings_model, model_filepath: str, output_file: str, noise_budget: int):
     start_time = time.perf_counter()
     expressions = load_expressions(expressions_file)
     if not len(expressions):
@@ -23,8 +24,9 @@ def run_agent(expressions_file: str,embeddings_model, model_filepath: str,output
     end_time = time.perf_counter()
     elapsed_seconds = end_time - start_time
     env = DummyVecEnv([
-    lambda: Monitor(fheEnv(rules_list, expressions, max_positions=max_positions,embeddings_model=embeddings_model))
+        lambda: Monitor(fheEnv(rules_list, expressions, max_positions=max_positions,embeddings_model=embeddings_model))
     ])
+    env.set_options({ "budget": noise_budget })
     model = PPO(
         policy=HierarchicalMaskablePolicy,
         env=env
