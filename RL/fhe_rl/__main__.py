@@ -104,7 +104,7 @@ def main(args=None):
     elif mode == "test":
         agent_zip = get_model_path("agent_model")
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip)
+        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip, noise_budget=300)
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":
@@ -112,7 +112,7 @@ def main(args=None):
         input_file = parsed_args.input_expr_file
         output_file = parsed_args.output_vector_file
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        run_agent(input_file, embeddings, agent_zip, output_file)
+        run_agent(input_file, embeddings, agent_zip, output_file, noise_budget=300)
 
     else:
         print("Invalid command. Use 'train', 'test' or 'run'.")

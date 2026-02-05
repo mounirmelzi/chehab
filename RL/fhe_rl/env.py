@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, Expr, Const, Var, Op,expr_to_str
+from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, Expr, Const, Var, Op, expr_to_str
 import torch
 from .config import get_tokenizer_type
 
@@ -27,7 +27,6 @@ CYAN    = "\033[36m"
 
 class fheEnv(gym.Env):
     def __init__(self, rules_list, expressions, max_positions=2,embeddings_model=None):
-        
         super().__init__()
         self.rules = rules_list
         self.expressions = expressions
@@ -38,19 +37,20 @@ class fheEnv(gym.Env):
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
+        self.budget_options = [240, 300, 1000000]
+        self.budget_dim = len(self.budget_options)
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
         self.action_space = spaces.Discrete(len(self.rules.keys()) * self.max_positions)
         self.observation_space = spaces.Dict({
-            "observation": spaces.Box(
-                low=-np.inf, high=np.inf, shape=(self.embedding_dim,), dtype=np.float32
-            ),
-            "action_mask": spaces.Box(0, 1, (len(self.rules.keys()) * self.max_positions,), np.float32)
+            "observation": spaces.Box(low=-np.inf, high=np.inf, shape=(self.embedding_dim,), dtype=np.float32),
+            "budget_one_hot_encoding": spaces.Box(low=0, high=1, shape=(self.budget_dim,), dtype=np.float32),
+            "action_mask": spaces.Box(low=0, high=1, shape=(len(self.rules.keys())*self.max_positions,), dtype=np.float32),
         })
         self.reset()
 
-    
+
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -61,12 +61,23 @@ class fheEnv(gym.Env):
         self.initial_expression = self.expression
         self.steps = 0
         self.initial_cost = self.current_cost = self.get_cost(self.expression)
+
+        budget = np.random.choice(self.budget_options)
+        if isinstance(options, dict):
+            budget = options.get("budget", budget)
+        self.set_noise_budget(budget)
+
         return {
             "observation": self._embed_expression(self.expression),
-            "action_mask": self.get_action_mask()
-        }, {}
+            "budget_one_hot_encoding": self.budget_one_hot_encoding,
+            "action_mask": self.get_action_mask(),
+        }, {
+            "expression": self.expression,
+            "budget": self.budget,
+            "noise": self.noise_estimator.estimate(self.expression),
+        }
 
-    
+
     def step(self, action: int):
         self.steps += 1
         rule_idx = action // self.max_positions
@@ -99,10 +110,12 @@ class fheEnv(gym.Env):
                 terminated = True
                 reward = self.calculate_final_reward()
 
-        info = {"expression": self.expression}
+        info = {
+            "expression": self.expression,
+            "budget": self.budget,
+            "noise": self.noise_estimator.estimate(self.expression),
+        }
 
-        noise = self.noise_estimator.estimate(self.expression)
-        info["noise"] = noise
 
         reward_color = GREEN if reward >= 0 else RED
 
@@ -111,7 +124,7 @@ class fheEnv(gym.Env):
         print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
         print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
         print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
-        print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{noise}{RESET}")
+        print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info["noise"]}{RESET}")
         print(f"{CYAN}{'-'*100}{RESET}")
 
         embedding = self._embed_expression(self.expression)
@@ -130,6 +143,7 @@ class fheEnv(gym.Env):
 
         return {
             "observation": embedding,
+            "budget_one_hot_encoding": self.budget_one_hot_encoding,
             "action_mask": self.get_action_mask()
         }, reward, terminated, truncated, info
     
@@ -179,7 +193,18 @@ class fheEnv(gym.Env):
         if emb is None:
             return None
         return emb.squeeze(0).cpu().numpy().astype(np.float32)
-    
+
+    def set_noise_budget(self, budget: int | None):
+        if budget is None:
+            self.budget = None
+            self.budget_one_hot_encoding = None
+            return
+        assert budget in self.budget_options
+        self.budget = budget
+        self.budget_one_hot_encoding = np.zeros(self.budget_dim, dtype=np.float32)
+        budget_idx = self.budget_options.index(budget)
+        self.budget_one_hot_encoding[budget_idx] = 1.0
+
     def get_action_mask(self) -> np.ndarray:
         mask = np.zeros(len(self.rules.keys()) * self.max_positions, dtype=np.float32)
         parsed = parse_sexpr(self.expression)
@@ -194,5 +219,3 @@ class fheEnv(gym.Env):
                 start = rule_idx * self.max_positions
                 mask[start:start + valid_positions] = 1.0
         return mask
-    
-

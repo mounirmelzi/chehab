@@ -11,7 +11,7 @@ import os
 import torch
 
 
-def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
+def test_agent(expressions_file: str, embeddings_model, model_filepath: str, noise_budget: int):
     expressions = load_expressions(expressions_file)
     rules_list = create_rules("rules.txt")
     rules_list["END"] = None
@@ -30,6 +30,8 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str):
             )
         ]
     )
+
+    env.set_options({ "budget": noise_budget })
 
     model = PPO(policy=HierarchicalMaskablePolicy, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
