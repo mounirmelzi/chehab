@@ -13,10 +13,10 @@ class CustomFeaturesExtractor(nn.Module):
         self._budget_dim = observation_space["budget_one_hot_encoding"].shape[0]
 
     def forward(self, obs_dict):
-        return np.concatenate([
+        return torch.cat([
             obs_dict["observation"],
             obs_dict["budget_one_hot_encoding"],
-        ], axis=0)
+        ], dim=1)
 
     @property
     def features_dim(self):
