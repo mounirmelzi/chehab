@@ -178,10 +178,10 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     for lagrange_iteration in range(lagrange_iterations):  # outer Lagrange loop
         model.learn(
-            total_timesteps=total_timesteps // lagrange_iterations, 
+            total_timesteps=total_timesteps // lagrange_iterations,
             reset_num_timesteps=False,
-            log_interval=1, 
-            progress_bar=True, 
+            log_interval=1,
+            progress_bar=True,
             callback=[eval_callback, EntCoefScheduler(ent_schedule)]
         )
 
@@ -197,8 +197,8 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
             total_noise += ep_noise
 
             if lagrange_iteration >= lagrange_delay: # Delay lambda penalty updates
-                val_env.update_lambda_penalty(noise=ep_noise, budget=val_env.reset_infos[0]["budget"])
-                env.update_lambda_penalty(noise=ep_noise, budget=val_env.reset_infos[0]["budget"])
+                val_env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
+                env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
 
         lambda_penalty = val_env.lambda_penalty
         avg_noise = total_noise / num_benchmarks
