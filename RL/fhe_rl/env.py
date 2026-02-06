@@ -33,11 +33,11 @@ class fheEnv(gym.Env):
         self.noise_estimator = NoiseEstimator()
         self.max_positions = max_positions
         self.embeddings_model = embeddings_model
-        self.max_steps =    75
+        self.max_steps = 75
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
-        self.budget_options = [240, 300, 1000000]
+        self.budget_options = [240, 300, 1_000_000]
         self.budget_dim = len(self.budget_options)
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
@@ -124,6 +124,7 @@ class fheEnv(gym.Env):
         print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
         print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
         print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
+        print(f"{BOLD}{MAGENTA}Budget         {RESET}: {YELLOW}{info["budget"]}{RESET}")
         print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info["noise"]}{RESET}")
         print(f"{CYAN}{'-'*100}{RESET}")
 
