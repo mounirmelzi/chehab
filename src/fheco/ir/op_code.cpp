@@ -35,6 +35,10 @@ const OpCode OpCode::mod_switch{Type::mod_switch, {}, 1, false, "mod_switch"};
 
 const OpCode OpCode::relin{Type::relin, {}, 1, false, "relin"};
 
+const OpCode OpCode::rescale{Type::rescale, {}, 1, false, "rescale"};
+
+const OpCode OpCode::bootstrap{Type::bootstrap, {}, 1, false, "bootstrap"};
+
 // an alias of o.generators()[0] for the rotate operation
 int OpCode::steps() const
 {
@@ -127,6 +131,14 @@ ostream &operator<<(ostream &os, OpCode::Type op_code_type)
 
   case OpCode::Type::relin:
     os << "relin";
+    break;
+
+  case OpCode::Type::rescale:
+    os << "rescale";
+    break;
+
+  case OpCode::Type::bootstrap:
+    os << "bootstrap";
     break;
 
   default:

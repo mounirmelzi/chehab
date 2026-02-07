@@ -125,6 +125,12 @@ double static_eval_op(const OpCode &op_code, const vector<TermInfo> &operands_in
   case OpCode::Type::mod_switch:
     return 0.05;
 
+  case OpCode::Type::rescale:
+    return 0.1;  // CKKS rescale cost (similar to mod_switch but slightly more expensive)
+
+  case OpCode::Type::SumVec:
+    return 0.5;  // SumVec cost (expands to log(n) rotations + additions)
+
   case OpCode::Type::add:
   case OpCode::Type::sub:
   case OpCode::Type::negate:

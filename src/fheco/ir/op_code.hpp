@@ -24,6 +24,8 @@ public:
     mod_switch,
     relin,
     SumVec,
+    rescale,    // CKKS: rescale after multiplication
+    bootstrap,  // CKKS: refresh ciphertext to max level
   };
 
   static const OpCode nop; 
@@ -36,6 +38,8 @@ public:
   static const OpCode mul;
   static const OpCode mod_switch;
   static const OpCode relin;
+  static const OpCode rescale;    // CKKS rescale operation
+  static const OpCode bootstrap;  // CKKS bootstrap to refresh levels
   ////****************************
   static OpCode SumVec(int size) ;
   ////****************************

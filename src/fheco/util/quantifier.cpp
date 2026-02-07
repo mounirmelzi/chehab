@@ -77,7 +77,9 @@ void Quantifier::compute_depth_info()
     auto operands_depth = top_depth_info.depth_;
     if (
       top_term->op_code().type() != ir::OpCode::Type::mod_switch &&
-      top_term->op_code().type() != ir::OpCode::Type::relin)
+      top_term->op_code().type() != ir::OpCode::Type::relin &&
+      top_term->op_code().type() != ir::OpCode::Type::rescale &&
+      top_term->op_code().type() != ir::OpCode::Type::SumVec)  // SumVec uses rotations (no mul depth)
       ++operands_depth;
     auto operands_xdepth = top_depth_info.xdepth_;
     if (top_term->op_code().type() == ir::OpCode::Type::mul || top_term->op_code().type() == ir::OpCode::Type::square)
@@ -167,6 +169,8 @@ void Quantifier::count_terms_classes()
   c_non_scalar_mul_total_ = 0;
   mod_switch_counts_.clear();
   mod_switch_total_ = 0;
+  rescale_counts_.clear();
+  rescale_total_ = 0;
   he_add_counts_.clear();
   he_add_total_ = 0;
   ctxt_outputs_info_.clear();
@@ -290,6 +294,31 @@ void Quantifier::count_terms_classes()
           auto [it, inserted] = mod_switch_counts_.emplace(CAOpInfo{arg_info.opposite_level_, arg_info.size_}, 1);
           if (!inserted)
             ++it->second;
+        }
+        else if (term->op_code().type() == ir::OpCode::Type::rescale)
+        {
+          // CKKS rescale: reduces level by 1, keeps size at 2 (after relinearization)
+          const auto &arg_info = ctxt_terms_info.find(term->operands()[0])->second;
+          ctxt_terms_info.emplace(term, CtxtTermInfo{arg_info.opposite_level_ + 1, arg_info.size_});
+          ++captured_terms_count_;
+          ++rescale_total_;
+          auto [it, inserted] = rescale_counts_.emplace(CAOpInfo{arg_info.opposite_level_, arg_info.size_}, 1);
+          if (!inserted)
+            ++it->second;
+        }
+        else if (term->op_code().type() == ir::OpCode::Type::SumVec)
+        {
+          // SumVec: vector reduction, equivalent to log2(size) rotations and additions
+          const auto &arg_info = ctxt_terms_info.find(term->operands()[0])->second;
+          ctxt_terms_info.emplace(term, CtxtTermInfo{arg_info.opposite_level_, arg_info.size_});
+          ++captured_terms_count_;
+          // Count as multiple rotations for analysis purposes
+          int size = term->op_code().size();
+          int num_rotations = 0;
+          int step = size / 2;
+          while (step >= 1) { ++num_rotations; step /= 2; }
+          rotate_total_ += num_rotations;
+          he_add_total_ += num_rotations;
         }
         else if (term->op_code().type() == ir::OpCode::Type::add || term->op_code().type() == ir::OpCode::Type::sub)
         {
@@ -555,6 +584,9 @@ void Quantifier::print_terms_classes_info(ostream &os, bool outputs_details) con
   os << "|mod_switch| (level, arg_size): count\n" << mod_switch_counts_;
   os << "total: " << mod_switch_total_ << '\n';
   print_line_sep(os);
+  os << "|rescale| (level, arg_size): count\n" << rescale_counts_;
+  os << "total: " << rescale_total_ << '\n';
+  print_line_sep(os);
   os << "|he_add| (level, max_args_size): count\n" << he_add_counts_;
   os << "total: " << he_add_total_ << '\n';
   print_line_sep(os);
@@ -659,6 +691,8 @@ Quantifier operator/(const Quantifier &lhs, const Quantifier &rhs)
     result.c_non_scalar_mul_total_ /= rhs.c_non_scalar_mul_total();
     result.mod_switch_counts_ /= rhs.mod_switch_counts();
     result.mod_switch_total_ /= rhs.mod_switch_total();
+    result.rescale_counts_ /= rhs.rescale_counts();
+    result.rescale_total_ /= rhs.rescale_total();
     result.he_add_counts_ /= rhs.he_add_counts();
     result.he_add_total_ /= rhs.he_add_total();
     result.ctxt_outputs_info_ /= rhs.ctxt_outputs_info();
@@ -717,6 +751,8 @@ Quantifier operator-(const Quantifier &lhs, const Quantifier &rhs)
     result.c_non_scalar_mul_total_ -= rhs.c_non_scalar_mul_total();
     result.mod_switch_counts_ -= rhs.mod_switch_counts();
     result.mod_switch_total_ -= rhs.mod_switch_total();
+    result.rescale_counts_ -= rhs.rescale_counts();
+    result.rescale_total_ -= rhs.rescale_total();
     result.he_add_counts_ -= rhs.he_add_counts();
     result.he_add_total_ -= rhs.he_add_total();
     result.ctxt_outputs_info_ -= rhs.ctxt_outputs_info();
@@ -776,6 +812,8 @@ Quantifier operator*(const Quantifier &lhs, int coeff)
     result.c_non_scalar_mul_total_ *= coeff;
     result.mod_switch_counts_ *= coeff;
     result.mod_switch_total_ *= coeff;
+    result.rescale_counts_ *= coeff;
+    result.rescale_total_ *= coeff;
     result.he_add_counts_ *= coeff;
     result.he_add_total_ *= coeff;
     result.ctxt_outputs_info_ *= coeff;

@@ -1,0 +1,32 @@
+# Conv2D benchmark I/O example
+# Format: variable_name value
+
+# 4x4 input image
+img_0_0 1.0
+img_0_1 2.0
+img_0_2 3.0
+img_0_3 4.0
+img_1_0 5.0
+img_1_1 6.0
+img_1_2 7.0
+img_1_3 8.0
+img_2_0 9.0
+img_2_1 10.0
+img_2_2 11.0
+img_2_3 12.0
+img_3_0 13.0
+img_3_1 14.0
+img_3_2 15.0
+img_3_3 16.0
+
+# 3x3 kernel (for encrypted kernel mode)
+kernel_0_0 0.1
+kernel_0_1 0.2
+kernel_0_2 0.1
+kernel_1_0 0.2
+kernel_1_1 0.4
+kernel_1_2 0.2
+kernel_2_0 0.1
+kernel_2_1 0.2
+kernel_2_2 0.1
+
