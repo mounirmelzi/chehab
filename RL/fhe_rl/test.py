@@ -73,9 +73,10 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str, noi
                 "Steps": steps,
                 "Initial Noise Used": initial_noise,
                 "Final Noise Used": last_noise,
+                "Noise Budget": noise_budget,
             }
         )
 
     job_id = os.environ.get("SLURM_JOB_ID", "jobid")
-    sheet_name = f"HierarchicalPPO_Test_{job_id}"
+    sheet_name = f"lppo_{job_id}"
     log_test_results(results, sheet_name=sheet_name)
