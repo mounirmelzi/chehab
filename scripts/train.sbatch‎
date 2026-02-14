@@ -2,10 +2,10 @@
 
 #SBATCH --reservation=c2
 #SBATCH -p compute
-#SBATCH --mem 64GB
+#SBATCH --mem 96GB
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH -c 16
+#SBATCH -c 20
 #SBATCH -t 7-00:00:00
 
 #SBATCH --mail-user=mm15538@nyu.edu

@@ -14,7 +14,7 @@ from .wrappers import LagrangianVecEnvWrapper
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 2_000_000, num_envs: int = 8):
+def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 4_000_000, num_envs: int = 16):
     match get_rl_algorithm():
         case RLAlgorithm.PPO:
             train_ppo_agent(expressions_file, embeddings_model, total_timesteps, num_envs)
@@ -24,7 +24,7 @@ def train_agent(expressions_file: str, embeddings_model, total_timesteps: int = 
             train_ppo_agent(expressions_file, embeddings_model, total_timesteps, num_envs)
 
 
-def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int = 8):
+def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
     expressions = load_expressions(expressions_file, benchmarks)
     max_positions = 16
@@ -92,7 +92,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
     model.save(run_name)
 
 
-def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int = 8):
+def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: int, num_envs: int):
     benchmarks = load_expressions("./fhe_rl/datasets/benchmarks.txt") 
     expressions = load_expressions(expressions_file, benchmarks)
     max_positions = 16
@@ -117,7 +117,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
 
     lagrange_delay = 0
-    denom_factor = 4
+    denom_factor = 2
     n_steps = 2048
 
 
@@ -142,7 +142,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
             "max_positions": max_positions,
             "rule_hidden_dims":   [128, 64],
             "pos_hidden_dims":    [64, 64],
-            "value_hidden_dims":    [256, 128, 64],
+            "value_hidden_dims":  [256, 128, 64],
         }
     }
     model = PPO(**model_params)
@@ -154,7 +154,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes=f"Lagrangian PPO [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay}): denom_factor={denom_factor}"
+        notes=f"Lagrangian PPO [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay})"
     )
 
     num_benchmarks = len(benchmarks)
@@ -162,7 +162,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         val_env, 
         best_model_save_path=f"./eval/best_model_{run_name}", 
         log_path=tensorboard_log_dir, 
-        eval_freq=10000,
+        eval_freq=10_000,
         n_eval_episodes=num_benchmarks,
         deterministic=True, 
         render=False, 
