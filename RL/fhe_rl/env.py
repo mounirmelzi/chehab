@@ -38,7 +38,7 @@ class fheEnv(gym.Env):
         self.initial_cost = 0
         self.embedding_dim = 256
         self.budget_options = [200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1_000, 9_999_999]
-        self.budget_dim = len(self.budget_options)
+        self.budget_dim = len(self.budget_options) + 1
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
@@ -203,8 +203,8 @@ class fheEnv(gym.Env):
         assert budget in self.budget_options
         self.budget = budget
         self.budget_one_hot_encoding = np.zeros(self.budget_dim, dtype=np.float32)
-        budget_idx = self.budget_options.index(budget)
-        self.budget_one_hot_encoding[budget_idx] = 1.0
+        self.budget_one_hot_encoding[self.budget_options.index(budget)] = 1.0
+        self.budget_one_hot_encoding[self.budget_dim - 1] = budget
 
     def get_action_mask(self) -> np.ndarray:
         mask = np.zeros(len(self.rules.keys()) * self.max_positions, dtype=np.float32)

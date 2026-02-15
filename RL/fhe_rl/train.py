@@ -117,7 +117,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
 
     lagrange_delay = 0
-    denom_factor = 2
+    denom_factor = 1
     n_steps = 2048
 
 
@@ -193,20 +193,17 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
             while not done:
                 action, _ = model.predict(obs, deterministic=True)
                 obs, reward, done, info = val_env.step(action)
-                ep_noise += info[0].get("noise", 0.0)
+                ep_noise = info[0].get("noise", 0.0)
             total_noise += ep_noise
 
             if lagrange_iteration >= lagrange_delay: # Delay lambda penalty updates
                 val_env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
                 env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
 
-        lambda_penalty = val_env.lambda_penalty
-        avg_noise = total_noise / num_benchmarks
-
         # Logs
-        print(f"[Step {model.num_timesteps}] Avg noise: {avg_noise:.2f}, λ: {lambda_penalty:.3f}")
-        tensorboard_writer.add_scalar("Lagrange/lambda_penalty", lambda_penalty, model.num_timesteps)
-        tensorboard_writer.add_scalar("Lagrange/avg_noise", avg_noise, model.num_timesteps)
+        tensorboard_writer.add_scalar("Lagrange/avg_noise", total_noise / num_benchmarks, model.num_timesteps)
+        for _budget, _lambda in env.lambdas.items():
+            tensorboard_writer.add_scalar(f"Lagrange/lambda_{_budget}", _lambda, model.num_timesteps)
 
     tensorboard_writer.close()
 

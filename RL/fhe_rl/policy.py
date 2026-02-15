@@ -11,16 +11,24 @@ class CustomFeaturesExtractor(nn.Module):
         super().__init__()
         self._embed_dim = observation_space["observation"].shape[0]
         self._budget_dim = observation_space["budget_one_hot_encoding"].shape[0]
+        self.feature_wise_linear_modulation_generator = nn.Sequential(
+            nn.Linear(self._budget_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, self._embed_dim * 2)
+        )
 
     def forward(self, obs_dict):
-        return torch.cat([
-            obs_dict["observation"],
-            obs_dict["budget_one_hot_encoding"],
-        ], dim=1)
+        obs, budget = obs_dict["observation"], obs_dict["budget_one_hot_encoding"]
+        gamma, beta = torch.split(
+            tensor=self.feature_wise_linear_modulation_generator(budget),
+            split_size_or_sections=self._embed_dim,
+            dim=1
+        )
+        return obs * torch.sigmoid(gamma) + beta
 
     @property
     def features_dim(self):
-        return self._embed_dim + self._budget_dim
+        return self._embed_dim
 
 
 class HierarchicalMaskablePolicy(nn.Module):
@@ -36,9 +44,9 @@ class HierarchicalMaskablePolicy(nn.Module):
         value_hidden_dims       = kwargs.pop("value_hidden_dims", [256, 128, 64])
 
         self.encoder = CustomFeaturesExtractor(observation_space)
-        self.rule_head = mlp(self.encoder.features_dim, rule_hidden_dims, self.rule_dim, layernorm=True)
-        self.pos_head  = mlp(self.encoder.features_dim + self.rule_dim, pos_hidden_dims, self.max_positions, layernorm=True)
-        self.value_net = mlp(self.encoder.features_dim, value_hidden_dims, 1, layernorm=True)
+        self.rule_head = mlp(self.encoder.features_dim, rule_hidden_dims, self.rule_dim, layernorm=True, dropout=0.1)
+        self.pos_head  = mlp(self.encoder.features_dim + self.rule_dim, pos_hidden_dims, self.max_positions, layernorm=True, dropout=0.1)
+        self.value_net = mlp(self.encoder.features_dim, value_hidden_dims, 1, layernorm=True, dropout=0.1)
 
         actor_params  = list(self.encoder.parameters()) + list(self.rule_head.parameters()) + list(self.pos_head.parameters())
         critic_params = self.value_net.parameters()
