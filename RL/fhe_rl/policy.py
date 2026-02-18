@@ -7,20 +7,90 @@ import numpy as np
 
 
 class CustomFeaturesExtractor(nn.Module):
-    def __init__(self, observation_space):
+    """Encodes observation + budget into a flat feature vector.
+
+    budget_encoding modes:
+      - "raw":   concat raw one-hot (current/default, simple)
+      - "embed": learned dense embedding from one-hot (richer representation)
+      - "film":  FiLM conditioning — budget modulates expression features via
+                 gamma * expr_emb + beta, so the budget controls WHICH expression
+                 features matter. Standard approach in goal-conditioned RL.
+    """
+
+    BUDGET_EMBED_DIM = 32  # Dense budget embedding dimension
+
+    def __init__(self, observation_space, budget_encoding="raw"):
         super().__init__()
-        self._embed_dim = observation_space["observation"].shape[0]
+        self._embed_dim = observation_space["observation"].shape[0]        # 256
         self._budget_dim = observation_space["budget_one_hot_encoding"].shape[0]
+        self._has_margin = "budget_margin" in observation_space.spaces
+        self._margin_dim = observation_space["budget_margin"].shape[0] if self._has_margin else 0
+        self._budget_encoding = budget_encoding
+
+        if budget_encoding == "embed":
+            # One-hot → dense learned embedding
+            self.budget_encoder = nn.Sequential(
+                nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
+                nn.ReLU(),
+            )
+
+        elif budget_encoding == "film":
+            # FiLM: budget → scale (gamma) & shift (beta) that modulate expr embedding
+            self.film_gamma = nn.Sequential(
+                nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
+                nn.ReLU(),
+                nn.Linear(self.BUDGET_EMBED_DIM, self._embed_dim),
+            )
+            self.film_beta = nn.Sequential(
+                nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
+                nn.ReLU(),
+                nn.Linear(self.BUDGET_EMBED_DIM, self._embed_dim),
+            )
+            # Initialize FiLM as identity: gamma≈1, beta≈0 so the network
+            # starts with unmodified expression features and learns from there
+            nn.init.zeros_(self.film_gamma[-1].weight)
+            nn.init.ones_(self.film_gamma[-1].bias)
+            nn.init.zeros_(self.film_beta[-1].weight)
+            nn.init.zeros_(self.film_beta[-1].bias)
+
+            # Also keep a small budget embedding for direct access (value net)
+            self.budget_encoder = nn.Sequential(
+                nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
+                nn.ReLU(),
+            )
 
     def forward(self, obs_dict):
-        return torch.cat([
-            obs_dict["observation"],
-            obs_dict["budget_one_hot_encoding"],
-        ], dim=1)
+        expr_emb = obs_dict["observation"]
+        budget_oh = obs_dict["budget_one_hot_encoding"]
+
+        if self._budget_encoding == "raw":
+            parts = [expr_emb, budget_oh]
+
+        elif self._budget_encoding == "embed":
+            budget_emb = self.budget_encoder(budget_oh)
+            parts = [expr_emb, budget_emb]
+
+        elif self._budget_encoding == "film":
+            gamma = self.film_gamma(budget_oh)      # (B, 256)
+            beta  = self.film_beta(budget_oh)        # (B, 256)
+            modulated = gamma * expr_emb + beta      # budget gates expression features
+            budget_emb = self.budget_encoder(budget_oh)
+            parts = [modulated, budget_emb]
+
+        else:
+            raise ValueError(f"Unknown budget_encoding: {self._budget_encoding}")
+
+        if self._has_margin:
+            parts.append(obs_dict["budget_margin"])
+        return torch.cat(parts, dim=1)
 
     @property
     def features_dim(self):
-        return self._embed_dim + self._budget_dim
+        if self._budget_encoding == "raw":
+            base = self._embed_dim + self._budget_dim
+        else:  # "embed" or "film"
+            base = self._embed_dim + self.BUDGET_EMBED_DIM
+        return base + self._margin_dim
 
 
 class HierarchicalMaskablePolicy(nn.Module):
@@ -31,11 +101,12 @@ class HierarchicalMaskablePolicy(nn.Module):
         self.rule_dim: int       = kwargs.pop("rule_dim", 5)
         self.max_positions: int  = kwargs.pop("max_positions", 32)
         lr: float               = kwargs.pop("lr", 3e-4)
+        budget_encoding: str     = kwargs.pop("budget_encoding", "raw")
         rule_hidden_dims        = kwargs.pop("rule_hidden_dims", [128, 128])
         pos_hidden_dims         = kwargs.pop("pos_hidden_dims", [128, 128])
         value_hidden_dims       = kwargs.pop("value_hidden_dims", [256, 128, 64])
 
-        self.encoder = CustomFeaturesExtractor(observation_space)
+        self.encoder = CustomFeaturesExtractor(observation_space, budget_encoding=budget_encoding)
         self.rule_head = mlp(self.encoder.features_dim, rule_hidden_dims, self.rule_dim, layernorm=True)
         self.pos_head  = mlp(self.encoder.features_dim + self.rule_dim, pos_hidden_dims, self.max_positions, layernorm=True)
         self.value_net = mlp(self.encoder.features_dim, value_hidden_dims, 1, layernorm=True)

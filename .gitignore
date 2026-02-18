@@ -53,3 +53,5 @@ __pycache__/
 *.pyd
 
 /logs
+
+commands.txt

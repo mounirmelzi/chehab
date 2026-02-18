@@ -14,6 +14,15 @@ class RLAlgorithm(enum.Enum):
     LAGRANGIAN_PPO = "LAGRANGIAN_PPO"
 
 
+class ConstraintMethod(enum.Enum):
+    """Constraint enforcement method for multi-budget training."""
+    NONE = "none"                                # Pure PPO, no constraint
+    LAGRANGIAN_OD_OV = "lagrangian_od_ov"        # ON_DONE + ON_VIOLATION (current stable)
+    LAGRANGIAN_PERSTEP = "lagrangian_perstep"    # Per-step violation penalty
+    LAGRANGIAN_ALWAYS_DONE = "lagrangian_always_done"  # Always penalize at terminal
+    MARGIN_BARRIER = "margin_barrier"            # Margin obs + hard terminal penalty (NEW)
+
+
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent  # Go up to RL/ directory
 FHE_RL_DIR = Path(__file__).parent

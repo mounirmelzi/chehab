@@ -37,9 +37,78 @@ def parse_arguments(args=None):
     
     # Train command
     train_parser = subparsers.add_parser('train', help='Train the agent')
+    train_parser.add_argument(
+        '--budgets',
+        type=str,
+        default=None,
+        help='Comma-separated list of noise budgets (e.g., "300,400,500,1000,9000000")'
+    )
+    train_parser.add_argument(
+        '--timesteps',
+        type=int,
+        default=2_000_000,
+        help='Total training timesteps (default: 2000000)'
+    )
+    train_parser.add_argument(
+        '--num_envs',
+        type=int,
+        default=8,
+        help='Number of parallel environments (default: 8)'
+    )
+    train_parser.add_argument(
+        '--denom_factor',
+        type=int,
+        default=4,
+        help='Lagrangian update frequency denominator (default: 4, lower=more frequent updates)'
+    )
+    train_parser.add_argument(
+        '--method',
+        type=str,
+        default='lagrangian_od_ov',
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier'],
+        help='Constraint enforcement method (default: lagrangian_od_ov)'
+    )
+    train_parser.add_argument(
+        '--budget_encoding',
+        type=str,
+        default='raw',
+        choices=['raw', 'embed', 'film'],
+        help='Budget encoding in policy (raw=one-hot, embed=learned embedding, film=FiLM conditioning)'
+    )
     
     # Test command
     test_parser = subparsers.add_parser('test', help='Test the agent')
+    test_parser.add_argument(
+        '--model',
+        type=str,
+        default=None,
+        help='Path to trained model .zip file (e.g., model_14007517_lagrangian_od_ov.zip)'
+    )
+    test_parser.add_argument(
+        '--budgets',
+        type=str,
+        default=None,
+        help='Comma-separated budgets to TEST on (e.g., "240,300,1000000")'
+    )
+    test_parser.add_argument(
+        '--train_budgets',
+        type=str,
+        default=None,
+        help='Comma-separated budgets the model was TRAINED on (for correct obs space). Defaults to --budgets.'
+    )
+    test_parser.add_argument(
+        '--method',
+        type=str,
+        default='lagrangian_od_ov',
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier'],
+        help='Constraint method the model was trained with (default: lagrangian_od_ov)'
+    )
+    test_parser.add_argument(
+        '--output',
+        type=str,
+        default=None,
+        help='Output Excel file path (default: auto-generated from model name)'
+    )
     
     # Run command
     run_parser = subparsers.add_parser('run', help='Run the agent')
@@ -98,13 +167,56 @@ def main(args=None):
     # ────────────────────────────── TRAIN ─────────────────────────────
     if mode == "train":
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        train_agent("./fhe_rl/datasets/final_llm_dataset.txt", embeddings)
+        
+        # Parse budget options if provided
+        budget_options = None
+        if parsed_args.budgets:
+            budget_options = [int(b.strip()) for b in parsed_args.budgets.split(',')]
+            print(f"Using custom budgets: {budget_options}")
+        
+        train_agent(
+            "./fhe_rl/datasets/final_llm_dataset.txt",
+            embeddings,
+            total_timesteps=parsed_args.timesteps,
+            num_envs=parsed_args.num_envs,
+            budget_options=budget_options,
+            denom_factor=parsed_args.denom_factor,
+            constraint_method=parsed_args.method,
+            budget_encoding=parsed_args.budget_encoding,
+        )
 
     # ─────────────────────────────── TEST ─────────────────────────────
     elif mode == "test":
-        agent_zip = get_model_path("agent_model")
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip, noise_budget=300)
+
+        # Model path: CLI arg or fallback to config
+        if parsed_args.model:
+            agent_zip = parsed_args.model
+        else:
+            agent_zip = get_model_path("agent_model")
+
+        # Budgets to test on
+        test_budgets = None
+        if parsed_args.budgets:
+            test_budgets = [int(b.strip()) for b in parsed_args.budgets.split(',')]
+            print(f"Testing on budgets: {test_budgets}")
+
+        # Budgets the model was trained on (for obs space)
+        train_budgets = None
+        if parsed_args.train_budgets:
+            train_budgets = [int(b.strip()) for b in parsed_args.train_budgets.split(',')]
+        elif test_budgets:
+            train_budgets = test_budgets
+
+        test_agent(
+            "./fhe_rl/datasets/benchmarks.txt",
+            embeddings,
+            agent_zip,
+            budget_options=train_budgets,
+            test_budgets=test_budgets,
+            constraint_method=parsed_args.method,
+            output_file=parsed_args.output,
+        )
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":

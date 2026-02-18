@@ -24,30 +24,41 @@ BLUE    = "\033[34m"
 MAGENTA = "\033[35m"
 CYAN    = "\033[36m"
 
+# Budget above this threshold is considered "unconstrained" (no utilization bonus)
+UNCONSTRAINED_BUDGET_THRESHOLD = 100_000
+
 
 class fheEnv(gym.Env):
-    def __init__(self, rules_list, expressions, max_positions=2,embeddings_model=None):
+    DEFAULT_BUDGET_OPTIONS = [240, 300, 1_000_000]
+    
+    def __init__(self, rules_list, expressions, max_positions=2, embeddings_model=None, budget_options=None, constraint_method="lagrangian_od_ov"):
         super().__init__()
         self.rules = rules_list
         self.expressions = expressions
         self.noise_estimator = NoiseEstimator()
         self.max_positions = max_positions
         self.embeddings_model = embeddings_model
+        self.constraint_method = constraint_method
         self.max_steps = 75
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
-        self.budget_options = [240, 300, 1_000_000]
+        self.budget_options = budget_options if budget_options is not None else self.DEFAULT_BUDGET_OPTIONS
         self.budget_dim = len(self.budget_options)
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
         self.action_space = spaces.Discrete(len(self.rules.keys()) * self.max_positions)
-        self.observation_space = spaces.Dict({
+
+        # Build observation space - add margin dimension for margin_barrier method
+        obs_dict = {
             "observation": spaces.Box(low=-np.inf, high=np.inf, shape=(self.embedding_dim,), dtype=np.float32),
             "budget_one_hot_encoding": spaces.Box(low=0, high=1, shape=(self.budget_dim,), dtype=np.float32),
             "action_mask": spaces.Box(low=0, high=1, shape=(len(self.rules.keys())*self.max_positions,), dtype=np.float32),
-        })
+        }
+        if self.constraint_method == "margin_barrier":
+            obs_dict["budget_margin"] = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+        self.observation_space = spaces.Dict(obs_dict)
         self.reset()
 
 
@@ -67,14 +78,21 @@ class fheEnv(gym.Env):
             budget = options.get("budget", budget)
         self.set_noise_budget(budget)
 
-        return {
+        noise = self.noise_estimator.estimate(self.expression)
+
+        obs = {
             "observation": self._embed_expression(self.expression),
             "budget_one_hot_encoding": self.budget_one_hot_encoding,
             "action_mask": self.get_action_mask(),
-        }, {
+        }
+        if self.constraint_method == "margin_barrier":
+            margin = np.clip((self.budget - noise) / max(self.budget, 1), -1.0, 1.0)
+            obs["budget_margin"] = np.array([margin], dtype=np.float32)
+
+        return obs, {
             "expression": self.expression,
             "budget": self.budget,
-            "noise": self.noise_estimator.estimate(self.expression),
+            "noise": noise,
         }
 
 
@@ -124,8 +142,8 @@ class fheEnv(gym.Env):
         print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
         print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
         print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
-        print(f"{BOLD}{MAGENTA}Budget         {RESET}: {YELLOW}{info["budget"]}{RESET}")
-        print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info["noise"]}{RESET}")
+        print(f"{BOLD}{MAGENTA}Budget         {RESET}: {YELLOW}{info['budget']}{RESET}")
+        print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info['noise']}{RESET}")
         print(f"{CYAN}{'-'*100}{RESET}")
 
         embedding = self._embed_expression(self.expression)
@@ -135,6 +153,23 @@ class fheEnv(gym.Env):
             reward = self.calculate_final_reward()
         else:
             terminated = terminated or (self.steps >= self.max_steps)
+
+        # ── Margin barrier: override terminal reward with hard penalty + utilization ──
+        if self.constraint_method == "margin_barrier" and (terminated or truncated):
+            noise = info["noise"]
+            if noise > self.budget:
+                # Hard violation penalty — agent must learn this is unacceptable
+                reward = -100.0
+            else:
+                cost_reward = self.calculate_final_reward()
+                if self.budget <= UNCONSTRAINED_BUDGET_THRESHOLD:
+                    # Utilization bonus: encourage using budget efficiently
+                    utilization = noise / max(self.budget, 1)
+                    reward = cost_reward + utilization * 5.0
+                else:
+                    # Unconstrained regime: pure cost optimization, no utilization bonus
+                    reward = cost_reward
+
         if terminated or truncated:
             info["episode"] = {
                 "r": reward,
@@ -142,11 +177,16 @@ class fheEnv(gym.Env):
                 "t": None
             }
 
-        return {
+        obs = {
             "observation": embedding,
             "budget_one_hot_encoding": self.budget_one_hot_encoding,
             "action_mask": self.get_action_mask()
-        }, reward, terminated, truncated, info
+        }
+        if self.constraint_method == "margin_barrier":
+            margin = np.clip((self.budget - info["noise"]) / max(self.budget, 1), -1.0, 1.0)
+            obs["budget_margin"] = np.array([margin], dtype=np.float32)
+
+        return obs, reward, terminated, truncated, info
     
     def _valid_end_action(self,expr: str) -> bool:
         expr_tree = parse_sexpr(expr)
