@@ -31,14 +31,13 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str, noi
         ]
     )
 
-    env.set_options({ "budget": noise_budget })
-
     model = PPO(policy=HierarchicalMaskablePolicy, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
     noise_estimator = NoiseEstimator()
 
     for _ in range(len(expressions)):
+        env.set_options({ "budget": noise_budget })
         obs = env.reset()
 
         wrapper = env.envs[0]

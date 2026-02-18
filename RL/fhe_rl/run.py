@@ -26,7 +26,6 @@ def run_agent(expressions_file: str,embeddings_model, model_filepath: str, outpu
     env = DummyVecEnv([
         lambda: Monitor(fheEnv(rules_list, expressions, max_positions=max_positions,embeddings_model=embeddings_model))
     ])
-    env.set_options({ "budget": noise_budget })
     model = PPO(
         policy=HierarchicalMaskablePolicy,
         env=env
@@ -34,6 +33,7 @@ def run_agent(expressions_file: str,embeddings_model, model_filepath: str, outpu
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
     start_time = time.perf_counter()
+    env.set_options({ "budget": noise_budget })
     obs = env.reset()
     wrapper  = env.envs[0]
     fhe_env   = wrapper.env
