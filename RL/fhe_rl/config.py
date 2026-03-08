@@ -20,7 +20,7 @@ FHE_RL_DIR = Path(__file__).parent
 
 # Model paths configuration
 MODEL_PATHS = {
-    "agent_model": FHE_RL_DIR / "trained_models" / "agent_lppo_14037028.zip",
+    "agent_model": FHE_RL_DIR / "trained_models" / "agent_lppo_14226838.zip",
     "dynamic_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_ROT_15_32_5m_10742576.pth",
     "bpe_embeddings_model": FHE_RL_DIR / "trained_models" / "model_Transformer_BPE_ddp_jobid_epoch_5000000.pth",
     "bpe_tokenizer": FHE_RL_DIR / "trained_models" / "bpe_tokenizer.pkl",

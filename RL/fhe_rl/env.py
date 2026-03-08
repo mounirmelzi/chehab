@@ -37,7 +37,7 @@ class fheEnv(gym.Env):
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
-        self.budget_options = [200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1_000, 9_999_999]
+        self.budget_options = [50, 100, 150, 200, 250, 300, 350, 400, 9_999_999]
         self.budget_dim = len(self.budget_options) + 1
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0

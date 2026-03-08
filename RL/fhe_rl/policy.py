@@ -3,32 +3,46 @@ from torch.distributions import Categorical
 from .utils import mlp
 import gymnasium as gym
 from typing import Any, Dict, Tuple, Union
-import numpy as np 
+import numpy as np
 
 
 class CustomFeaturesExtractor(nn.Module):
+    BUDGET_EMBED_DIM = 32
+
     def __init__(self, observation_space):
         super().__init__()
         self._embed_dim = observation_space["observation"].shape[0]
         self._budget_dim = observation_space["budget_one_hot_encoding"].shape[0]
-        self.feature_wise_linear_modulation_generator = nn.Sequential(
-            nn.Linear(self._budget_dim, 64),
+
+        self.film_gamma = nn.Sequential(
+            nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
             nn.ReLU(),
-            nn.Linear(64, self._embed_dim * 2)
+            nn.Linear(self.BUDGET_EMBED_DIM, self._embed_dim),
+        )
+        nn.init.zeros_(self.film_gamma[-1].weight)
+        nn.init.ones_(self.film_gamma[-1].bias)
+
+        self.film_beta = nn.Sequential(
+            nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
+            nn.ReLU(),
+            nn.Linear(self.BUDGET_EMBED_DIM, self._embed_dim),
+        )
+        nn.init.zeros_(self.film_beta[-1].weight)
+        nn.init.zeros_(self.film_beta[-1].bias)
+
+        self.budget_encoder = nn.Sequential(
+            nn.Linear(self._budget_dim, self.BUDGET_EMBED_DIM),
+            nn.ReLU(),
         )
 
     def forward(self, obs_dict):
         obs, budget = obs_dict["observation"], obs_dict["budget_one_hot_encoding"]
-        gamma, beta = torch.split(
-            tensor=self.feature_wise_linear_modulation_generator(budget),
-            split_size_or_sections=self._embed_dim,
-            dim=1
-        )
-        return obs * torch.sigmoid(gamma) + beta
+        gamma, beta = self.film_gamma(budget), self.film_beta(budget)
+        return torch.cat((gamma * obs + beta, self.budget_encoder(budget)), dim=1)
 
     @property
     def features_dim(self):
-        return self._embed_dim
+        return self._embed_dim + self.BUDGET_EMBED_DIM
 
 
 class HierarchicalMaskablePolicy(nn.Module):
