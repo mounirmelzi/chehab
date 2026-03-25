@@ -6,7 +6,7 @@ from .policy import HierarchicalMaskablePolicy
 from stable_baselines3 import PPO
 from .utils  import load_expressions, create_rules, load_embeddings
 from .logger import log_training_details
-from .callbacks import linear_schedule, EntCoefScheduler
+from .callbacks import linear_schedule, EntCoefScheduler, CurriculumCallback
 from stable_baselines3.common.callbacks import EvalCallback
 from .wrappers import (
     LagrangianVecEnvWrapper,
@@ -38,6 +38,8 @@ def train_agent(
     denom_factor: int = 4,
     constraint_method: str = "lagrangian_od_ov",
     budget_encoding: str = "raw",
+    ent_coef: float = 0.01,
+    curriculum: bool = False,
 ):
     """Unified training entry point for all constraint methods.
 
@@ -45,10 +47,14 @@ def train_agent(
     ----------
     constraint_method : str
         One of: none, lagrangian_od_ov, lagrangian_perstep,
-        lagrangian_always_done, margin_barrier
+        lagrangian_always_done, margin_barrier, noise_masking
     budget_encoding : str
         How to encode budget in the policy network:
         raw = concat one-hot, embed = learned embedding, film = FiLM conditioning
+    ent_coef : float
+        Entropy coefficient for exploration (constant throughout training).
+    curriculum : bool
+        If True, gradually widen the set of active budgets during training.
     """
 
     # ── Common setup ─────────────────────────────────────────────────────────
@@ -94,7 +100,6 @@ def train_agent(
         val_env = WrapperCls(val_env)
 
     # ── PPO model ────────────────────────────────────────────────────────────
-    ent_schedule = linear_schedule(0.1)
     n_steps = 2048
 
     print("=" * 80)
@@ -102,6 +107,8 @@ def train_agent(
     print(f"  method          = {constraint_method}")
     print(f"  budget_encoding = {budget_encoding}")
     print(f"  budget_options  = {budget_options}")
+    print(f"  ent_coef        = {ent_coef}")
+    print(f"  curriculum      = {curriculum}")
     print(f"  total_timesteps = {total_timesteps:,}")
     print(f"  num_envs        = {num_envs}")
     print(f"  denom_factor    = {denom_factor}")
@@ -121,11 +128,11 @@ def train_agent(
         "n_epochs": 15,
         "clip_range": 0.1,
         "clip_range_vf": 0.2,
-        "ent_coef": 0.1,
+        "ent_coef": ent_coef,
         "verbose": 1,
         "tensorboard_log": tensorboard_log_dir,
         "policy_kwargs": {
-            "ent_coef": 0.1,
+            "ent_coef": ent_coef,
             "budget_encoding": budget_encoding,
             "rule_dim":      len(rules_list),
             "max_positions": max_positions,
@@ -158,6 +165,20 @@ def train_agent(
         verbose=1,
     )
 
+    # ── Build callback list ──────────────────────────────────────────────────
+    callbacks = [eval_callback]
+    if curriculum and budget_options and len(budget_options) >= 3:
+        sorted_budgets = sorted(budget_options)
+        n = len(sorted_budgets)
+        phase_0 = sorted_budgets[:2]
+        phase_1 = sorted_budgets[:max(3, n - 1)]
+        phase_2 = sorted_budgets
+        callbacks.append(CurriculumCallback(
+            budget_phases=[phase_0, phase_1, phase_2],
+            phase_boundaries=[0.33, 0.66],
+        ))
+        print(f"Curriculum phases: {phase_0} → {phase_1} → {phase_2}")
+
     # ── Training loop ────────────────────────────────────────────────────────
     if use_lagrange:
         _train_lagrangian_loop(
@@ -168,17 +189,17 @@ def train_agent(
             denom_factor=denom_factor,
             num_benchmarks=num_benchmarks,
             eval_callback=eval_callback,
-            ent_schedule=ent_schedule,
+            callbacks=callbacks,
             tensorboard_log_dir=tensorboard_log_dir,
             run_name=run_name,
         )
     else:
-        # Simple training (none, margin_barrier): single model.learn() call
+        # Simple training (none, margin_barrier, noise_masking): single model.learn()
         model.learn(
             total_timesteps=total_timesteps,
             log_interval=1,
             progress_bar=True,
-            callback=[eval_callback, EntCoefScheduler(ent_schedule)],
+            callback=callbacks,
         )
 
     # Always save the final model
@@ -189,7 +210,7 @@ def train_agent(
 def _train_lagrangian_loop(
     model, env, val_env, *,
     total_timesteps, n_steps, num_envs, denom_factor,
-    num_benchmarks, eval_callback, ent_schedule,
+    num_benchmarks, eval_callback, callbacks,
     tensorboard_log_dir, run_name,
 ):
     """Lagrangian PPO outer loop: train, evaluate, update lambda."""
@@ -208,7 +229,7 @@ def _train_lagrangian_loop(
             reset_num_timesteps=False,
             log_interval=1,
             progress_bar=True,
-            callback=[eval_callback, EntCoefScheduler(ent_schedule)],
+            callback=callbacks,
         )
 
         # ── Evaluate average noise on validation benchmarks ──────────────

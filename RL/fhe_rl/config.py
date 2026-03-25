@@ -20,7 +20,8 @@ class ConstraintMethod(enum.Enum):
     LAGRANGIAN_OD_OV = "lagrangian_od_ov"        # ON_DONE + ON_VIOLATION (current stable)
     LAGRANGIAN_PERSTEP = "lagrangian_perstep"    # Per-step violation penalty
     LAGRANGIAN_ALWAYS_DONE = "lagrangian_always_done"  # Always penalize at terminal
-    MARGIN_BARRIER = "margin_barrier"            # Margin obs + hard terminal penalty (NEW)
+    MARGIN_BARRIER = "margin_barrier"            # Margin obs + hard terminal penalty
+    NOISE_MASKING = "noise_masking"              # Budget-aware action masking via noise estimation
 
 
 # Base paths

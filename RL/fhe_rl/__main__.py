@@ -65,7 +65,7 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_od_ov',
-        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier'],
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking'],
         help='Constraint enforcement method (default: lagrangian_od_ov)'
     )
     train_parser.add_argument(
@@ -74,6 +74,18 @@ def parse_arguments(args=None):
         default='raw',
         choices=['raw', 'embed', 'film'],
         help='Budget encoding in policy (raw=one-hot, embed=learned embedding, film=FiLM conditioning)'
+    )
+    train_parser.add_argument(
+        '--ent_coef',
+        type=float,
+        default=0.01,
+        help='Entropy coefficient for exploration (default: 0.01)'
+    )
+    train_parser.add_argument(
+        '--curriculum',
+        action='store_true',
+        default=False,
+        help='Enable curriculum budget scheduling (tight budgets first, then widen)'
     )
     
     # Test command
@@ -100,7 +112,7 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_od_ov',
-        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier'],
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking'],
         help='Constraint method the model was trained with (default: lagrangian_od_ov)'
     )
     test_parser.add_argument(
@@ -183,6 +195,8 @@ def main(args=None):
             denom_factor=parsed_args.denom_factor,
             constraint_method=parsed_args.method,
             budget_encoding=parsed_args.budget_encoding,
+            ent_coef=parsed_args.ent_coef,
+            curriculum=parsed_args.curriculum,
         )
 
     # ─────────────────────────────── TEST ─────────────────────────────

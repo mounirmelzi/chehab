@@ -45,6 +45,7 @@ class fheEnv(gym.Env):
         self.embedding_dim = 256
         self.budget_options = budget_options if budget_options is not None else self.DEFAULT_BUDGET_OPTIONS
         self.budget_dim = len(self.budget_options)
+        self.active_budgets = list(self.budget_options)
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
         self.vectorization_helper = 0
@@ -73,7 +74,7 @@ class fheEnv(gym.Env):
         self.steps = 0
         self.initial_cost = self.current_cost = self.get_cost(self.expression)
 
-        budget = np.random.choice(self.budget_options)
+        budget = np.random.choice(self.active_budgets)
         if isinstance(options, dict):
             budget = options.get("budget", budget)
         self.set_noise_budget(budget)
@@ -246,9 +247,19 @@ class fheEnv(gym.Env):
         budget_idx = self.budget_options.index(budget)
         self.budget_one_hot_encoding[budget_idx] = 1.0
 
+    def set_active_budgets(self, budgets):
+        """Update which budgets are sampled during reset (for curriculum training).
+        The one-hot encoding still uses self.budget_options for consistent dims."""
+        self.active_budgets = list(budgets)
+
     def get_action_mask(self) -> np.ndarray:
         mask = np.zeros(len(self.rules.keys()) * self.max_positions, dtype=np.float32)
         parsed = parse_sexpr(self.expression)
+        use_noise_mask = (
+            self.constraint_method == "noise_masking"
+            and self.budget is not None
+            and self.budget < UNCONSTRAINED_BUDGET_THRESHOLD
+        )
         for rule_idx, rule_name in enumerate(self.rules.keys()):
             if rule_name == "END":
                 mask[rule_idx * self.max_positions] = 1.0
@@ -258,5 +269,16 @@ class fheEnv(gym.Env):
             valid_positions = min(len(matches), self.max_positions)
             if valid_positions > 0:
                 start = rule_idx * self.max_positions
-                mask[start:start + valid_positions] = 1.0
+                if use_noise_mask:
+                    for pos_idx in range(valid_positions):
+                        k, _ = matches[pos_idx]
+                        try:
+                            new_expr_tree = rule_obj.apply_rule(parsed, path=k)
+                            noise_est = self.noise_estimator.estimate(new_expr_tree)
+                            if noise_est <= self.budget:
+                                mask[start + pos_idx] = 1.0
+                        except Exception:
+                            pass
+                else:
+                    mask[start:start + valid_positions] = 1.0
         return mask

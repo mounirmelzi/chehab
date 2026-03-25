@@ -121,6 +121,34 @@ run_test 14085649 "old_5budgets_denom2_8envs"  lagrangian_od_ov "300,400,500,100
 run_test 14085650 "old_10budgets_denom2_8envs" lagrangian_od_ov "240,300,400,500,600,700,800,900,1000,9000000" \
     "best_model_model_14085650"
 
+# ═══════════════════════════════════════════════════════════════
+# V2 models — tight budgets [60,80,100,200,1M] + new methods
+# ═══════════════════════════════════════════════════════════════
+
+# ─── v2 Job 1: Embed + Lagrangian + ent=0.05 ─────────────────
+run_test 14147263 "v2_embed_lagr_ent05"        lagrangian_od_ov "60,80,100,200,1000000" \
+    "best_model_model_14147263_lagrangian_od_ov"
+
+# ─── v2 Job 3: Noise Masking + Embed + ent=0.05 ──────────────
+run_test 14147264 "v2_noise_masking"           noise_masking "60,80,100,200,1000000" \
+    "best_model_model_14147264_noise_masking"
+
+# ─── v2 Job 4: Curriculum + Lagrangian + Embed + ent=0.05 ────
+run_test 14147265 "v2_curriculum"              lagrangian_od_ov "60,80,100,200,1000000" \
+    "best_model_model_14147265_lagrangian_od_ov"
+
+# ─── v2 Job 2: Embed + Lagrangian + ent=0.03 ─────────────────
+run_test 14147266 "v2_embed_lagr_ent03"        lagrangian_od_ov "60,80,100,200,1000000" \
+    "best_model_model_14147266_lagrangian_od_ov"
+
+# ─── v2 Job 5: CONTROL — Embed + Lagrangian + ent=0.0 ────────
+run_test 14147267 "v2_embed_noent"             lagrangian_od_ov "60,80,100,200,1000000" \
+    "best_model_model_14147267_lagrangian_od_ov"
+
+# ─── v2 Job 6: CONTROL — Raw + Lagrangian + ent=0.05 ─────────
+run_test 14147268 "v2_raw_lagr_ent05"          lagrangian_od_ov "60,80,100,200,1000000" \
+    "best_model_model_14147268_lagrangian_od_ov"
+
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
