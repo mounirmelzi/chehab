@@ -20,6 +20,7 @@ except ImportError:
     sys.exit(1)
 
 # --- Custom Imports ---
+from .utils  import load_expressions
 from pytrs import (
     Op, Const, Var, VARIABLE_RANGE, CONST_OFFSET,
     PAREN_CLOSE, PAREN_OPEN, node_to_id, parse_sexpr,
@@ -41,7 +42,7 @@ ddp = int(os.environ.get("RANK", -1)) != -1
 
 if ddp:
     if not torch.cuda.is_available(): sys.exit(1)
-    dist.init_process_group(backend="nccl")
+    if not dist.is_initialized(): dist.init_process_group(backend="nccl")
     ddp_rank = int(os.environ["RANK"])
     ddp_local_rank = int(os.environ["LOCAL_RANK"])
     ddp_world_size = int(os.environ["WORLD_SIZE"])
@@ -99,10 +100,10 @@ class Config:
     dim_feedforward = 1024 
     dropout = 0.1
     
-    max_gen_length = 500
-    batch_size = 256       # Reduced to 128 for safety (256 might OOM on 8 layers)
+    max_gen_length = 512
+    batch_size = 128
     learning_rate = 3e-4   
-    epochs = 5            
+    epochs = 20
 
 config = Config()
 
@@ -324,17 +325,24 @@ def collate_fn_gnn(batch_exprs):
     for expr in batch_exprs:
         data_list.append(graph_builder.expr_to_graph(expr))
         flat_ids = graph_builder.flatten_for_tgt(expr)
+        flat_ids = flat_ids[: config.max_gen_length - 2]
         tgt_seqs.append([config.start_token] + flat_ids + [config.end_token])
         
     batch_data = Batch.from_data_list(data_list)
-    max_len = max(len(t) for t in tgt_seqs)
-    padded_tgt = [t + [config.pad_token] * (max_len - len(t)) for t in tgt_seqs]
+    padded_tgt = [t + [config.pad_token] * (config.max_gen_length - len(t)) for t in tgt_seqs]
     return batch_data, torch.tensor(padded_tgt, dtype=torch.long)
 
 def train(model, dataset):
-    train_sampler = DistributedSampler(dataset) if ddp else None
-    train_loader = DataLoader(dataset, batch_size=config.batch_size, shuffle=(train_sampler is None), 
-                              sampler=train_sampler, collate_fn=collate_fn_gnn, num_workers=4, pin_memory=True)
+    train_sampler = DistributedSampler(dataset, drop_last=True) if ddp else None
+    train_loader = DataLoader(
+        dataset,
+        batch_size=config.batch_size,
+        shuffle=(train_sampler is None),
+        sampler=train_sampler,
+        collate_fn=collate_fn_gnn,
+        num_workers=4,
+        pin_memory=True
+    )
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=config.pad_token)
     opt = optim.AdamW(model.parameters(), lr=config.learning_rate)
@@ -360,7 +368,7 @@ def train(model, dataset):
             opt.step()
             total_loss += loss.item()
             batch_count += 1
-            if master_process and i % 50 == 0: print(f"[E{epoch} B{i}] Loss: {loss.item():.4f}")
+            if master_process: print(f"[E{epoch} B{i}] Loss: {loss.item():.4f}")
 
         avg_loss = total_loss / batch_count if batch_count > 0 else 0
         scheduler.step(avg_loss)
@@ -389,19 +397,13 @@ if __name__ == "__main__":
     if ddp: model = DDP(model, device_ids=[ddp_local_rank], find_unused_parameters=False)
 
     if mode == "train":
-        # UPDATE PATH
-        data_path = "/scratch/bs5331/chehab-vectorization-rl/pretraining/dataset_balanced_ROT_32_15_5000000.txt"
-        local_exprs = []
-        if master_process: print("Loading Dataset...")
-        try:
-            with open(data_path, "r") as f:
-                for idx, line in enumerate(f):
-                    if idx % ddp_world_size == ddp_rank:
-                        local_exprs.append(line.strip())
-        except: sys.exit(1)
-        
-        train(model, [parse_sexpr(e) for e in local_exprs])
-        if ddp: dist.destroy_process_group()
+        all_expressions = load_expressions("./pretraining/dataset_balanced_ROT_32_15_5000000.txt")
+        all_expressions = sorted(all_expressions, key=len, reverse=True)
+        all_expressions = list(map(parse_sexpr, all_expressions))
+        train(model, all_expressions)
+        if ddp:
+            dist.barrier()
+            dist.destroy_process_group()
 
     elif mode == "test_rl":
         model_path = "saved_models/gnn_pos_latest_n.pth"
@@ -419,7 +421,7 @@ if __name__ == "__main__":
         print(f"Swap Distance (should be > 0.0): {dist:.5f}")
         
         print("\n--- Testing Variable Invariance ---")
-        expr3 = "(Vec (* a 2))"
+        expr3 = "(Vec (* a b))"
         expr4 = "(Vec (* x y))"
         v3 = get_vector_for_rl(model, expr3)
         v4 = get_vector_for_rl(model, expr4)
