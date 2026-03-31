@@ -1,5 +1,6 @@
 rl_venv/
 tensorboard/
+saved_models/
 eval/
 old_test_results/
 job_logs.xlsx

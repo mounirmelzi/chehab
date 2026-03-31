@@ -103,7 +103,7 @@ class Config:
     max_gen_length = 512
     batch_size = 128
     learning_rate = 3e-4   
-    epochs = 20
+    epochs = 100
 
 config = Config()
 
