@@ -59,6 +59,8 @@ class fheEnv(gym.Env):
         }
         if self.constraint_method == "margin_barrier":
             obs_dict["budget_margin"] = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+        if self.constraint_method == "nato_sc":
+            obs_dict["noise_ratio"] = spaces.Box(low=0, high=20, shape=(1,), dtype=np.float32)
         self.observation_space = spaces.Dict(obs_dict)
         self.reset()
 
@@ -89,6 +91,8 @@ class fheEnv(gym.Env):
         if self.constraint_method == "margin_barrier":
             margin = np.clip((self.budget - noise) / max(self.budget, 1), -1.0, 1.0)
             obs["budget_margin"] = np.array([margin], dtype=np.float32)
+        if self.constraint_method == "nato_sc":
+            obs["noise_ratio"] = np.array([noise / max(self.budget, 1)], dtype=np.float32)
 
         return obs, {
             "expression": self.expression,
@@ -133,6 +137,7 @@ class fheEnv(gym.Env):
             "expression": self.expression,
             "budget": self.budget,
             "noise": self.noise_estimator.estimate(self.expression),
+            "cost": self.current_cost,
         }
 
 
@@ -159,16 +164,27 @@ class fheEnv(gym.Env):
         if self.constraint_method == "margin_barrier" and (terminated or truncated):
             noise = info["noise"]
             if noise > self.budget:
-                # Hard violation penalty — agent must learn this is unacceptable
                 reward = -100.0
             else:
                 cost_reward = self.calculate_final_reward()
                 if self.budget <= UNCONSTRAINED_BUDGET_THRESHOLD:
-                    # Utilization bonus: encourage using budget efficiently
                     utilization = noise / max(self.budget, 1)
                     reward = cost_reward + utilization * 5.0
                 else:
-                    # Unconstrained regime: pure cost optimization, no utilization bonus
+                    reward = cost_reward
+
+        # ── NATO-SC: quadratic terminal penalty, allows intermediate violations ──
+        if self.constraint_method == "nato_sc" and (terminated or truncated):
+            noise = info["noise"]
+            cost_reward = self.calculate_final_reward()
+            if noise > self.budget:
+                violation_ratio = (noise - self.budget) / max(self.budget, 1)
+                reward = cost_reward - 50.0 * (violation_ratio ** 2)
+            else:
+                if self.budget <= UNCONSTRAINED_BUDGET_THRESHOLD:
+                    utilization = noise / max(self.budget, 1)
+                    reward = cost_reward + utilization * 5.0
+                else:
                     reward = cost_reward
 
         if terminated or truncated:
@@ -186,6 +202,8 @@ class fheEnv(gym.Env):
         if self.constraint_method == "margin_barrier":
             margin = np.clip((self.budget - info["noise"]) / max(self.budget, 1), -1.0, 1.0)
             obs["budget_margin"] = np.array([margin], dtype=np.float32)
+        if self.constraint_method == "nato_sc":
+            obs["noise_ratio"] = np.array([info["noise"] / max(self.budget, 1)], dtype=np.float32)
 
         return obs, reward, terminated, truncated, info
     
@@ -241,10 +259,14 @@ class fheEnv(gym.Env):
             self.budget = None
             self.budget_one_hot_encoding = None
             return
-        assert budget in self.budget_options
         self.budget = budget
         self.budget_one_hot_encoding = np.zeros(self.budget_dim, dtype=np.float32)
-        budget_idx = self.budget_options.index(budget)
+        if budget in self.budget_options:
+            budget_idx = self.budget_options.index(budget)
+        else:
+            # Test budget not in training set — use nearest training budget for encoding
+            budget_idx = min(range(len(self.budget_options)),
+                             key=lambda i: abs(self.budget_options[i] - budget))
         self.budget_one_hot_encoding[budget_idx] = 1.0
 
     def set_active_budgets(self, budgets):

@@ -22,10 +22,13 @@ class CustomFeaturesExtractor(nn.Module):
     def __init__(self, observation_space, budget_encoding="raw"):
         super().__init__()
         self._embed_dim = observation_space["observation"].shape[0]        # 256
-        self._budget_dim = observation_space["budget_one_hot_encoding"].shape[0]
+        self._has_budget = "budget_one_hot_encoding" in observation_space.spaces
+        self._budget_dim = observation_space["budget_one_hot_encoding"].shape[0] if self._has_budget else 0
         self._has_margin = "budget_margin" in observation_space.spaces
         self._margin_dim = observation_space["budget_margin"].shape[0] if self._has_margin else 0
-        self._budget_encoding = budget_encoding
+        self._has_noise_ratio = "noise_ratio" in observation_space.spaces
+        self._noise_ratio_dim = observation_space["noise_ratio"].shape[0] if self._has_noise_ratio else 0
+        self._budget_encoding = budget_encoding if self._has_budget else "none"
 
         if budget_encoding == "embed":
             # One-hot → dense learned embedding
@@ -61,16 +64,19 @@ class CustomFeaturesExtractor(nn.Module):
 
     def forward(self, obs_dict):
         expr_emb = obs_dict["observation"]
-        budget_oh = obs_dict["budget_one_hot_encoding"]
 
-        if self._budget_encoding == "raw":
-            parts = [expr_emb, budget_oh]
+        if self._budget_encoding == "none":
+            parts = [expr_emb]
+
+        elif self._budget_encoding == "raw":
+            parts = [expr_emb, obs_dict["budget_one_hot_encoding"]]
 
         elif self._budget_encoding == "embed":
-            budget_emb = self.budget_encoder(budget_oh)
+            budget_emb = self.budget_encoder(obs_dict["budget_one_hot_encoding"])
             parts = [expr_emb, budget_emb]
 
         elif self._budget_encoding == "film":
+            budget_oh = obs_dict["budget_one_hot_encoding"]
             gamma = self.film_gamma(budget_oh)      # (B, 256)
             beta  = self.film_beta(budget_oh)        # (B, 256)
             modulated = gamma * expr_emb + beta      # budget gates expression features
@@ -82,15 +88,19 @@ class CustomFeaturesExtractor(nn.Module):
 
         if self._has_margin:
             parts.append(obs_dict["budget_margin"])
+        if self._has_noise_ratio:
+            parts.append(obs_dict["noise_ratio"])
         return torch.cat(parts, dim=1)
 
     @property
     def features_dim(self):
-        if self._budget_encoding == "raw":
+        if self._budget_encoding == "none":
+            base = self._embed_dim
+        elif self._budget_encoding == "raw":
             base = self._embed_dim + self._budget_dim
         else:  # "embed" or "film"
             base = self._embed_dim + self.BUDGET_EMBED_DIM
-        return base + self._margin_dim
+        return base + self._margin_dim + self._noise_ratio_dim
 
 
 class HierarchicalMaskablePolicy(nn.Module):

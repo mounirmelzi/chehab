@@ -22,6 +22,7 @@ class ConstraintMethod(enum.Enum):
     LAGRANGIAN_ALWAYS_DONE = "lagrangian_always_done"  # Always penalize at terminal
     MARGIN_BARRIER = "margin_barrier"            # Margin obs + hard terminal penalty
     NOISE_MASKING = "noise_masking"              # Budget-aware action masking via noise estimation
+    NATO_SC = "nato_sc"                          # Noise-Aware Trajectory Optimization + Safety Checkpointing
 
 
 # Base paths

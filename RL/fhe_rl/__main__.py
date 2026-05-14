@@ -4,7 +4,7 @@ import os
 import argparse
 from .run import run_agent
 from .train import train_agent
-from .test import test_agent
+from .test import test_agent, test_agent_v2
 from .utils import load_embeddings
 from .TRAE_bpe import BPETokenizer  # Import for pickle compatibility
 from .config import (
@@ -65,8 +65,15 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_od_ov',
-        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking'],
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc'],
         help='Constraint enforcement method (default: lagrangian_od_ov)'
+    )
+    train_parser.add_argument(
+        '--algo',
+        type=str,
+        default='ppo',
+        choices=['ppo', 'focops', 'lagrangian_pid'],
+        help='RL algorithm (default: ppo)'
     )
     train_parser.add_argument(
         '--budget_encoding',
@@ -112,8 +119,15 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_od_ov',
-        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking'],
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc'],
         help='Constraint method the model was trained with (default: lagrangian_od_ov)'
+    )
+    test_parser.add_argument(
+        '--test_mode',
+        type=str,
+        default='v1',
+        choices=['v1', 'v2'],
+        help='v1=existing test, v2=trajectory checkpointing + safety rollback'
     )
     test_parser.add_argument(
         '--output',
@@ -197,6 +211,7 @@ def main(args=None):
             budget_encoding=parsed_args.budget_encoding,
             ent_coef=parsed_args.ent_coef,
             curriculum=parsed_args.curriculum,
+            algo=parsed_args.algo,
         )
 
     # ─────────────────────────────── TEST ─────────────────────────────
@@ -222,7 +237,8 @@ def main(args=None):
         elif test_budgets:
             train_budgets = test_budgets
 
-        test_agent(
+        test_fn = test_agent_v2 if parsed_args.test_mode == "v2" else test_agent
+        test_fn(
             "./fhe_rl/datasets/benchmarks.txt",
             embeddings,
             agent_zip,

@@ -40,6 +40,7 @@ def train_agent(
     budget_encoding: str = "raw",
     ent_coef: float = 0.01,
     curriculum: bool = False,
+    algo: str = "ppo",
 ):
     """Unified training entry point for all constraint methods.
 
@@ -104,6 +105,7 @@ def train_agent(
 
     print("=" * 80)
     print(f"Training config:")
+    print(f"  algo            = {algo}")
     print(f"  method          = {constraint_method}")
     print(f"  budget_encoding = {budget_encoding}")
     print(f"  budget_options  = {budget_options}")
@@ -141,7 +143,17 @@ def train_agent(
             "value_hidden_dims":  [256, 128, 64],
         }
     }
-    model = PPO(**model_params)
+    # ── Algorithm selection ──────────────────────────────────────────────
+    if algo == "focops":
+        from .algos.focops import FOCOPS
+        model = FOCOPS(**model_params, cost_limit=0.0, nu_lr=0.01, nu_max=10.0)
+    elif algo == "lagrangian_pid":
+        from .algos.lagrangian_pid import PIDLagrangianWrapper
+        env = PIDLagrangianWrapper(env)
+        model_params["env"] = env
+        model = PPO(**model_params)
+    else:
+        model = PPO(**model_params)
 
     log_training_details(
         model_params,
@@ -150,7 +162,7 @@ def train_agent(
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes=f"Method: {constraint_method} | budget_encoding={budget_encoding} | denom_factor={denom_factor} | num_envs={num_envs} | budgets={budget_options}",
+        notes=f"Algo: {algo} | Method: {constraint_method} | budget_encoding={budget_encoding} | denom_factor={denom_factor} | num_envs={num_envs} | budgets={budget_options}",
     )
 
     num_benchmarks = len(benchmarks)
