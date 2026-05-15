@@ -135,6 +135,12 @@ def parse_arguments(args=None):
         default=None,
         help='Output Excel file path (default: auto-generated from model name)'
     )
+    test_parser.add_argument(
+        '--benchmark',
+        type=str,
+        default=None,
+        help='Path to benchmark expressions file (default: ./fhe_rl/datasets/benchmarks.txt)'
+    )
     
     # Run command
     run_parser = subparsers.add_parser('run', help='Run the agent')
@@ -237,9 +243,10 @@ def main(args=None):
         elif test_budgets:
             train_budgets = test_budgets
 
+        benchmark_file = parsed_args.benchmark or "./fhe_rl/datasets/benchmarks.txt"
         test_fn = test_agent_v2 if parsed_args.test_mode == "v2" else test_agent
         test_fn(
-            "./fhe_rl/datasets/benchmarks.txt",
+            benchmark_file,
             embeddings,
             agent_zip,
             budget_options=train_budgets,
