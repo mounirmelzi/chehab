@@ -1,4 +1,7 @@
+#include "fheco/ckks/ckks_params.hpp"
+#include "fheco/ckks/ckks_scale_manager.hpp"
 #include "fheco/code_gen/gen_func.hpp"
+#include "fheco/code_gen/gen_func_lattigo.hpp"
 #include "fheco/dsl/ciphertext.hpp"
 #include "fheco/dsl/compiler.hpp"
 #include "fheco/dsl/plaintext.hpp"
@@ -77,6 +80,130 @@ void Compiler::gen_he_code(
   code_gen::gen_func(
     func, rotation_steps_keys, header_os, header_name, source_os, security_level, auto_enc_params_selection_enabled());
 }
+
+/***********************************************************************/
+void Compiler::gen_lattigo_code(
+  const std::shared_ptr<ir::Func> &func, std::ostream &go_os,
+  size_t rotation_keys_threshold, bool insert_rescale_ops)
+{
+#ifdef FHECO_LOGGING
+  clog << "\nLattigo code generation (CKKS)\n";
+#endif
+
+  // Get rotation steps
+  unordered_set<int> rotation_steps_keys;
+  rotation_steps_keys = passes::reduce_rotation_keys(func, rotation_keys_threshold);
+
+  // NOTE: Do NOT insert explicit relin operations for Lattigo backend
+  // Lattigo's MulRelinNew already includes relinearization, so explicit
+  // relin operations would be redundant and waste computation.
+  // The following line is intentionally commented out:
+  // passes::relin_after_ctxt_ctxt_mul(func);
+
+  // Compute multiplicative depth (max chain of cipher-cipher muls)
+  std::unordered_map<std::size_t, size_t> term_mul_depth;
+  size_t max_mul_depth = 0;
+  
+  for (auto* term : func->get_top_sorted_terms())
+  {
+    size_t depth = 0;
+    
+    // Get max depth from operands
+    for (auto* operand : term->operands())
+    {
+      auto it = term_mul_depth.find(operand->id());
+      if (it != term_mul_depth.end())
+        depth = std::max(depth, it->second);
+    }
+    
+    // Add 1 if this is a cipher-cipher multiplication
+    auto op_type = term->op_code().type();
+    if (op_type == ir::OpCode::Type::mul || op_type == ir::OpCode::Type::square)
+    {
+      // Check if cipher-cipher (not cipher-plain)
+      bool is_ctxt_ctxt = (op_type == ir::OpCode::Type::square);
+      if (!is_ctxt_ctxt && term->operands().size() >= 2)
+      {
+        auto* op1 = term->operands()[0];
+        auto* op2 = term->operands()[1];
+        is_ctxt_ctxt = (op1->type() == ir::Term::Type::cipher && 
+                        op2->type() == ir::Term::Type::cipher);
+      }
+      if (is_ctxt_ctxt)
+        ++depth;
+    }
+    
+    term_mul_depth[term->id()] = depth;
+    max_mul_depth = std::max(max_mul_depth, depth);
+  }
+  
+  // Maximum practical depth without bootstrapping is ~12-15 levels
+  // If depth exceeds this, we need bootstrapping
+  const size_t MAX_DEPTH_WITHOUT_BOOTSTRAP = 12;
+  bool needs_bootstrap = (max_mul_depth > MAX_DEPTH_WITHOUT_BOOTSTRAP);
+  
+  // If bootstrapping is needed, we use a fixed depth and rely on bootstrap
+  // Otherwise, add some headroom for safety (minimum 3)
+  size_t mul_depth;
+  if (needs_bootstrap)
+  {
+    mul_depth = MAX_DEPTH_WITHOUT_BOOTSTRAP;
+  }
+  else
+  {
+    mul_depth = std::max(max_mul_depth + 1, static_cast<size_t>(3));
+  }
+  
+#ifdef FHECO_LOGGING
+  clog << "Circuit multiplicative depth: " << max_mul_depth << " (using " << mul_depth << " levels)\n";
+  if (needs_bootstrap)
+  {
+    clog << "Bootstrap REQUIRED: depth " << max_mul_depth << " exceeds " << MAX_DEPTH_WITHOUT_BOOTSTRAP << "\n";
+  }
+#endif
+
+  // Create CKKS params based on multiplicative depth
+  ckks::CKKSParams ckks_params;
+  if (needs_bootstrap)
+  {
+    ckks_params = ckks::CKKSParamSelector::default_params_with_bootstrap(mul_depth);
+    ckks_params.enable_bootstrap = true;
+  }
+  else
+  {
+    ckks_params = ckks::CKKSParamSelector::default_params(mul_depth);
+    ckks_params.enable_bootstrap = false;
+  }
+
+  // Insert rescale operations and handle level alignment for CKKS
+  if (insert_rescale_ops)
+  {
+#ifdef FHECO_LOGGING
+    clog << "\nCKKS scale/level management\n";
+#endif
+    
+    ckks::CKKSScaleManager scale_manager(func, ckks_params);
+    
+    // Enable bootstrap insertion if needed
+    scale_manager.set_enable_bootstrap(needs_bootstrap);
+    
+    size_t ops_inserted = scale_manager.analyze_and_transform();
+    
+#ifdef FHECO_LOGGING
+    clog << "CKKS manager inserted " << ops_inserted << " operations (rescale + mod_switch";
+    if (scale_manager.requires_bootstrap())
+    {
+      clog << " + " << scale_manager.get_bootstrap_count() << " bootstraps";
+    }
+    clog << ")\n";
+    scale_manager.print_analysis(clog);
+#endif
+  }
+
+  // Generate Lattigo Go code with computed CKKS params
+  code_gen::lattigo::gen_func_lattigo(func, rotation_steps_keys, go_os, func->name(), &ckks_params);
+}
+
 /***********************************************************************/
 const shared_ptr<ir::Func> &Compiler::add_func(shared_ptr<ir::Func> func)
 {

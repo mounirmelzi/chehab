@@ -69,6 +69,12 @@ public:
     const std::shared_ptr<ir::Func> &func, std::ostream &header_os, std::string_view header_name,
     std::ostream &source_os, std::size_t rotation_keys_threshold = std::numeric_limits<std::size_t>::max(),
     bool lazy_relin = false,param_select::EncParams::SecurityLevel security_level=param_select::EncParams::SecurityLevel::tc128);
+
+  // Generate Lattigo (Go) code for CKKS
+  static void gen_lattigo_code(
+    const std::shared_ptr<ir::Func> &func, std::ostream &go_os,
+    std::size_t rotation_keys_threshold = std::numeric_limits<std::size_t>::max(),
+    bool insert_rescale = true);
   static inline const std::shared_ptr<ir::Func> &active_func()
   {
     if (active_func_it_ == funcs_table_.cend())

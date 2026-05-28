@@ -1,6 +1,9 @@
 #pragma once
 
+#include "fheco/ckks/ckks_params.hpp"
+#include "fheco/ckks/ckks_scale_manager.hpp"
 #include "fheco/code_gen/gen_func.hpp"
+#include "fheco/code_gen/gen_func_lattigo.hpp"
 #include "fheco/param_select/enc_params.hpp"
 #include "fheco/param_select/param_selector.hpp"
 #include "fheco/dsl/ciphertext.hpp"
@@ -8,6 +11,7 @@
 #include "fheco/dsl/compiler.hpp"
 #include "fheco/dsl/ops_overloads.hpp"
 #include "fheco/dsl/plaintext.hpp"
+#include "fheco/dsl/conv2d_optimized.hpp"
 #include "fheco/trs/common.hpp"
 #include "fheco/trs/reduct_order/check_ruleset.hpp"
 #include "fheco/trs/trs.hpp"

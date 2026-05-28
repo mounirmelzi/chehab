@@ -76,6 +76,10 @@ int main(int argc, char **argv)
   if (argc > 7)
     const_folding = stoi(argv[7]); 
 
+  int backend = 0;  // 0 = SEAL (default), 1 = Lattigo (Go/CKKS)
+  if (argc > 8)
+    backend = stoi(argv[8]);
+
   if (cse)
   {
     Compiler::enable_cse();
@@ -120,7 +124,20 @@ int main(int argc, char **argv)
       Compiler::compile(func, ruleset, rewrite_heuristic);
     }
     /********** FHE code generation  *****************************/
-    Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+    if (backend == 0) {
+      // SEAL backend (C++)
+      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+      cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+    } else {
+      // Lattigo backend (Go/CKKS)
+      string go_path = "generated_" + func_name + ".go";
+      ofstream go_os(go_path);
+      if (!go_os)
+        throw logic_error("failed to create Go file");
+      Compiler::gen_lattigo_code(func, go_os);
+      go_os.close();
+      cout << "Generated Lattigo code: " << go_path << endl;
+    }
     
     /************/elapsed = chrono::high_resolution_clock::now() - t;
     cout << elapsed.count() << " ms\n";
@@ -151,7 +168,22 @@ int main(int argc, char **argv)
     auto ruleset = Compiler::Ruleset::simplification_ruleset;
     auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
     Compiler::compile(func, ruleset, rewrite_heuristic);
-    Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+    
+    if (backend == 0) {
+      // SEAL backend (C++)
+      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+      cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+    } else {
+      // Lattigo backend (Go/CKKS)
+      string go_path = "generated_" + func_name + ".go";
+      ofstream go_os(go_path);
+      if (!go_os)
+        throw logic_error("failed to create Go file");
+      Compiler::gen_lattigo_code(func, go_os);
+      go_os.close();
+      cout << "Generated Lattigo code: " << go_path << endl;
+    }
+    
     /************/elapsed = chrono::high_resolution_clock::now() - t;
     cout<<"Compile time : \n";
     cout << elapsed.count() << " ms\n";
