@@ -25,8 +25,8 @@ export PROJ_ROOT="/scratch/${NETID}/chehab-constr-updated"
 cd "$PROJ_ROOT/RL"
 export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:${PYTHONPATH:-}"
 
-# OpenRouter API key (for optional LLM-based generation in future)
-export OPENAI_API_KEY="REDACTED"
+# OpenRouter API key (set via environment variable before running)
+export OPENAI_API_KEY="${OPENROUTER_API_KEY}"
 
 mkdir -p "$PROJ_ROOT/logs"
 
