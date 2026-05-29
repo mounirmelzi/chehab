@@ -1,0 +1,2 @@
+name,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+fc_plus_act_4,42.4,0.0,151.2,86.3,17.8,297.8,18.31,3.07e-06

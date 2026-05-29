@@ -558,17 +558,18 @@ std::vector<size_t> LevelDAG::get_bootstrap_locations()
   
   // =================================================================
   // Orion-style bootstrap placement algorithm:
-  // - Simulate execution in topological order
-  // - Bootstrap when level would hit 0 but there are more operations
+  // - Simulate execution in topological order over ALL cipher terms
+  // - Propagate levels through non-level-consuming ops (add, sub, etc.)
+  // - Bootstrap when a level-consuming op would hit level 0 but there
+  //   are more level-consuming operations remaining
   // - After bootstrap, level resets to l_eff (max level)
   // =================================================================
   
   auto sorted_terms = func_->get_top_sorted_terms();
   std::unordered_map<size_t, int> current_levels;
   
-  // Collect only cipher terms and their indices for checking "remaining ops"
   std::vector<const ir::Term*> cipher_terms;
-  std::vector<const ir::Term*> level_consuming_terms;
+  int total_level_consuming = 0;
   
   for (auto* term : sorted_terms)
   {
@@ -578,17 +579,16 @@ std::vector<size_t> LevelDAG::get_bootstrap_locations()
     
     int local_depth = estimate_term_depth(term);
     if (local_depth > 0 && !term->is_leaf())
-    {
-      level_consuming_terms.push_back(term);
-    }
+      ++total_level_consuming;
   }
   
 #ifdef FHECO_LOGGING
-  std::clog << "  Level-consuming terms: " << level_consuming_terms.size() << "\n";
+  std::clog << "  Level-consuming terms: " << total_level_consuming << "\n";
+  std::clog << "  Total cipher terms: " << cipher_terms.size() << "\n";
   std::clog << "  l_eff (max level): " << l_eff_ << "\n";
 #endif
   
-  // Initialize all cipher terms at max level
+  // Initialize leaf cipher terms at max level
   for (auto* term : cipher_terms)
   {
     if (term->is_leaf())
@@ -597,12 +597,22 @@ std::vector<size_t> LevelDAG::get_bootstrap_locations()
     }
   }
   
-  // Process level-consuming operations
-  for (size_t idx = 0; idx < level_consuming_terms.size(); ++idx)
+  int remaining_consuming = total_level_consuming;
+  
+  // Process ALL cipher terms in topological order so that levels propagate
+  // correctly through non-level-consuming operations (add_plain, etc.)
+  for (auto* term : cipher_terms)
   {
-    auto* term = level_consuming_terms[idx];
+    if (term->is_leaf())
+      continue;
+    
     int local_depth = estimate_term_depth(term);
-    bool has_more_ops = (idx + 1 < level_consuming_terms.size());
+    bool is_level_consuming = (local_depth > 0);
+    
+    if (is_level_consuming)
+      --remaining_consuming;
+    
+    bool has_more_ops = (remaining_consuming > 0);
     
     // Get minimum operand level
     int min_operand_level = l_eff_;
@@ -624,22 +634,20 @@ std::vector<size_t> LevelDAG::get_bootstrap_locations()
     // Level after this operation (without bootstrap)
     int output_level = min_operand_level - local_depth;
     
-    // Orion's rule: Bootstrap when output_level would reach 0 (or below)
+    // Bootstrap when a level-consuming op would reach level 0 (or below)
     // AND there are more level-consuming operations remaining
-    // This ensures we never hit level 0 except for the final output
-    if (output_level < 1 && has_more_ops && lowest_operand != nullptr)
+    if (is_level_consuming && output_level < 1 && has_more_ops && lowest_operand != nullptr)
     {
-      // Bootstrap the lowest operand
       bootstrap_locations_.push_back(lowest_operand->id());
       ++total_bootstraps_;
       
-      // After bootstrap, operand level resets to l_eff
 #ifdef FHECO_LOGGING
-      int old_level = current_levels[lowest_operand->id()];
+      int old_level = current_levels.count(lowest_operand->id()) 
+                        ? current_levels[lowest_operand->id()] : -1;
 #endif
       current_levels[lowest_operand->id()] = l_eff_;
       
-      // Recalculate output level
+      // Recalculate output level after bootstrap
       min_operand_level = l_eff_;
       output_level = l_eff_ - local_depth;
       
@@ -649,7 +657,6 @@ std::vector<size_t> LevelDAG::get_bootstrap_locations()
 #endif
     }
     
-    // Update current level for this term
     current_levels[term->id()] = std::max(0, output_level);
   }
   

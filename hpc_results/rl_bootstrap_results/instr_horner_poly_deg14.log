@@ -1,0 +1,8 @@
+[info] Loaded 1 plaintext values from fhe_io_example_adapted.txt
+[info]   p1 = [1.0]
+[info] Found 1 cipher inputs: ['c0']
+[info] Found 1 plain inputs: ['p1']
+[info] FHE function: fhe
+[info] Bootstrap: True
+[info] Params: params, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{...
+[info] Pass 1: fixing 1 unused variables: ['p1']

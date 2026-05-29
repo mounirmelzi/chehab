@@ -1,0 +1,2 @@
+name,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+poly_activation_deg4_8,41.3,0.0,41.7,49.2,17.6,149.8,16.85,8.44e-06

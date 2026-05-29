@@ -1,0 +1,5 @@
+[info] Found 74 cipher inputs: ['c0', 'img_0_0', 'img_0_1', 'img_0_2', 'img_0_3', 'img_0_4', 'img_0_5', 'img_0_6', 'img_0_7', 'img_1_0', 'img_1_1', 'img_1_2', 'img_1_3', 'img_1_4', 'img_1_5', 'img_1_6', 'img_1_7', 'img_2_0', 'img_2_1', 'img_2_2', 'img_2_3', 'img_2_4', 'img_2_5', 'img_2_6', 'img_2_7', 'img_3_0', 'img_3_1', 'img_3_2', 'img_3_3', 'img_3_4', 'img_3_5', 'img_3_6', 'img_3_7', 'img_4_0', 'img_4_1', 'img_4_2', 'img_4_3', 'img_4_4', 'img_4_5', 'img_4_6', 'img_4_7', 'img_5_0', 'img_5_1', 'img_5_2', 'img_5_3', 'img_5_4', 'img_5_5', 'img_5_6', 'img_5_7', 'img_6_0', 'img_6_1', 'img_6_2', 'img_6_3', 'img_6_4', 'img_6_5', 'img_6_6', 'img_6_7', 'img_7_0', 'img_7_1', 'img_7_2', 'img_7_3', 'img_7_4', 'img_7_5', 'img_7_6', 'img_7_7', 'k0_0_0', 'k0_0_1', 'k0_0_2', 'k0_1_0', 'k0_1_1', 'k0_1_2', 'k0_2_0', 'k0_2_1', 'k0_2_2']
+[info] Found 0 plain inputs: []
+[info] FHE function: deep_conv
+[info] Bootstrap: False
+[info] Params: params, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{...

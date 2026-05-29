@@ -1,0 +1,74 @@
+[veclang_runner] ../vectorized_code.txt size=4381 bytes
+[veclang_runner] ../inputs.txt size=560 bytes
+[veclang_runner] fhe_io_example.txt size=858 bytes
+[veclang_runner] create_func done
+==> stop_reached : 1 
+===> First_Step_FVC : 
+===> Second_Step_FVC : 
+===> Third_Step_FVC : 
+==> stop_reached : 1 
+[veclang_runner] format_vectorized_code done, terms=39
+[veclang_runner] generating Lattigo code...
+lattigo_output: generated_fhe.go
+----------------------------------------------------------------------------------------------------
+global_metrics
+global_metrics not computed
+----------------------------------------------------------------------------------------------------
+depth_metrics
+ctxt_leaves_*: (depth, xdepth)
+max: (8, 3)
+avg: (8, 3)
+min: (8, 3)
+----------------------------------------------------------------------------------------------------
+terms_classes_metrics
+|terms|: 39
+captured_terms: 39 (100%)
+|ctxt_inputs|: 16
+|ptxt_leaves|: 3
+|constants|: 0
+|ptxt_ptxt_ops|: 0
+|constants_ops|: 0
+operations_static_cost: 9.49
+----------------------------------------------------------------------------------------------------
+|mul| (level, arg1_size, arg2_size): count
+(L-0, 3, 3): 1
+(L-0, 2, 2): 8
+total: 9
+----------------------------------------------------------------------------------------------------
+|square| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|encrypt|: 0
+----------------------------------------------------------------------------------------------------
+|relin| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rotate| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_plain| (level, ctxt_arg_size): count
+(L-0, 3): 1
+(L-0, 5): 1
+total: 2
+----------------------------------------------------------------------------------------------------
+|mul_scalar| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_non_scalar| (level, ctxt_arg_size): count
+(L-0, 3): 1
+(L-0, 5): 1
+total: 2
+----------------------------------------------------------------------------------------------------
+|mod_switch| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rescale| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|he_add| (level, max_args_size): count
+(L-0, 5): 2
+(L-0, 3): 7
+total: 9
+----------------------------------------------------------------------------------------------------
+|rotation_keys|: 0
+|relin_keys|: 0

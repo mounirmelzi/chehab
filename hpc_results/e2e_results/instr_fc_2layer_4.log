@@ -1,0 +1,7 @@
+[info] Found 24 cipher inputs: ['c0', 'c1', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c2', 'c20', 'c21', 'c22', 'c23', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9']
+[info] Found 0 plain inputs: []
+[info] FHE function: fhe
+[info] Bootstrap: False
+[info] Params: params, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{...
+[info] Pass 1: fixing 10 unused variables: ['c12', 'c14', 'c16', 'c18', 'c20', 'c22', 'c23', 'c25', 'c27', 'c29']
+[info] Pass 2: fixing 8 unused variables: ['c31', 'c33', 'c35', 'c37', 'c39', 'c41', 'c43', 'c45']

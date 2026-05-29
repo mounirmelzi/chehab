@@ -1,0 +1,7 @@
+[info] Found 0 cipher inputs: []
+[info] Found 0 plain inputs: []
+[info] FHE function: fhe
+[info] Bootstrap: False
+Build/run failed:
+instrumented_run.go:2:1: expected 'package', found 'func'
+

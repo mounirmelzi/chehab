@@ -1,0 +1,10 @@
+[info] Loaded 3 plaintext values from fhe_io_example_adapted.txt
+[info]   p0 = [1.0, 1.0, 1.0, 1.0]
+[info]   p2 = [3.0, 3.0, 3.0, 3.0]
+[info]   p3 = [2.0, 2.0, 2.0, 2.0]
+[info] Found 2 cipher inputs: ['c0', 'c1']
+[info] Found 3 plain inputs: ['p0', 'p2', 'p3']
+[info] FHE function: fhe
+[info] Bootstrap: False
+[info] Params: params, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{...
+[info] Pass 1: fixing 3 unused variables: ['p2', 'p3', 'p6']

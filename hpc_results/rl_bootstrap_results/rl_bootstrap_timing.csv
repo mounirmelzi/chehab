@@ -1,0 +1,1 @@
+name,rl_cost_before,rl_cost_after,rl_reduction_pct,depth,xdepth,terms,ops_cost,compilation_ms,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error

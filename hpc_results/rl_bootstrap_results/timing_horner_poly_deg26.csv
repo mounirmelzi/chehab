@@ -1,0 +1,4 @@
+Generating bootstrap keys (this may take a moment)...
+Bootstrap keys generated successfully!
+name,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+horner_poly_deg26,968.0,126907.1,244.4,2271.0,4.7,130395.2,-3.91,1.50e+01

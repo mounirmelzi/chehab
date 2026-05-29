@@ -1,0 +1,14 @@
+[veclang_runner] ../vectorized_code.txt size=483 bytes
+[veclang_runner] ../inputs.txt size=6 bytes
+[veclang_runner] fhe_io_example.txt size=16 bytes
+[veclang_runner] create_func done
+==> stop_reached : 1 
+===> First_Step_FVC : 
+===> Second_Step_FVC : 
+===> Third_Step_FVC : 
+==> stop_reached : 1 
+[veclang_runner] format_vectorized_code done, terms=53
+[veclang_runner] generating Lattigo code...
+lattigo_output: generated_fhe.go
+terminate called after throwing an instance of 'std::logic_error'
+  what():  unhandled he operation

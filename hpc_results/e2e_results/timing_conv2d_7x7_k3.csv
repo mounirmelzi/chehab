@@ -1,0 +1,2 @@
+name,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+conv2d_7x7_k3,42.0,0.0,289.5,159.0,20.0,510.6,27.26,6.22e-09

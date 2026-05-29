@@ -137,10 +137,10 @@ CiphertextInfo CKKSScaleManager::compute_term_info(const ir::Term* term)
     case ir::OpCode::Type::rescale:
     {
       auto& operand_info = term_info_[term->operands()[0]->id()];
-      info.level = operand_info.level - 1; // Consumes one level
-      info.log_scale = operand_info.log_scale - params_.log_scale; // Divides by scale
+      info.level = operand_info.level - 1;
+      info.log_scale = operand_info.log_scale - params_.log_scale;
       
-      if (info.level < 0)
+      if (info.level < 0 && !enable_bootstrap_)
         throw std::runtime_error("Rescale would result in negative level - circuit too deep");
       break;
     }
@@ -148,10 +148,10 @@ CiphertextInfo CKKSScaleManager::compute_term_info(const ir::Term* term)
     case ir::OpCode::Type::mod_switch:
     {
       auto& operand_info = term_info_[term->operands()[0]->id()];
-      info.level = operand_info.level - 1; // Drop one level
-      info.log_scale = operand_info.log_scale; // Scale unchanged
+      info.level = operand_info.level - 1;
+      info.log_scale = operand_info.log_scale;
       
-      if (info.level < 0)
+      if (info.level < 0 && !enable_bootstrap_)
         throw std::runtime_error("ModSwitch would result in negative level - circuit too deep");
       break;
     }

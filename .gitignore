@@ -55,3 +55,7 @@ __pycache__/
 /logs
 
 commands.txt
+
+manuscript writing/
+manuscript writing/*
+hpc_results/logs/

@@ -1,0 +1,82 @@
+Creating deep linear chain: 3 layers
+Vector size: 16
+  Layer 1 completed
+  Layer 2 completed
+  Layer 3 completed
+
+==> Applying TRS simplification...
+==> greedy TRS part : 
+Run simplification TRS ===> 
+
+==> Expression statistics:
+----------------------------------------------------------------------------------------------------
+global_metrics
+global_metrics not computed
+----------------------------------------------------------------------------------------------------
+depth_metrics
+ctxt_leaves_*: (depth, xdepth)
+max: (51, 6)
+avg: (23.4987, 4.04082)
+min: (3, 2)
+----------------------------------------------------------------------------------------------------
+terms_classes_metrics
+|terms|: 2320
+captured_terms: 2320 (100%)
+|ctxt_inputs|: 784
+|ptxt_leaves|: 0
+|constants|: 0
+|ptxt_ptxt_ops|: 0
+|constants_ops|: 0
+operations_static_cost: 823.2
+----------------------------------------------------------------------------------------------------
+|mul| (level, arg1_size, arg2_size): count
+(L-0, 12, 12): 16
+(L-0, 3, 3): 16
+(L-0, 2, 2): 256
+(L-0, 2, 5): 256
+(L-0, 6, 6): 16
+(L-0, 2, 11): 256
+total: 816
+----------------------------------------------------------------------------------------------------
+|square| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|encrypt|: 0
+----------------------------------------------------------------------------------------------------
+|relin| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rotate| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_plain| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_scalar| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_non_scalar| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mod_switch| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rescale| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|he_add| (level, max_args_size): count
+(L-0, 12): 240
+(L-0, 3): 240
+(L-0, 6): 240
+total: 720
+----------------------------------------------------------------------------------------------------
+|rotation_keys|: 0
+|relin_keys|: 0
+
+==> Generating Lattigo code with CKKS management...
+
+=== Results ===
+Compilation completed in 121 ms
+Generated: generated_deep_linear.go
+
+To run: cd to lattigo_backend && go run generated_deep_linear.go

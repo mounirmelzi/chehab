@@ -37,12 +37,32 @@ int main(int argc, char **argv)
   int backend = 0;
   if (argc > 3) backend = stoi(argv[3]);
 
+  // Diagnostic: check input files exist and have content
+  {
+    auto check_file = [](const string &path) {
+      ifstream f(path);
+      if (!f.is_open()) {
+        cerr << "[veclang_runner] MISSING: " << path << endl;
+        return;
+      }
+      f.seekg(0, ios::end);
+      auto sz = f.tellg();
+      cerr << "[veclang_runner] " << path << " size=" << sz << " bytes" << endl;
+    };
+    check_file("../vectorized_code.txt");
+    check_file("../inputs.txt");
+    check_file("fhe_io_example.txt");
+  }
+
   string func_name = "fhe";
   const auto &func = Compiler::create_func(func_name, 1, 20, false, true);
+  cerr << "[veclang_runner] create_func done" << endl;
   Compiler::format_vectorized_code(func, false);
+  cerr << "[veclang_runner] format_vectorized_code done, terms=" << func->get_top_sorted_terms().size() << endl;
 
   if (backend == 1)
   {
+    cerr << "[veclang_runner] generating Lattigo code..." << endl;
     ofstream go_os("generated_fhe.go");
     if (!go_os) throw logic_error("failed to create Go output file");
     Compiler::gen_lattigo_code(func, go_os, numeric_limits<size_t>::max(), true);

@@ -1,0 +1,2 @@
+name,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+fc_2layer_4,71.6,0.0,526.9,632.4,17.5,1248.5,17.67,4.81e-06

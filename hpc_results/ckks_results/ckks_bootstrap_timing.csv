@@ -1,0 +1,3 @@
+name,compilation_ms,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+poly_depth13,42,980.0,131180.8,416.2,41192.6,195.7,173965.4,31.12,4.30e-10
+poly_depth25,72,964.5,131550.1,430.2,81796.5,179.3,214920.5,30.74,5.58e-10

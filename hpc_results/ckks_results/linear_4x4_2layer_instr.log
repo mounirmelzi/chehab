@@ -1,0 +1,5 @@
+[info] Found 37 cipher inputs: ['c0', 'w0_0_0', 'w0_0_1', 'w0_0_2', 'w0_0_3', 'w0_1_0', 'w0_1_1', 'w0_1_2', 'w0_1_3', 'w0_2_0', 'w0_2_1', 'w0_2_2', 'w0_2_3', 'w0_3_0', 'w0_3_1', 'w0_3_2', 'w0_3_3', 'w1_0_0', 'w1_0_1', 'w1_0_2', 'w1_0_3', 'w1_1_0', 'w1_1_1', 'w1_1_2', 'w1_1_3', 'w1_2_0', 'w1_2_1', 'w1_2_2', 'w1_2_3', 'w1_3_0', 'w1_3_1', 'w1_3_2', 'w1_3_3', 'x_0', 'x_1', 'x_2', 'x_3']
+[info] Found 0 plain inputs: []
+[info] FHE function: deep_linear
+[info] Bootstrap: False
+[info] Params: params, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{...

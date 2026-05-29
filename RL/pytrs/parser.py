@@ -47,7 +47,11 @@ def parse_tokens(tokens, parent=None):
             raise SyntaxError("Unexpected EOF, expecting ')'")
         tokens.pop(0)  # Remove ')'
         return Op(op, args), tokens
-    elif token.isdigit() or ((token.startswith('-') or token.startswith('+') ) and token[1:].isdigit()):
-        return Const(int(token)), tokens
     else:
-        return Var(token,parent), tokens
+        try:
+            num = float(token)
+            if num == int(num) and '.' not in token and 'e' not in token.lower():
+                return Const(int(num)), tokens
+            return Const(num), tokens
+        except ValueError:
+            return Var(token, parent), tokens

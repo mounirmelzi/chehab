@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <deque>
 #include <vector>
 #include <string>
 #include <limits>
@@ -133,7 +134,7 @@ private:
   
   // Graph representation
   std::unordered_set<LevelDAGNode, LevelDAGNodeHash> nodes_;
-  std::vector<LevelDAGEdge> edges_;
+  std::deque<LevelDAGEdge> edges_;
   
   // Adjacency lists
   std::unordered_map<std::string, std::vector<LevelDAGEdge*>> adj_list_;  // outgoing edges

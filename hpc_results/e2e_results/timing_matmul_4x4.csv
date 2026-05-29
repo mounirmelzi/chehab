@@ -1,0 +1,2 @@
+name,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error
+matmul_4x4,43.1,0.0,128.8,72.3,20.5,264.8,31.19,4.08e-10

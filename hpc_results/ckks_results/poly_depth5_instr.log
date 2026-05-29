@@ -1,0 +1,5 @@
+[info] Found 2 cipher inputs: ['c0', 'x']
+[info] Found 0 plain inputs: []
+[info] FHE function: deep_poly
+[info] Bootstrap: False
+[info] Params: params, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{...

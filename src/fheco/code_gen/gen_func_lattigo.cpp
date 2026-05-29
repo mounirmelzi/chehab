@@ -505,6 +505,13 @@ void gen_main_go(
   os << "},\n";
   
   os << "\t\tLogDefaultScale: " << params.log_scale << ",\n";
+  
+  if (params.enable_bootstrap)
+  {
+    os << "\t\tXs:              ring.Ternary{H: " << params.hamming_weight << "},\n";
+    os << "\t\tRingType:        ring.Standard,\n";
+  }
+  
   os << "\t})\n";
   os << "\tif err != nil {\n";
   os << "\t\tpanic(err)\n";

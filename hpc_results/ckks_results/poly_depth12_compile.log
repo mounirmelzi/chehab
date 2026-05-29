@@ -1,0 +1,94 @@
+Creating deep polynomial chain: depth=12
+This will compute x^(2^12)
+  After squaring 1: x^(2^1)
+  After squaring 2: x^(2^2)
+  After squaring 3: x^(2^3)
+  After squaring 4: x^(2^4)
+  After squaring 5: x^(2^5)
+  After squaring 6: x^(2^6)
+  After squaring 7: x^(2^7)
+  After squaring 8: x^(2^8)
+  After squaring 9: x^(2^9)
+  After squaring 10: x^(2^10)
+  After squaring 11: x^(2^11)
+  After squaring 12: x^(2^12)
+
+==> Applying TRS simplification...
+==> greedy TRS part : 
+Run simplification TRS ===> 
+
+==> Expression statistics:
+----------------------------------------------------------------------------------------------------
+global_metrics
+global_metrics not computed
+----------------------------------------------------------------------------------------------------
+depth_metrics
+ctxt_leaves_*: (depth, xdepth)
+max: (12, 12)
+avg: (12, 12)
+min: (12, 12)
+----------------------------------------------------------------------------------------------------
+terms_classes_metrics
+|terms|: 13
+captured_terms: 13 (100%)
+|ctxt_inputs|: 1
+|ptxt_leaves|: 0
+|constants|: 0
+|ptxt_ptxt_ops|: 0
+|constants_ops|: 0
+operations_static_cost: 12
+----------------------------------------------------------------------------------------------------
+|mul| (level, arg1_size, arg2_size): count
+(L-0, 2049, 2049): 1
+(L-0, 513, 513): 1
+(L-0, 17, 17): 1
+(L-0, 9, 9): 1
+(L-0, 5, 5): 1
+(L-0, 129, 129): 1
+(L-0, 3, 3): 1
+(L-0, 257, 257): 1
+(L-0, 33, 33): 1
+(L-0, 2, 2): 1
+(L-0, 1025, 1025): 1
+(L-0, 65, 65): 1
+total: 12
+----------------------------------------------------------------------------------------------------
+|square| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|encrypt|: 0
+----------------------------------------------------------------------------------------------------
+|relin| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rotate| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_plain| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_scalar| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mul_non_scalar| (level, ctxt_arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|mod_switch| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rescale| (level, arg_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|he_add| (level, max_args_size): count
+total: 0
+----------------------------------------------------------------------------------------------------
+|rotation_keys|: 0
+|relin_keys|: 0
+
+==> Generating Lattigo code with CKKS management...
+
+=== Results ===
+Compilation completed in 1 ms
+Generated: generated_deep_poly.go
+
+To run: cd to lattigo_backend && go run generated_deep_poly.go
