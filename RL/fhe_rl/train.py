@@ -42,6 +42,7 @@ def train_ppo_agent(expressions_file: str, embeddings_model, total_timesteps: in
     model_params = {
         "policy": HierarchicalMaskablePolicy,
         "env": env,
+        "seed": 42,
         "learning_rate": 1e-4,
         "n_steps": 2048,
         "batch_size": 256,
@@ -109,15 +110,13 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
     env = LagrangianVecEnvWrapper(env) # Use the Lagrangian wrapper
 
     val_env = DummyVecEnv([
-        lambda: Monitor(fheEnv(rules_list, benchmarks, max_positions=max_positions,embeddings_model=embeddings_model))
+        lambda: Monitor(fheEnv(rules_list, benchmarks, max_positions=max_positions, embeddings_model=embeddings_model))
     ])
     val_env = LagrangianVecEnvWrapper(val_env) # Use the Lagrangian wrapper
 
     ent_schedule = linear_schedule(0.1)
 
 
-    lagrange_delay = 0
-    denom_factor = 1
     n_steps = 2048
 
 
@@ -154,7 +153,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
         num_actions=len(rules_list),
         total_timesteps=total_timesteps,
         output_model_name=run_name,
-        notes=f"Lagrangian PPO [ON_DONE+ON_VIOLATION] Delayed({lagrange_delay})"
+        notes=f"Lagrangian PPO [ON_DONE+ON_VIOLATION] [GNN]"
     )
 
     num_benchmarks = len(benchmarks)
@@ -173,7 +172,7 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
 
     tensorboard_writer = SummaryWriter(tensorboard_log_dir)
 
-    lagrange_iterations = total_timesteps // ((n_steps * num_envs) * denom_factor)
+    lagrange_iterations = total_timesteps // (n_steps * num_envs)
     lagrange_iterations = max(1, lagrange_iterations)
 
     for lagrange_iteration in range(lagrange_iterations):  # outer Lagrange loop
@@ -196,9 +195,8 @@ def train_lagrangian_ppo_agent(expressions_file: str, embeddings_model, total_ti
                 ep_noise = info[0].get("noise", 0.0)
             total_noise += ep_noise
 
-            if lagrange_iteration >= lagrange_delay: # Delay lambda penalty updates
-                val_env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
-                env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
+            val_env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
+            env.update_lambda_penalty(noise=ep_noise, budget=val_env.unwrapped.reset_infos[0]["budget"])
 
         # Logs
         tensorboard_writer.add_scalar("Lagrange/avg_noise", total_noise / num_benchmarks, model.num_timesteps)

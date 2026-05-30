@@ -3,7 +3,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, Expr, Const, Var, Op, expr_to_str
 import torch
-from .config import get_tokenizer_type
+from .config import get_tokenizer_type, get_embeddings_model_type, EmbeddingsModelType
 
 if get_tokenizer_type() == "bpe":
     from .TRAE_bpe import get_expression_cls_embedding
@@ -37,7 +37,7 @@ class fheEnv(gym.Env):
         self.max_expression_size = 10000
         self.initial_cost = 0
         self.embedding_dim = 256
-        self.budget_options = [50, 100, 150, 200, 250, 300, 350, 400, 9_999_999]
+        self.budget_options = [172, 230, 236, 369, 9_000_000]
         self.budget_dim = len(self.budget_options) + 1
         self.initial_vectorization_potential = 0
         self.vectorizations_applied = 0
@@ -187,13 +187,23 @@ class fheEnv(gym.Env):
     def get_cost(self, expr: str) -> float:
         return calculate_cost(parse_sexpr(expr))
     
+
     def _embed_expression(self, expr: str) -> np.ndarray:
-        expr_tree = parse_sexpr(expr)
-        with torch.no_grad():
-            emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)
-        if emb is None:
-            return None
-        return emb.squeeze(0).cpu().numpy().astype(np.float32)
+        match get_embeddings_model_type():
+            case EmbeddingsModelType.GNN_AUTOENCODER:
+                return self.embeddings_model.get_embedding(expr_str=expr)
+
+            case EmbeddingsModelType.TRANSFORMER_AUTOENCODER:
+                expr_tree = parse_sexpr(expr)
+                with torch.no_grad():
+                    emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)
+                if emb is None:
+                    return None
+                return emb.squeeze(0).cpu().numpy().astype(np.float32)
+
+            case _:
+                raise Exception("Invalid embeddings model type")
+
 
     def set_noise_budget(self, budget: int | None):
         if budget is None:

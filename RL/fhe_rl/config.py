@@ -13,6 +13,10 @@ class RLAlgorithm(enum.Enum):
     PPO = "PPO"
     LAGRANGIAN_PPO = "LAGRANGIAN_PPO"
 
+class EmbeddingsModelType(enum.Enum):
+    TRANSFORMER_AUTOENCODER = "TRANSFORMER_AUTOENCODER"
+    GNN_AUTOENCODER = "GNN_AUTOENCODER"
+
 
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent  # Go up to RL/ directory
@@ -20,7 +24,8 @@ FHE_RL_DIR = Path(__file__).parent
 
 # Model paths configuration
 MODEL_PATHS = {
-    "agent_model": FHE_RL_DIR / "trained_models" / "agent_lppo_14226838.zip",
+    "agent_model": FHE_RL_DIR / "trained_models" / "agent_lppo_14848346.zip",
+    "gnn_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_gnn_model_epoch_100.pth",
     "dynamic_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_ROT_15_32_5m_10742576.pth",
     "bpe_embeddings_model": FHE_RL_DIR / "trained_models" / "model_Transformer_BPE_ddp_jobid_epoch_5000000.pth",
     "bpe_tokenizer": FHE_RL_DIR / "trained_models" / "bpe_tokenizer.pkl",
@@ -37,6 +42,7 @@ TOKENIZER_CONFIG = {
 AGENT_CONFIG = {
     "device": "cuda" if torch.cuda.is_available() else "cpu",
     "algorithm": RLAlgorithm.LAGRANGIAN_PPO,
+    "embeddings_model_type": EmbeddingsModelType.GNN_AUTOENCODER,
 }
 
 def get_model_path(model_key):
@@ -82,6 +88,12 @@ def get_rl_algorithm() -> RLAlgorithm:
     Get the configured RL algorithm
     """
     return AGENT_CONFIG["algorithm"]
+
+def get_embeddings_model_type() -> EmbeddingsModelType:
+    """
+    Get the configured embeddings model type
+    """
+    return AGENT_CONFIG["embeddings_model_type"]
 
 def print_config():
     """

@@ -77,5 +77,5 @@ def test_agent(expressions_file: str, embeddings_model, model_filepath: str, noi
         )
 
     job_id = os.environ.get("SLURM_JOB_ID", "jobid")
-    sheet_name = f"lppo_{job_id}"
+    sheet_name = f"lppo_gnn_{job_id}"
     log_test_results(results, sheet_name=sheet_name)

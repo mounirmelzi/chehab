@@ -1,4 +1,3 @@
-
 import sys
 import os
 import argparse
@@ -7,10 +6,8 @@ from .train import train_agent
 from .test import test_agent
 from .utils import load_embeddings
 from .TRAE_bpe import BPETokenizer  # Import for pickle compatibility
-from .config import (
-    get_model_path, get_tokenizer_type, 
-    print_config
-)
+from .config import get_model_path, get_tokenizer_type, print_config, get_embeddings_model_type, EmbeddingsModelType
+from .gnn_embeddings import FHEFeatureExtractor
 
 
 def parse_arguments(args=None):
@@ -68,18 +65,19 @@ def usage() -> None:
 
 
 def load_embeddings_from_config(tokenizer_type=None):
-    """Load embeddings using the configuration system"""
-    try:
-        # Determine the correct embeddings model based on tokenizer type
-        if tokenizer_type == "bpe" or (tokenizer_type is None and get_tokenizer_type() == "bpe"):
-            embeddings_path = get_model_path("bpe_embeddings_model")
-        else:
-            embeddings_path = get_model_path("dynamic_embeddings_model")
-        
-        return load_embeddings(tokenizer_type=tokenizer_type, checkpoint_path=embeddings_path)
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    match get_embeddings_model_type():
+        case EmbeddingsModelType.GNN_AUTOENCODER:
+            return FHEFeatureExtractor(model_path=get_model_path("gnn_embeddings_model")), None
+
+        case EmbeddingsModelType.TRANSFORMER_AUTOENCODER:
+            if tokenizer_type == "bpe" or (tokenizer_type is None and get_tokenizer_type() == "bpe"):
+                embeddings_path = get_model_path("bpe_embeddings_model")
+            else:
+                embeddings_path = get_model_path("dynamic_embeddings_model")
+            return load_embeddings(tokenizer_type=tokenizer_type, checkpoint_path=embeddings_path)
+
+        case _:
+            raise Exception("Invalid embeddings model type")
 
 
 def main(args=None):
@@ -104,7 +102,7 @@ def main(args=None):
     elif mode == "test":
         agent_zip = get_model_path("agent_model")
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip, noise_budget=300)
+        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip, noise_budget=369)
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":
@@ -112,7 +110,7 @@ def main(args=None):
         input_file = parsed_args.input_expr_file
         output_file = parsed_args.output_vector_file
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        run_agent(input_file, embeddings, agent_zip, output_file, noise_budget=300)
+        run_agent(input_file, embeddings, agent_zip, output_file, noise_budget=369)
 
     else:
         print("Invalid command. Use 'train', 'test' or 'run'.")

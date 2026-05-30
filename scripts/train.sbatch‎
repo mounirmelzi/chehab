@@ -1,19 +1,20 @@
 #!/bin/bash
 
-#SBATCH --reservation=c2
+#SBATCH -q c2
 #SBATCH -p compute
-#SBATCH --mem 96GB
-#SBATCH -N 1
-#SBATCH -n 1
-#SBATCH -c 20
+#SBATCH --mem=300G
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=20
 #SBATCH -t 7-00:00:00
+#SBATCH --exclusive
 
 #SBATCH --mail-user=mm15538@nyu.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 
-#SBATCH -J train
-#SBATCH -o logs/output.train.%j.txt
-#SBATCH -e logs/error.train.%j.txt
+#SBATCH -J train_rl_with_gnn
+#SBATCH -o logs/stdout/train_rl_with_gnn.%j.txt
+#SBATCH -e logs/stderr/train_rl_with_gnn.%j.txt
 
 
 source /share/apps/NYUAD5/miniconda/3-4.11.0/bin/activate
