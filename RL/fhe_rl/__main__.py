@@ -102,7 +102,7 @@ def main(args=None):
     elif mode == "test":
         agent_zip = get_model_path("agent_model")
         embeddings, tokenizer = load_embeddings_from_config(parsed_args.tokenizer_type)
-        test_agent("./fhe_rl/datasets/benchmarks.txt", embeddings, agent_zip, noise_budget=369)
+        test_agent("./fhe_rl/datasets/benchmarks_69_augmented.txt", embeddings, agent_zip, noise_budget=369)
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":
