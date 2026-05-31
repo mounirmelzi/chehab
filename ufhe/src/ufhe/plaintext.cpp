@@ -1,5 +1,8 @@
 #include "ufhe/plaintext.hpp"
 #include "ufhe/seal_backend/plaintext.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/plaintext.hpp"
+#endif
 
 namespace ufhe
 {
@@ -10,6 +13,12 @@ Plaintext::Plaintext(api::backend_type backend)
   case api::backend_type::seal:
     underlying_ = std::make_shared<seal_backend::Plaintext>();
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Plaintext>();
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

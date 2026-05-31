@@ -3,6 +3,10 @@
 #include "ufhe/plaintext.hpp"
 #include "ufhe/seal_backend/batch_encoder.hpp"
 #include "ufhe/seal_backend/encryption_context.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/batch_encoder.hpp"
+#include "ufhe/heongpu_backend/encryption_context.hpp"
+#endif
 
 namespace ufhe
 {
@@ -14,6 +18,13 @@ BatchEncoder::BatchEncoder(const EncryptionContext &context)
     underlying_ = std::make_shared<seal_backend::BatchEncoder>(
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::BatchEncoder>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

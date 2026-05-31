@@ -6,6 +6,11 @@
 #include "ufhe/seal_backend/encryption_context.hpp"
 #include "ufhe/seal_backend/secret_key.hpp"
 #include "ufhe/secret_key.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/decryptor.hpp"
+#include "ufhe/heongpu_backend/encryption_context.hpp"
+#include "ufhe/heongpu_backend/secret_key.hpp"
+#endif
 
 namespace ufhe
 {
@@ -21,6 +26,14 @@ Decryptor::Decryptor(const EncryptionContext &context, const SecretKey &secret_k
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()),
       static_cast<const seal_backend::SecretKey &>(secret_key.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Decryptor>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()),
+      static_cast<const heongpu_backend::SecretKey &>(secret_key.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

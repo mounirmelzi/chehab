@@ -2,6 +2,10 @@
 #include "ufhe/encryption_context.hpp"
 #include "ufhe/seal_backend/ciphertext.hpp"
 #include "ufhe/seal_backend/encryption_context.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/ciphertext.hpp"
+#include "ufhe/heongpu_backend/encryption_context.hpp"
+#endif
 
 namespace ufhe
 {
@@ -12,6 +16,12 @@ Ciphertext::Ciphertext(api::backend_type backend)
   case api::backend_type::seal:
     underlying_ = std::make_shared<seal_backend::Ciphertext>();
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Ciphertext>();
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
@@ -32,6 +42,13 @@ Ciphertext::Ciphertext(const EncryptionContext &context) : underlying_{}
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()));
     break;
 
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Ciphertext>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()));
+    break;
+#endif
+
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
     break;
@@ -50,6 +67,13 @@ Ciphertext::Ciphertext(const Ciphertext &copy)
     underlying_ =
       std::make_shared<seal_backend::Ciphertext>(static_cast<const seal_backend::Ciphertext &>(copy.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ =
+      std::make_shared<heongpu_backend::Ciphertext>(static_cast<const heongpu_backend::Ciphertext &>(copy.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
@@ -70,6 +94,14 @@ Ciphertext &Ciphertext::operator=(const Ciphertext &assign)
       std::make_shared<seal_backend::Ciphertext>(static_cast<const seal_backend::Ciphertext &>(assign.underlying()));
     return *this;
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ =
+      std::make_shared<heongpu_backend::Ciphertext>(static_cast<const heongpu_backend::Ciphertext &>(assign.underlying()));
+    return *this;
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

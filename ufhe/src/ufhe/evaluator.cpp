@@ -5,6 +5,9 @@
 #include "ufhe/plaintext.hpp"
 #include "ufhe/relin_keys.hpp"
 #include "ufhe/seal_backend/evaluator.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/evaluator.hpp"
+#endif
 
 namespace ufhe
 {
@@ -16,6 +19,13 @@ Evaluator::Evaluator(const EncryptionContext &context)
     underlying_ = std::make_shared<seal_backend::Evaluator>(
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Evaluator>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

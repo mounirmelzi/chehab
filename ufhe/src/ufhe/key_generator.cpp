@@ -5,6 +5,10 @@
 #include "ufhe/relin_keys.hpp"
 #include "ufhe/seal_backend/encryption_context.hpp"
 #include "ufhe/seal_backend/key_generator.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/encryption_context.hpp"
+#include "ufhe/heongpu_backend/key_generator.hpp"
+#endif
 
 namespace ufhe
 {
@@ -17,6 +21,14 @@ KeyGenerator::KeyGenerator(EncryptionContext &context)
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()));
     secret_key_ = SecretKey(underlying().secret_key());
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::KeyGenerator>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()));
+    secret_key_ = SecretKey(underlying().secret_key());
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
@@ -40,6 +52,14 @@ KeyGenerator::KeyGenerator(const EncryptionContext &context, const SecretKey &se
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()),
       static_cast<const seal_backend::SecretKey &>(secret_key.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::KeyGenerator>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()),
+      static_cast<const heongpu_backend::SecretKey &>(secret_key.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

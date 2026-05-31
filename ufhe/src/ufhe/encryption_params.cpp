@@ -1,5 +1,8 @@
 #include "ufhe/encryption_params.hpp"
 #include "ufhe/seal_backend/encryption_params.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/encryption_params.hpp"
+#endif
 
 namespace ufhe
 {
@@ -11,6 +14,13 @@ EncryptionParams::EncryptionParams(const Scheme &scheme) : scheme_{scheme}
     underlying_ =
       std::make_shared<seal_backend::EncryptionParams>(static_cast<const seal_backend::Scheme &>(scheme.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::EncryptionParams>(
+      static_cast<const heongpu_backend::Scheme &>(scheme.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
@@ -33,6 +43,13 @@ EncryptionParams::EncryptionParams(const EncryptionParams &copy) : underlying_{}
       static_cast<const seal_backend::EncryptionParams &>(copy.underlying()));
     break;
 
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::EncryptionParams>(
+      static_cast<const heongpu_backend::EncryptionParams &>(copy.underlying()));
+    break;
+#endif
+
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
     break;
@@ -53,6 +70,13 @@ EncryptionParams &EncryptionParams::operator=(const EncryptionParams &assign)
     underlying_ = std::make_shared<seal_backend::EncryptionParams>(
       static_cast<const seal_backend::EncryptionParams &>(assign.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::EncryptionParams>(
+      static_cast<const heongpu_backend::EncryptionParams &>(assign.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");

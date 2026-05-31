@@ -8,6 +8,12 @@
 #include "ufhe/seal_backend/public_key.hpp"
 #include "ufhe/seal_backend/secret_key.hpp"
 #include "ufhe/secret_key.hpp"
+#ifdef UFHE_USE_HEONGPU
+#include "ufhe/heongpu_backend/encryption_context.hpp"
+#include "ufhe/heongpu_backend/encryptor.hpp"
+#include "ufhe/heongpu_backend/public_key.hpp"
+#include "ufhe/heongpu_backend/secret_key.hpp"
+#endif
 
 namespace ufhe
 {
@@ -23,6 +29,14 @@ Encryptor::Encryptor(const EncryptionContext &context, const PublicKey &public_k
       static_cast<const seal_backend::EncryptionContext &>(context.underlying()),
       static_cast<const seal_backend::PublicKey &>(public_key.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Encryptor>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()),
+      static_cast<const heongpu_backend::PublicKey &>(public_key.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
@@ -47,6 +61,14 @@ Encryptor::Encryptor(const EncryptionContext &context, const SecretKey &secret_k
       static_cast<const seal_backend::SecretKey &>(secret_key.underlying()));
     break;
 
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Encryptor>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()),
+      static_cast<const heongpu_backend::SecretKey &>(secret_key.underlying()));
+    break;
+#endif
+
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
     break;
@@ -70,6 +92,15 @@ Encryptor::Encryptor(const EncryptionContext &context, const PublicKey &public_k
       static_cast<const seal_backend::PublicKey &>(public_key.underlying()),
       static_cast<const seal_backend::SecretKey &>(secret_key.underlying()));
     break;
+
+#ifdef UFHE_USE_HEONGPU
+  case api::backend_type::heongpu:
+    underlying_ = std::make_shared<heongpu_backend::Encryptor>(
+      static_cast<const heongpu_backend::EncryptionContext &>(context.underlying()),
+      static_cast<const heongpu_backend::PublicKey &>(public_key.underlying()),
+      static_cast<const heongpu_backend::SecretKey &>(secret_key.underlying()));
+    break;
+#endif
 
   case api::backend_type::none:
     throw std::invalid_argument("no backend is selected");
