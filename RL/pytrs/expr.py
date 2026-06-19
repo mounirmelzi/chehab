@@ -1,3 +1,4 @@
+from __future__ import annotations
 # expr.py  ────────────────────────────────────────────────────────────────────
 """
 Light‑weight algebraic AST with built‑in structural validation.

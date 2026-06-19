@@ -181,6 +181,32 @@ def load_expressions(file_path: str,validation_exprs = []):
     return list(unique_expressions.values())
 
 
+def load_expressions_named(file_path: str):
+    """Load expressions with their names from a benchmark file.
+    Returns list of (expression_str, name) tuples, preserving order."""
+    results = []
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if ":" in line:
+                exp_str, name = line.rsplit(":", 1)
+                exp_str = exp_str.strip()
+                name = name.strip()
+            else:
+                exp_str = line
+                name = f"expr_{len(results)}"
+            try:
+                expr = parse_sexpr(exp_str)
+                results.append((exp_str, name))
+            except Exception as e:
+                print(f"Skipping invalid expression '{name}': {e}")
+                continue
+    print(f"Loaded {len(results)} named expressions from {file_path}")
+    return results
+
+
 def mlp(in_dim, hidden_dims, out_dim, *,
         act=nn.GELU, layernorm=True, dropout=0.0,
         residual=False):

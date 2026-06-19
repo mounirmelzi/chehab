@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Rewrite rule functionality."""
 
 from typing import List, Dict, Union, Tuple, Optional

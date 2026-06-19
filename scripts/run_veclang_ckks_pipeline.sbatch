@@ -100,6 +100,7 @@ if [ ! -f "$BEST_AGENT" ]; then
 fi
 
 E2E_OUTPUT="$RESULTS_DIR/e2e_rl_optimized.xlsx"
+RL_OPTIMIZED_EXPRS="$RESULTS_DIR/rl_optimized_expressions.txt"
 
 if [ -f "$BEST_AGENT" ]; then
     echo "Using agent: $BEST_AGENT (method=$METHOD)"
@@ -110,20 +111,32 @@ if [ -f "$BEST_AGENT" ]; then
         --method "$METHOD" \
         --test_mode v2 \
         --benchmark "$DNN_BENCH" \
-        --output "$E2E_OUTPUT"
+        --output "$E2E_OUTPUT" \
+        --save_optimized "$RL_OPTIMIZED_EXPRS"
     echo "RL optimization results: $E2E_OUTPUT"
+    echo "RL-optimized expressions: $RL_OPTIMIZED_EXPRS"
 else
     echo "WARN: No trained agent found, skipping RL optimization step"
 fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
-echo "  Step 2: Compile DNN expressions to Lattigo & run CKKS"
+echo "  Step 2: Compile RL-optimized expressions to Lattigo & run CKKS"
 echo "═══════════════════════════════════════════════════════════"
 
-CSV_FILE="$RESULTS_DIR/e2e_ckks_timing.csv"
-echo "expression,depth,xdepth,terms,ops_cost,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error" > "$CSV_FILE"
+# Use RL-optimized expressions if available, otherwise fall back to raw
+if [ -f "$RL_OPTIMIZED_EXPRS" ] && [ -s "$RL_OPTIMIZED_EXPRS" ]; then
+    COMPILE_SRC="$RL_OPTIMIZED_EXPRS"
+    echo "Using RL-optimized expressions from: $COMPILE_SRC"
+else
+    COMPILE_SRC="$DNN_BENCH"
+    echo "WARN: No RL-optimized expressions found, using raw expressions"
+fi
 
+CSV_FILE="$RESULTS_DIR/e2e_ckks_timing.csv"
+echo "expression,depth,xdepth,terms,ops_cost,compile_ms,keygen_ms,bootstrap_keygen_ms,encrypt_ms,eval_ms,decrypt_ms,total_ms,precision_bits,abs_error" > "$CSV_FILE"
+
+COMPILE_TOTAL=$(wc -l < "$COMPILE_SRC")
 EXPR_IDX=0
 PASS=0
 FAIL=0
@@ -132,7 +145,7 @@ while IFS= read -r line; do
     EXPR_IDX=$((EXPR_IDX + 1))
 
     echo ""
-    echo "─── [$EXPR_IDX/$TOTAL_EXPR] Expression: $EXPR_NAME ───"
+    echo "─── [$EXPR_IDX/$COMPILE_TOTAL] Expression: $EXPR_NAME ───"
 
     rm -f "$PROJ_ROOT/build/RL/veclang_runner/generated_fhe.go"
 
@@ -162,8 +175,11 @@ while IFS= read -r line; do
 
     cd "$PROJ_ROOT/build/RL/veclang_runner"
     echo "  compiling to Lattigo..."
+    COMPILE_START=$(python3 -c "import time; print(time.perf_counter())")
     ./veclang_runner 1 1 1 > "$RESULTS_DIR/compile_${EXPR_NAME}.log" 2>&1
     VECLANG_EXIT=$?
+    COMPILE_END=$(python3 -c "import time; print(time.perf_counter())")
+    COMPILE_MS=$(python3 -c "print(round(($COMPILE_END - $COMPILE_START) * 1000, 1))")
 
     if [ $VECLANG_EXIT -ne 0 ] || [ ! -f "generated_fhe.go" ]; then
         echo "  ERROR: veclang_runner failed (exit $VECLANG_EXIT)"
@@ -176,7 +192,7 @@ while IFS= read -r line; do
     XDEPTH=$(grep -oP 'max: \([0-9]+, \K[0-9]+' "$RESULTS_DIR/compile_${EXPR_NAME}.log" || echo "?")
     TERMS=$(grep -oP '\|terms\|: \K[0-9]+' "$RESULTS_DIR/compile_${EXPR_NAME}.log" || echo "?")
     OPS_COST=$(grep -oP 'operations_static_cost: \K[0-9.]+' "$RESULTS_DIR/compile_${EXPR_NAME}.log" || echo "?")
-    echo "  compiled OK: depth=$DEPTH, xdepth=$XDEPTH, terms=$TERMS, ops_cost=$OPS_COST"
+    echo "  compiled OK: compile=${COMPILE_MS}ms, depth=$DEPTH, xdepth=$XDEPTH, terms=$TERMS, ops_cost=$OPS_COST"
 
     cp generated_fhe.go "$LATTIGO_DIR/generated_e2e_${EXPR_NAME}.go"
     # Copy fhe_io_example_adapted.txt for plaintext constant values
@@ -199,17 +215,38 @@ while IFS= read -r line; do
     if [ $INSTR_EXIT -ne 0 ]; then
         echo "  WARN: instrumented runner failed (exit $INSTR_EXIT)"
         tail -5 "$RESULTS_DIR/instr_${EXPR_NAME}.log"
-        echo "$EXPR_NAME,$DEPTH,$XDEPTH,$TERMS,$OPS_COST,,,,,,,," >> "$CSV_FILE"
+        echo "$EXPR_NAME,$DEPTH,$XDEPTH,$TERMS,$OPS_COST,$COMPILE_MS,,,,,,,,," >> "$CSV_FILE"
         FAIL=$((FAIL + 1))
     else
         TIMING_DATA=$(tail -1 "$RESULTS_DIR/timing_${EXPR_NAME}.csv" | cut -d',' -f2-)
-        echo "$EXPR_NAME,$DEPTH,$XDEPTH,$TERMS,$OPS_COST,$TIMING_DATA" >> "$CSV_FILE"
+        echo "$EXPR_NAME,$DEPTH,$XDEPTH,$TERMS,$OPS_COST,$COMPILE_MS,$TIMING_DATA" >> "$CSV_FILE"
         echo "  CKKS execution OK: $TIMING_DATA"
         PASS=$((PASS + 1))
     fi
 
     cd "$PROJ_ROOT/build/RL/veclang_runner"
-done < "$DNN_BENCH"
+done < "$COMPILE_SRC"
+
+echo ""
+echo "═══════════════════════════════════════════════════════════"
+echo "  Step 3: Extract RL timing summary"
+echo "═══════════════════════════════════════════════════════════"
+
+RL_TIMING_CSV="$RESULTS_DIR/rl_timing_summary.csv"
+if [ -f "$E2E_OUTPUT" ]; then
+    python3 -c "
+import pandas as pd, sys
+df = pd.read_excel('$E2E_OUTPUT', sheet_name='all_results')
+cols = ['Expression Name', 'Budget', 'RL Time (ms)', 'Initial Cost', 'Safe Final Cost', 'Safe Cost Reduction (%)', 'Safe Final Noise', 'Safety Activated']
+out = df[[c for c in cols if c in df.columns]]
+out.to_csv('$RL_TIMING_CSV', index=False)
+print(f'RL timing summary: {len(out)} rows')
+print(out.to_string(index=False))
+"
+    echo "RL timing CSV: $RL_TIMING_CSV"
+else
+    echo "WARN: No RL output xlsx found, skipping timing extraction"
+fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

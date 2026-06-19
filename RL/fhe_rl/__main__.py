@@ -141,6 +141,12 @@ def parse_arguments(args=None):
         default=None,
         help='Path to benchmark expressions file (default: ./fhe_rl/datasets/benchmarks.txt)'
     )
+    test_parser.add_argument(
+        '--save_optimized',
+        type=str,
+        default=None,
+        help='Save RL-optimized expressions to this file (one per line, expr:name format)'
+    )
     
     # Run command
     run_parser = subparsers.add_parser('run', help='Run the agent')
@@ -245,15 +251,15 @@ def main(args=None):
 
         benchmark_file = parsed_args.benchmark or "./fhe_rl/datasets/benchmarks.txt"
         test_fn = test_agent_v2 if parsed_args.test_mode == "v2" else test_agent
-        test_fn(
-            benchmark_file,
-            embeddings,
-            agent_zip,
+        kwargs = dict(
             budget_options=train_budgets,
             test_budgets=test_budgets,
             constraint_method=parsed_args.method,
             output_file=parsed_args.output,
         )
+        if parsed_args.test_mode == "v2" and parsed_args.save_optimized:
+            kwargs["save_optimized"] = parsed_args.save_optimized
+        test_fn(benchmark_file, embeddings, agent_zip, **kwargs)
 
     # ─────────────────────────────── RUN ──────────────────────────────
     elif mode == "run":

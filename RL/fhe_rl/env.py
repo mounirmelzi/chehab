@@ -31,7 +31,7 @@ UNCONSTRAINED_BUDGET_THRESHOLD = 100_000
 class fheEnv(gym.Env):
     DEFAULT_BUDGET_OPTIONS = [240, 300, 1_000_000]
     
-    def __init__(self, rules_list, expressions, max_positions=2, embeddings_model=None, budget_options=None, constraint_method="lagrangian_od_ov"):
+    def __init__(self, rules_list, expressions, max_positions=2, embeddings_model=None, budget_options=None, constraint_method="lagrangian_od_ov", verbose=True):
         super().__init__()
         self.rules = rules_list
         self.expressions = expressions
@@ -39,6 +39,7 @@ class fheEnv(gym.Env):
         self.max_positions = max_positions
         self.embeddings_model = embeddings_model
         self.constraint_method = constraint_method
+        self.verbose = verbose
         self.max_steps = 75
         self.max_expression_size = 10000
         self.initial_cost = 0
@@ -110,9 +111,10 @@ class fheEnv(gym.Env):
         truncated = False
         reward = 0
 
-        print(f"\n{CYAN}{'-'*100}{RESET}")
-        print(f"{BOLD}{MAGENTA}Old expression{RESET}: {YELLOW}{self.expression}{RESET}")
-        print(f"{BOLD}{MAGENTA}Old cost      {RESET}: {RED}{self.current_cost}{RESET}")
+        if self.verbose:
+            print(f"\n{CYAN}{'-'*100}{RESET}")
+            print(f"{BOLD}{MAGENTA}Old expression{RESET}: {YELLOW}{self.expression}{RESET}")
+            print(f"{BOLD}{MAGENTA}Old cost      {RESET}: {RED}{self.current_cost}{RESET}")
 
         if rule_name == "END":
             terminated = True
@@ -141,16 +143,16 @@ class fheEnv(gym.Env):
         }
 
 
-        reward_color = GREEN if reward >= 0 else RED
-
-        print(f"{BOLD}{MAGENTA}New expression{RESET}: {YELLOW}{self.expression}{RESET}")
-        print(f"{BOLD}{MAGENTA}New cost      {RESET}: {RED}{self.current_cost}{RESET}")
-        print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
-        print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
-        print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
-        print(f"{BOLD}{MAGENTA}Budget         {RESET}: {YELLOW}{info['budget']}{RESET}")
-        print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info['noise']}{RESET}")
-        print(f"{CYAN}{'-'*100}{RESET}")
+        if self.verbose:
+            reward_color = GREEN if reward >= 0 else RED
+            print(f"{BOLD}{MAGENTA}New expression{RESET}: {YELLOW}{self.expression}{RESET}")
+            print(f"{BOLD}{MAGENTA}New cost      {RESET}: {RED}{self.current_cost}{RESET}")
+            print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
+            print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
+            print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
+            print(f"{BOLD}{MAGENTA}Budget         {RESET}: {YELLOW}{info['budget']}{RESET}")
+            print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info['noise']}{RESET}")
+            print(f"{CYAN}{'-'*100}{RESET}")
 
         embedding = self._embed_expression(self.expression)
         if embedding is None:

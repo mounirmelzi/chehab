@@ -1,6 +1,6 @@
 from stable_baselines3 import PPO
-import sys, importlib
-from .utils import load_expressions, load_embeddings, create_rules
+import sys, importlib, time
+from .utils import load_expressions, load_expressions_named, load_embeddings, create_rules
 from pytrs import parse_sexpr, NoiseEstimator
 from .env import fheEnv
 from .policy import HierarchicalMaskablePolicy
@@ -187,6 +187,7 @@ def test_agent_v2(
     test_budgets: list = None,
     constraint_method: str = "nato_sc",
     output_file: str = None,
+    save_optimized: str = None,
 ):
     """Test with trajectory checkpointing, safety rollback, and feasible/infeasible split.
 
@@ -197,6 +198,8 @@ def test_agent_v2(
     and infeasible categories for honest evaluation.
     """
 
+    named_pairs = load_expressions_named(expressions_file)
+    expr_names = [name for _, name in named_pairs]
     expressions = load_expressions(expressions_file)
     rules_list = create_rules("rules.txt")
     rules_list["END"] = None
@@ -235,6 +238,8 @@ def test_agent_v2(
         env.set_options({"budget": budget})
 
         for expr_idx in range(len(expressions)):
+            t0 = time.perf_counter()
+
             obs = env.reset()
 
             wrapper = env.envs[0]
@@ -283,6 +288,8 @@ def test_agent_v2(
                     "noise": cp_noise,
                 })
 
+            rl_time_ms = (time.perf_counter() - t0) * 1000
+
             # Agent's raw result (last checkpoint)
             agent_final = checkpoints[-1]
 
@@ -305,9 +312,12 @@ def test_agent_v2(
             agent_cr = ((initial_cost - agent_final["cost"]) / initial_cost * 100) if initial_cost > 0 else 0
             safe_cr = ((initial_cost - safe_cost) / initial_cost * 100) if initial_cost > 0 else 0
 
+            expr_name = expr_names[expr_idx] if expr_idx < len(expr_names) else f"expr_{expr_idx}"
+
             all_results.append({
                 "Budget": budget,
                 "Expression #": expr_idx + 1,
+                "Expression Name": expr_name,
                 "Is Feasible": is_feasible,
                 "Initial Cost": initial_cost,
                 "Initial Noise": round(initial_noise, 2),
@@ -322,9 +332,11 @@ def test_agent_v2(
                 "Safety Activated": safety_activated,
                 "Best Valid Step": best_valid_step,
                 "Total Steps": steps,
+                "RL Time (ms)": round(rl_time_ms, 1),
                 "Noise Margin": round(budget - safe_noise, 2),
                 "Trajectory Costs": "|".join(str(cp["cost"]) for cp in checkpoints),
                 "Trajectory Noises": "|".join(f'{cp["noise"]:.2f}' for cp in checkpoints),
+                "_safe_expr": safe_expr,
             })
 
             tag = "FEASIBLE" if is_feasible else "INFEAS"
@@ -332,10 +344,12 @@ def test_agent_v2(
             print(f"  [{tag}][{safe_tag}] Expr {expr_idx+1}: "
                   f"cost {initial_cost}->{safe_cost} ({safe_cr:+.1f}%), "
                   f"noise {initial_noise:.0f}->{safe_noise:.0f}, "
+                  f"rl_time={rl_time_ms:.0f}ms, "
                   f"safety={'ON' if safety_activated else 'off'}")
 
     # ── Write results to Excel ──────────────────────────────────────────
-    df = pd.DataFrame(all_results)
+    excel_results = [{k: v for k, v in r.items() if not k.startswith("_")} for r in all_results]
+    df = pd.DataFrame(excel_results)
 
     if output_file is None:
         job_id = os.environ.get("SLURM_JOB_ID", "jobid")
@@ -422,3 +436,18 @@ def test_agent_v2(
             print(f"  {r['Budget']:>10}  {r['Feasible Expressions']:>4}  "
                   f"{r['Agent Violation Rate (%)']:>10.1f}  {r['Safe Violation Rate (%)']:>10.1f}  "
                   f"{r['Safe Avg Cost Red (%)']:>8.1f}  {r['Safety Activations']:>8}")
+
+    # Save RL-optimized expressions for downstream compilation
+    if save_optimized:
+        best_per_expr = {}
+        for r in all_results:
+            name = r["Expression Name"]
+            if name not in best_per_expr or r["Safe Cost Reduction (%)"] > best_per_expr[name]["Safe Cost Reduction (%)"]:
+                best_per_expr[name] = r
+        with open(save_optimized, "w") as f:
+            for name, r in best_per_expr.items():
+                idx = r["Expression #"] - 1
+                safe_expr = r.get("_safe_expr", expressions[idx])
+                f.write(f"{safe_expr}:{name}\n")
+        print(f"\nRL-optimized expressions saved to: {save_optimized}")
+        print(f"  {len(best_per_expr)} expressions (best result per expression across budgets)")
