@@ -1,0 +1,86 @@
+======================================================================
+  STEP 2 — RL OPTIMIZATION TRAJECTORY
+======================================================================
+
+Budget:       369 bits
+Total steps:  75
+RL time:      17.21 s
+
+ Step  Rule                             Cost      Noise  Status
+-----  -------------------------- ---------- ----------  ---------------
+    0  initial                       73772.0      283.8  ok
+    1  flex-mul-vectorize            68372.0      283.8  ok
+    2  flex-mul-vectorize            66222.0      283.8  ok
+    3  flex-mul-vectorize            65572.0      283.8  ok
+    4  flex-mul-vectorize            64672.0      283.8  ok
+    5  flex-mul-vectorize            61774.0      318.4  ok
+    6  flex-mul-vectorize            60624.0      318.4  ok
+    7  flex-mul-vectorize            59226.0      353.0  ok
+    8  assoc-balan-mul-6             59226.0      353.0  ok
+    9  flex-add-vectorize            57727.0      353.0  ok
+   10  flex-mul-vectorize            57327.0      353.0  ok
+   11  flex-mul-vectorize            56927.0      353.0  ok
+   12  flex-mul-vectorize            56527.0      353.0  ok
+   13  flex-add-vectorize            54529.0      354.2  ok
+   14  flex-mul-vectorize            53629.0      354.2  ok
+   15  flex-mul-vectorize            53229.0      354.2  ok
+   16  flex-mul-vectorize            52831.0      388.8  VIOLATED
+   17  flex-add-vectorize            52082.0      388.8  VIOLATED
+   18  flex-neg-vectorize            51333.0      389.8  VIOLATED
+   19  flex-add-vectorize            50834.0      389.8  VIOLATED
+   20  flex-sub-vectorize            49335.0      389.8  VIOLATED
+   21  flex-mul-vectorize            48935.0      389.8  VIOLATED
+   22  flex-add-vectorize            48436.0      389.8  VIOLATED
+   23  flex-sub-vectorize            47937.0      389.8  VIOLATED
+   24  flex-sub-vectorize            47188.0      389.8  VIOLATED
+   25  flex-sub-vectorize            44439.0      389.8  VIOLATED
+   26  flex-mul-vectorize            43539.0      389.8  VIOLATED
+   27  flex-add-vectorize            43040.0      389.8  VIOLATED
+   28  flex-sub-vectorize            42541.0      389.8  VIOLATED
+   29  flex-sub-vectorize            41792.0      389.8  VIOLATED
+   30  flex-mul-vectorize            41392.0      389.8  VIOLATED
+   31  flex-mul-vectorize            40992.0      389.8  VIOLATED
+   32  flex-add-vectorize            40493.0      389.8  VIOLATED
+   33  flex-sub-vectorize            38244.0      389.8  VIOLATED
+   34  flex-add-vectorize            37745.0      389.8  VIOLATED
+   35  flex-add-vectorize            37246.0      389.8  VIOLATED
+   36  flex-sub-vectorize            36247.0      389.8  VIOLATED
+   37  flex-mul-vectorize            35597.0      389.8  VIOLATED
+   38  flex-sub-vectorize            35098.0      389.8  VIOLATED
+   39  flex-add-vectorize            34599.0      389.8  VIOLATED
+   40  assoc-balan-mul-3             34601.0      424.4  VIOLATED
+   41  assoc-balan-mul-3             34603.0      459.0  VIOLATED
+   42  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   43  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   44  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   45  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   46  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   47  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   48  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   49  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   50  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   51  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   52  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   53  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   54  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   55  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   56  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   57  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   58  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   59  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   60  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   61  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   62  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   63  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   64  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   65  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   66  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   67  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   68  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   69  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   70  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   71  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   72  assoc-balan-mul-2             34603.0      459.0  VIOLATED
+   73  assoc-balan-mul-3             34605.0      493.5  VIOLATED
+   74  assoc-balan-mul-1             34603.0      459.0  VIOLATED
+   75  assoc-balan-mul-2             34603.0      459.0  VIOLATED

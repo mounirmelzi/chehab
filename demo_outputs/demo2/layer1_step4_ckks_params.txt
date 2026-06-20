@@ -1,0 +1,16 @@
+======================================================================
+  STEP 4 — CKKS PARAMETERS & COMPILATION
+======================================================================
+
+Ring dimension:    N = 2^14 = 16384
+Default scale:     2^40
+
+Bootstrap ops:     0
+Rescale ops:       4
+ModSwitch ops:     0
+
+HE operations in generated code:
+  Multiplications: 4
+  Additions:       3
+  Subtractions:    0
+  Rotations:       0

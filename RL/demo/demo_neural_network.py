@@ -31,6 +31,8 @@ from demo.demo_utils import (
     print_banner, print_section, print_subsection, print_summary_box,
     print_kv, print_phase, print_exec_phase,
     print_waiting, print_done, print_network_diagram,
+    save_input_expression, save_rl_trajectory, save_safety_rollback,
+    save_lattigo_code, save_execution_output,
 )
 
 # ── Network definition ──────────────────────────────────────────────────────
@@ -72,7 +74,8 @@ def load_expression(layer: dict) -> str:
     return line.rsplit(":", 1)[0] if ":" in line else line
 
 
-def optimize_expression(expression: str, op_name: str, embeddings_model, rules_list, model):
+def optimize_expression(expression: str, op_name: str, embeddings_model, rules_list, model,
+                        layer_idx: int = 0):
     """Run RL optimization on a single expression, returning summary + optimized expr."""
     from fhe_rl.env import fheEnv
     from pytrs import NoiseEstimator
@@ -147,6 +150,11 @@ def optimize_expression(expression: str, op_name: str, embeddings_model, rules_l
     cr = ((initial_cost - best["cost"]) / initial_cost * 100) if initial_cost > 0 else 0
     safety_on = best["step"] != checkpoints[-1]["step"]
 
+    pfx = f"layer{layer_idx+1}_"
+    save_input_expression("demo2", expression, op_name, BUDGET, prefix=pfx)
+    save_rl_trajectory("demo2", checkpoints, BUDGET, rl_time, prefix=pfx)
+    save_safety_rollback("demo2", checkpoints, BUDGET, best["step"], safety_on, prefix=pfx)
+
     return {
         "expression": best["expression"],
         "initial_cost": initial_cost,
@@ -209,6 +217,8 @@ def compile_and_execute(expression: str, op_name: str, layer_idx: int,
         print(f"      {RED}{CROSS} generated_fhe.go not found{RESET}")
         return None
 
+    save_lattigo_code("demo2", generated_go, prefix=f"layer{layer_idx+1}_")
+
     adapted_src = build_dir / "fhe_io_example_adapted.txt"
     if adapted_src.exists():
         shutil.copy2(adapted_src, lattigo_dir / "fhe_io_example_adapted.txt")
@@ -236,7 +246,8 @@ def compile_and_execute(expression: str, op_name: str, layer_idx: int,
             key, val = line.split(":", 1)
             results[key.strip()] = val.strip()
 
-    return {
+    abs_err = float(results["abs_error"]) if "abs_error" in results else None
+    exec_data = {
         "keygen_ms": float(results.get("keygen_ms", 0)),
         "bootstrap_keygen_ms": float(results.get("bootstrap_keygen_ms", 0)),
         "encrypt_ms": float(results.get("encrypt_ms", 0)),
@@ -244,7 +255,11 @@ def compile_and_execute(expression: str, op_name: str, layer_idx: int,
         "decrypt_ms": float(results.get("decrypt_ms", 0)),
         "total_ms": float(results.get("total_ms", 0)),
         "precision_bits": float(results.get("precision_bits", 0)),
+        "abs_error": abs_err,
     }
+    save_execution_output("demo2", exec_data, prefix=f"layer{layer_idx+1}_",
+                          op_name=op_name, expected_output=expected_value)
+    return exec_data
 
 
 def main():
@@ -317,7 +332,8 @@ def main():
 
         # RL optimization
         print(f"  {CYAN}{BULLET}{RESET} {BOLD}RL Optimization{RESET}")
-        opt = optimize_expression(expression, layer["type"], embeddings_model, rules_list, model)
+        opt = optimize_expression(expression, layer["type"], embeddings_model, rules_list, model,
+                                  layer_idx=i)
 
         cr_color = GREEN if opt["cost_reduction"] > 0 else RED
         noise_color = GREEN if opt["final_noise"] <= BUDGET else RED

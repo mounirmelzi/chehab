@@ -1,0 +1,61 @@
+======================================================================
+  STEP 2 — RL OPTIMIZATION TRAJECTORY
+======================================================================
+
+Budget:       369 bits
+Total steps:  50
+RL time:      10.94 s
+
+ Step  Rule                             Cost      Noise  Status
+-----  -------------------------- ---------- ----------  ---------------
+    0  initial                       73772.0      283.8  ok
+    1  flex-add-vectorize            72524.0      285.0  ok
+    2  flex-mul-vectorize            66874.0      285.0  ok
+    3  flex-mul-vectorize            64474.0      285.0  ok
+    4  flex-mul-vectorize            63824.0      285.0  ok
+    5  flex-mul-vectorize            62674.0      285.0  ok
+    6  flex-mul-vectorize            59776.0      319.6  ok
+    7  flex-mul-vectorize            58626.0      319.6  ok
+    8  flex-mul-vectorize            57228.0      354.2  ok
+    9  flex-mul-vectorize            56578.0      354.2  ok
+   10  flex-add-vectorize            56079.0      354.2  ok
+   11  flex-sub-vectorize            54330.0      354.2  ok
+   12  flex-sub-vectorize            52831.0      354.2  ok
+   13  flex-sub-vectorize            52082.0      354.2  ok
+   14  flex-sub-vectorize            49583.0      354.2  ok
+   15  flex-sub-vectorize            49084.0      354.2  ok
+   16  flex-sub-vectorize            48085.0      354.2  ok
+   17  flex-mul-vectorize            47685.0      354.2  ok
+   18  assoc-balan-mul-5             47685.0      354.2  ok
+   19  flex-mul-vectorize            47285.0      354.2  ok
+   20  flex-sub-vectorize            46786.0      354.2  ok
+   21  flex-mul-vectorize            46386.0      354.2  ok
+   22  flex-mul-vectorize            45486.0      354.2  ok
+   23  flex-sub-vectorize            44737.0      354.2  ok
+   24  flex-add-vectorize            42988.0      354.2  ok
+   25  flex-sub-vectorize            42489.0      354.2  ok
+   26  flex-mul-vectorize            42089.0      354.2  ok
+   27  flex-add-vectorize            41590.0      354.2  ok
+   28  flex-mul-vectorize            41190.0      354.2  ok
+   29  flex-sub-vectorize            40691.0      354.2  ok
+   30  flex-mul-vectorize            40291.0      354.2  ok
+   31  flex-mul-vectorize            39891.0      354.2  ok
+   32  flex-mul-vectorize            39491.0      354.2  ok
+   33  flex-mul-vectorize            38841.0      354.2  ok
+   34  flex-add-vectorize            38342.0      354.2  ok
+   35  flex-add-vectorize            37843.0      354.2  ok
+   36  flex-add-vectorize            37344.0      354.2  ok
+   37  flex-add-vectorize            36095.0      354.2  ok
+   38  flex-add-vectorize            35596.0      354.2  ok
+   39  flex-add-vectorize            35097.0      354.2  ok
+   40  assoc-balan-mul-3             35097.0      354.2  ok
+   41  assoc-balan-mul-5             35097.0      354.2  ok
+   42  assoc-balan-mul-3             35097.0      354.2  ok
+   43  assoc-balan-mul-3             35099.0      388.8  VIOLATED
+   44  assoc-balan-mul-5             35099.0      388.8  VIOLATED
+   45  assoc-balan-mul-5             35099.0      388.8  VIOLATED
+   46  assoc-balan-mul-3             35099.0      388.8  VIOLATED
+   47  assoc-balan-mul-3             35101.0      423.4  VIOLATED
+   48  assoc-balan-mul-5             35101.0      423.4  VIOLATED
+   49  assoc-balan-mul-3             35103.0      457.9  VIOLATED
+   50  END                           35103.0      457.9  VIOLATED

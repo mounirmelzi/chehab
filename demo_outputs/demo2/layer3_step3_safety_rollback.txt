@@ -1,0 +1,22 @@
+======================================================================
+  STEP 3 — SAFETY ROLLBACK DECISION
+======================================================================
+
+Budget:                369 bits
+Valid checkpoints:     28 / 28
+Safety activated:      YES
+
+Agent's final state (step 27):
+  Cost:  1578.0
+  Noise: 112.1 bits
+  Status: WITHIN BUDGET
+
+Selected state (step 26):
+  Cost:  1578.0
+  Noise: 112.1 bits
+  Status: WITHIN BUDGET
+
+Rollback: stepped back from step 27 to step 26
+
+Optimized expression:
+(VecAdd (VecAdd (VecMul (Vec 2 2 2 2 1 1 1 1) (VecMul (VecAdd (VecAdd (VecMul (Vec w_0_0 w_1_0 w_2_0 w_3_0 1 1 1 1) (Vec x_0 x_0 x_0 x_0 0 0 0 0)) (VecMul (Vec w_0_1 w_1_1 w_2_1 w_3_1 1 1 1 1) (Vec x_1 x_1 x_1 x_1 0 0 0 0))) (VecAdd (VecMul (Vec w_0_2 w_1_2 w_2_2 w_3_2 1 1 1 1) (Vec x_2 x_2 x_2 x_2 0 0 0 0)) (VecMul (Vec w_0_3 w_1_3 w_2_3 w_3_3 1 1 1 1) (Vec x_3 x_3 x_3 x_3 1 1 1 1)))) (VecAdd (VecAdd (VecMul (Vec w_0_0 w_1_0 w_2_0 w_3_0 1 1 1 1) (Vec x_0 x_0 x_0 x_0 0 0 0 0)) (VecMul (Vec w_0_1 w_1_1 w_2_1 w_3_1 1 1 1 1) (Vec x_1 x_1 x_1 x_1 0 0 0 0))) (VecAdd (VecMul (Vec w_0_2 w_1_2 w_2_2 w_3_2 1 1 1 1) (Vec x_2 x_2 x_2 x_2 0 0 0 0)) (VecMul (Vec w_0_3 w_1_3 w_2_3 w_3_3 1 1 1 1) (Vec x_3 x_3 x_3 x_3 0 0 0 0)))))) (VecMul (Vec 3 3 3 3 1 1 1 1) (VecAdd (VecAdd (VecMul (Vec w_0_0 w_1_0 w_2_0 w_3_0 1 1 1 1) (Vec x_0 x_0 x_0 x_0 0 0 0 0)) (VecMul (Vec w_0_1 w_1_1 w_2_1 w_3_1 1 1 1 1) (Vec x_1 x_1 x_1 x_1 0 0 0 0))) (VecAdd (VecMul (Vec w_0_2 w_1_2 w_2_2 w_3_2 1 1 1 1) (Vec x_2 x_2 x_2 x_2 0 0 0 0)) (VecMul (Vec w_0_3 w_1_3 w_2_3 w_3_3 1 1 1 1) (Vec x_3 x_3 x_3 x_3 1 1 1 1)))))) (<< (VecAdd (VecMul (Vec 2 2 2 2 1 1 1 1) (VecMul (VecAdd (VecAdd (VecMul (Vec w_0_0 w_1_0 w_2_0 w_3_0 1 1 1 1) (Vec x_0 x_0 x_0 x_0 0 0 0 0)) (VecMul (Vec w_0_1 w_1_1 w_2_1 w_3_1 1 1 1 1) (Vec x_1 x_1 x_1 x_1 0 0 0 0))) (VecAdd (VecMul (Vec w_0_2 w_1_2 w_2_2 w_3_2 1 1 1 1) (Vec x_2 x_2 x_2 x_2 0 0 0 0)) (VecMul (Vec w_0_3 w_1_3 w_2_3 w_3_3 1 1 1 1) (Vec x_3 x_3 x_3 x_3 1 1 1 1)))) (VecAdd (VecAdd (VecMul (Vec w_0_0 w_1_0 w_2_0 w_3_0 1 1 1 1) (Vec x_0 x_0 x_0 x_0 0 0 0 0)) (VecMul (Vec w_0_1 w_1_1 w_2_1 w_3_1 1 1 1 1) (Vec x_1 x_1 x_1 x_1 0 0 0 0))) (VecAdd (VecMul (Vec w_0_2 w_1_2 w_2_2 w_3_2 1 1 1 1) (Vec x_2 x_2 x_2 x_2 0 0 0 0)) (VecMul (Vec w_0_3 w_1_3 w_2_3 w_3_3 1 1 1 1) (Vec x_3 x_3 x_3 x_3 0 0 0 0)))))) (VecMul (Vec 3 3 3 3 1 1 1 1) (VecAdd (VecAdd (VecMul (Vec w_0_0 w_1_0 w_2_0 w_3_0 1 1 1 1) (Vec x_0 x_0 x_0 x_0 0 0 0 0)) (VecMul (Vec w_0_1 w_1_1 w_2_1 w_3_1 1 1 1 1) (Vec x_1 x_1 x_1 x_1 0 0 0 0))) (VecAdd (VecMul (Vec w_0_2 w_1_2 w_2_2 w_3_2 1 1 1 1) (Vec x_2 x_2 x_2 x_2 0 0 0 0)) (VecMul (Vec w_0_3 w_1_3 w_2_3 w_3_3 1 1 1 1) (Vec x_3 x_3 x_3 x_3 1 1 1 1)))))) 4))

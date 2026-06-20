@@ -32,6 +32,8 @@ from demo.demo_utils import (
     print_banner, print_section, print_subsection, print_summary_box,
     print_kv, print_step, print_phase, print_exec_phase,
     print_waiting, print_done, noise_bar, generate_trajectory_plot,
+    save_input_expression, save_rl_trajectory, save_safety_rollback,
+    save_lattigo_code, save_execution_output,
 )
 
 # ── Available operators ─────────────────────────────────────────────────────
@@ -271,6 +273,12 @@ def run_rl_optimization(expression: str, budget: int, op_name: str):
         title=f"RL Optimization: {op_name} (B={budget})"
     )
 
+    # ── Save pipeline artifacts ──────────────────────────────────────
+    print_subsection("Pipeline Artifacts")
+    save_input_expression("demo1", initial_expr, op_name, budget)
+    save_rl_trajectory("demo1", trajectory, budget, rl_time)
+    save_safety_rollback("demo1", trajectory, budget, best_step, safety_activated)
+
     return best_expr, op_name, rl_time
 
 
@@ -354,7 +362,8 @@ def generate_veclang_files(expression: str, temp_dir: Path):
             f.write(f"{inp} {IS_CIPHER} {IS_SIGNED} {random.randint(0, 10)}\n")
 
 
-def run_ckks_pipeline(expression: str, op_name: str, expected_output: float = None):
+def run_ckks_pipeline(expression: str, op_name: str, expected_output: float = None,
+                      input_val: float = 0.95):
     """Compile expression to Lattigo Go and run encrypted execution."""
     print_section("CKKS COMPILATION")
 
@@ -422,6 +431,8 @@ def run_ckks_pipeline(expression: str, op_name: str, expected_output: float = No
         print(f"  {RED}{CROSS} generated_fhe.go not found{RESET}")
         return
 
+    save_lattigo_code("demo1", generated_go)
+
     # Copy adapted IO file if it exists
     lattigo_dir = PROJECT_ROOT / "lattigo_backend"
     adapted_src = build_dir / "fhe_io_example_adapted.txt"
@@ -469,6 +480,7 @@ def run_ckks_pipeline(expression: str, op_name: str, expected_output: float = No
     decrypt = float(results.get("decrypt_ms", 0))
     total = float(results.get("total_ms", 0))
     precision = float(results.get("precision_bits", 0))
+    abs_error = float(results["abs_error"]) if "abs_error" in results else None
 
     print_exec_phase("KeyGen", keygen)
     if btp_keygen > 0:
@@ -484,6 +496,13 @@ def run_ckks_pipeline(expression: str, op_name: str, expected_output: float = No
     prec_status = f"{CHECK} above 10-bit threshold" if prec_ok else f"{CROSS} below threshold"
     print(f"    {BOLD}Precision:{RESET} {prec_color}{BOLD}{precision:.1f} bits{RESET}  {prec_color}{prec_status}{RESET}")
     print()
+
+    save_execution_output("demo1", {
+        "keygen_ms": keygen, "bootstrap_keygen_ms": btp_keygen,
+        "encrypt_ms": encrypt, "eval_ms": eval_ms,
+        "decrypt_ms": decrypt, "total_ms": total, "precision_bits": precision,
+        "abs_error": abs_error,
+    }, op_name=op_name, input_val=input_val, expected_output=expected_output)
 
 
 def main():

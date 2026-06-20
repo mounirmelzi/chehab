@@ -37,6 +37,8 @@ from demo.demo_utils import (
     print_banner, print_section, print_subsection, print_summary_box,
     print_kv, print_step, print_phase, print_exec_phase,
     print_waiting, print_done, noise_bar, generate_trajectory_plot,
+    save_input_expression, save_rl_trajectory, save_safety_rollback,
+    save_lattigo_code, save_execution_output,
 )
 from demo.demo_single_operator import generate_veclang_files, evaluate_expression
 
@@ -255,6 +257,12 @@ def run_rl_optimization(expression: str):
         title=f"Challenging Benchmark: {BENCHMARK['name']} (B={BUDGET})"
     )
 
+    # ── Save pipeline artifacts ──────────────────────────────────────
+    print_subsection("Pipeline Artifacts")
+    save_input_expression("demo3", initial_expr, BENCHMARK["name"], BUDGET)
+    save_rl_trajectory("demo3", trajectory, BUDGET, rl_time)
+    save_safety_rollback("demo3", trajectory, BUDGET, best_step, safety_activated)
+
     return best_expr, rl_time
 
 
@@ -353,6 +361,7 @@ def run_ckks_pipeline(expression: str, expected_output: float = None):
         return
 
     _patch_generated_go(generated_go)
+    save_lattigo_code("demo3", generated_go)
 
     lattigo_dir = PROJECT_ROOT / "lattigo_backend"
     adapted_src = build_dir / "fhe_io_example_adapted.txt"
@@ -400,6 +409,7 @@ def run_ckks_pipeline(expression: str, expected_output: float = None):
     decrypt = float(results.get("decrypt_ms", 0))
     total = float(results.get("total_ms", 0))
     precision = float(results.get("precision_bits", 0))
+    abs_error = float(results["abs_error"]) if "abs_error" in results else None
 
     print()
     print_exec_phase("KeyGen", keygen)
@@ -416,6 +426,13 @@ def run_ckks_pipeline(expression: str, expected_output: float = None):
     prec_status = f"{CHECK} above 10-bit threshold" if prec_ok else f"{CROSS} below threshold"
     print(f"    {BOLD}Precision:{RESET} {prec_color}{BOLD}{precision:.1f} bits{RESET}  {prec_color}{prec_status}{RESET}")
     print()
+
+    save_execution_output("demo3", {
+        "keygen_ms": keygen, "bootstrap_keygen_ms": btp_keygen,
+        "encrypt_ms": encrypt, "eval_ms": eval_ms,
+        "decrypt_ms": decrypt, "total_ms": total, "precision_bits": precision,
+        "abs_error": abs_error,
+    }, op_name=BENCHMARK["name"], expected_output=expected_output)
 
 
 def main():

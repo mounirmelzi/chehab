@@ -1,0 +1,86 @@
+======================================================================
+  STEP 2 — RL OPTIMIZATION TRAJECTORY
+======================================================================
+
+Budget:       369 bits
+Total steps:  75
+RL time:      4.51 s
+
+ Step  Rule                             Cost      Noise  Status
+-----  -------------------------- ---------- ----------  ---------------
+    0  initial                       20273.0      317.2  ok
+    1  flex-sub-vectorize            19775.0      318.4  ok
+    2  rot-mul-vectorize-flex        18684.0      319.6  ok
+    3  flex-add-vectorize            18186.0      320.8  ok
+    4  flex-mul-vectorize            17036.0      320.8  ok
+    5  flex-mul-vectorize            16138.0      355.4  ok
+    6  flex-mul-vectorize            15238.0      355.4  ok
+    7  flex-mul-vectorize            14838.0      355.4  ok
+    8  assoc-balan-mul-6             14840.0      390.0  VIOLATED
+    9  flex-sub-vectorize            14341.0      390.0  VIOLATED
+   10  assoc-balan-mul-3             14339.0      355.4  ok
+   11  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   12  assoc-balan-mul-3             14339.0      355.4  ok
+   13  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   14  assoc-balan-mul-3             14339.0      355.4  ok
+   15  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   16  assoc-balan-mul-3             14339.0      355.4  ok
+   17  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   18  assoc-balan-mul-3             14339.0      355.4  ok
+   19  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   20  assoc-balan-mul-3             14339.0      355.4  ok
+   21  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   22  assoc-balan-mul-3             14339.0      355.4  ok
+   23  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   24  assoc-balan-mul-3             14339.0      355.4  ok
+   25  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   26  assoc-balan-mul-3             14339.0      355.4  ok
+   27  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   28  assoc-balan-mul-3             14339.0      355.4  ok
+   29  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   30  assoc-balan-mul-3             14339.0      355.4  ok
+   31  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   32  assoc-balan-mul-3             14339.0      355.4  ok
+   33  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   34  assoc-balan-mul-3             14339.0      355.4  ok
+   35  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   36  assoc-balan-mul-3             14339.0      355.4  ok
+   37  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   38  assoc-balan-mul-3             14339.0      355.4  ok
+   39  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   40  assoc-balan-mul-3             14339.0      355.4  ok
+   41  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   42  assoc-balan-mul-3             14339.0      355.4  ok
+   43  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   44  assoc-balan-mul-3             14339.0      355.4  ok
+   45  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   46  assoc-balan-mul-3             14339.0      355.4  ok
+   47  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   48  assoc-balan-mul-3             14339.0      355.4  ok
+   49  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   50  assoc-balan-mul-3             14339.0      355.4  ok
+   51  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   52  assoc-balan-mul-3             14339.0      355.4  ok
+   53  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   54  assoc-balan-mul-3             14339.0      355.4  ok
+   55  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   56  assoc-balan-mul-3             14339.0      355.4  ok
+   57  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   58  assoc-balan-mul-3             14339.0      355.4  ok
+   59  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   60  assoc-balan-mul-3             14339.0      355.4  ok
+   61  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   62  assoc-balan-mul-3             14339.0      355.4  ok
+   63  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   64  assoc-balan-mul-3             14339.0      355.4  ok
+   65  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   66  assoc-balan-mul-3             14339.0      355.4  ok
+   67  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   68  assoc-balan-mul-3             14339.0      355.4  ok
+   69  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   70  assoc-balan-mul-3             14339.0      355.4  ok
+   71  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   72  assoc-balan-mul-3             14339.0      355.4  ok
+   73  assoc-balan-mul-1             14341.0      390.0  VIOLATED
+   74  assoc-balan-mul-3             14339.0      355.4  ok
+   75  assoc-balan-mul-1             14341.0      390.0  VIOLATED

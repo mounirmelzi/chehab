@@ -1,0 +1,16 @@
+======================================================================
+  STEP 2 — RL OPTIMIZATION TRAJECTORY
+======================================================================
+
+Budget:       369 bits
+Total steps:  5
+RL time:      0.09 s
+
+ Step  Rule                             Cost      Noise  Status
+-----  -------------------------- ---------- ----------  ---------------
+    0  initial                        5008.0       74.0  ok
+    1  rot-add-vectorize              4064.0       75.2  ok
+    2  rot-add-vectorize-flex         3132.0       76.3  ok
+    3  flex-mul-vectorize             1232.0       76.3  ok
+    4  flex-mul-vectorize              332.0       76.3  ok
+    5  END                             332.0       76.3  ok

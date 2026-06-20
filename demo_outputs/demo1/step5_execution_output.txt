@@ -1,0 +1,21 @@
+======================================================================
+  STEP 5 — FHE EXECUTION OUTPUT (Lattigo CKKS)
+======================================================================
+
+Operator:       poly_activation_deg2_4
+Input value:    x = 0.95  (all cipher slots set to this value)
+Expected output (plaintext): 5.655000
+Decrypted output (CKKS):     5.655004
+Absolute error:              4.08e-06
+
+Phase                              Time
+---------------------------- ----------
+KeyGen                             33 ms
+Encrypt                            19 ms
+Eval (homomorphic)                  9 ms
+Decrypt                             9 ms
+---------------------------- ----------
+TOTAL                              71 ms
+
+Precision:  17.9 bits
+Status:     PASS (>= 10 bits)
