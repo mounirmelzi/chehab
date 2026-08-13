@@ -1,11 +1,10 @@
 from stable_baselines3 import PPO
 import time
-from .utils import load_expressions, create_rules, parse_sexpr, load_embeddings,predict_method,calc_vec_sizes
+from .utils import load_expressions, create_rules, parse_sexpr, calc_vec_sizes
 import sys
-from .env import fheEnv
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize,SubprocVecEnv
-from .policy import HierarchicalMaskablePolicy
-import sys, importlib
+import importlib
+from stable_baselines3.common.vec_env import DummyVecEnv
+from .config import get_env_class, get_policy_class
 from stable_baselines3.common.monitor import Monitor
 
 
@@ -23,12 +22,14 @@ def run_agent(expressions_file: str,embeddings_model, model_filepath: str, outpu
     max_positions = 16
     end_time = time.perf_counter()
     elapsed_seconds = end_time - start_time
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
     env = DummyVecEnv([
-        lambda: Monitor(fheEnv(rules_list, expressions, max_positions=max_positions,embeddings_model=embeddings_model))
+        lambda: Monitor(EnvCls(rules_list, expressions, max_positions=max_positions, embeddings_model=embeddings_model))
     ])
     env.set_options({ "budget": noise_budget })
     model = PPO(
-        policy=HierarchicalMaskablePolicy,
+        policy=PolicyCls,
         env=env
     )
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")

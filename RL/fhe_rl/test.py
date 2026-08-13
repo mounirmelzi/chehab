@@ -1,9 +1,8 @@
 from stable_baselines3 import PPO
 import sys, importlib, time
-from .utils import load_expressions, load_expressions_named, load_embeddings, create_rules
+from .utils import load_expressions, load_expressions_named, create_rules
 from pytrs import parse_sexpr, NoiseEstimator
-from .env import fheEnv
-from .policy import HierarchicalMaskablePolicy
+from .config import get_env_class, get_policy_class
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 import os
@@ -56,9 +55,11 @@ def test_agent(
         budget_options = test_budgets  # Assume test budgets = train budgets
 
     # Create env with correct budget_options and constraint_method
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
     env = DummyVecEnv([
         lambda: Monitor(
-            fheEnv(
+            EnvCls(
                 rules_list,
                 expressions,
                 max_positions=max_positions,
@@ -70,7 +71,7 @@ def test_agent(
     ])
 
     # Load model
-    model = PPO(policy=HierarchicalMaskablePolicy, env=env)
+    model = PPO(policy=PolicyCls, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
     noise_estimator = NoiseEstimator()
@@ -210,9 +211,11 @@ def test_agent_v2(
     if budget_options is None:
         budget_options = test_budgets
 
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
     env = DummyVecEnv([
         lambda: Monitor(
-            fheEnv(
+            EnvCls(
                 rules_list,
                 expressions,
                 max_positions=max_positions,
@@ -223,7 +226,7 @@ def test_agent_v2(
         )
     ])
 
-    model = PPO(policy=HierarchicalMaskablePolicy, env=env)
+    model = PPO(policy=PolicyCls, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
     noise_estimator = NoiseEstimator()

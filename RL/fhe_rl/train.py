@@ -1,12 +1,11 @@
 import os
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize, DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
-from .env    import fheEnv
-from .policy import HierarchicalMaskablePolicy
 from stable_baselines3 import PPO
-from .utils  import load_expressions, create_rules, load_embeddings
+from .utils  import load_expressions, create_rules
 from .logger import log_training_details
-from .callbacks import linear_schedule, EntCoefScheduler, CurriculumCallback
+from .callbacks import CurriculumCallback
+from .config import get_env_class, get_policy_class
 from stable_baselines3.common.callbacks import EvalCallback
 from .wrappers import (
     LagrangianVecEnvWrapper,
@@ -68,10 +67,13 @@ def train_agent(
     run_name = f"model_{job_id}_{constraint_method}"
     tensorboard_log_dir = f"./tensorboard/{run_name}"
 
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
+
     # ── Environment creation ─────────────────────────────────────────────────
     def make_env():
         return Monitor(
-            fheEnv(
+            EnvCls(
                 rules_list, expressions,
                 max_positions=max_positions,
                 embeddings_model=embeddings_model,
@@ -83,7 +85,7 @@ def train_agent(
     env = SubprocVecEnv([make_env for _ in range(num_envs)], start_method='spawn')
     val_env = DummyVecEnv([
         lambda: Monitor(
-            fheEnv(
+            EnvCls(
                 rules_list, benchmarks,
                 max_positions=max_positions,
                 embeddings_model=embeddings_model,
@@ -119,7 +121,7 @@ def train_agent(
     print("=" * 80)
 
     model_params = {
-        "policy": HierarchicalMaskablePolicy,
+        "policy": PolicyCls,
         "env": env,
         "seed": 42,
         "learning_rate": 1e-4,

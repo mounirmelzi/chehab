@@ -1,9 +1,14 @@
 """
 Configuration file for FHE RL Agent
-Contains model paths, tokenizer settings, and other configuration parameters
+Contains model paths, tokenizer settings, and other configuration parameters.
+
+To plug in a new env or policy (e.g. a multi-objective agent), set
+COMPONENT_CONFIG["env_class"] / COMPONENT_CONFIG["policy_class"] to the
+dotted path of the replacement class. Training, testing, and run all
+resolve those classes through get_env_class() / get_policy_class().
 """
 
-import os
+import importlib
 from pathlib import Path
 import torch
 import enum
@@ -12,6 +17,11 @@ import enum
 class RLAlgorithm(enum.Enum):
     PPO = "PPO"
     LAGRANGIAN_PPO = "LAGRANGIAN_PPO"
+
+
+class EmbeddingsModelType(enum.Enum):
+    TRANSFORMER_AUTOENCODER = "TRANSFORMER_AUTOENCODER"
+    GNN_AUTOENCODER = "GNN_AUTOENCODER"
 
 
 class ConstraintMethod(enum.Enum):
@@ -32,6 +42,8 @@ FHE_RL_DIR = Path(__file__).parent
 # Model paths configuration
 MODEL_PATHS = {
     "agent_model": FHE_RL_DIR / "trained_models" / "agent_dynamic_llm_data.zip",
+    "gnn_agent_model": FHE_RL_DIR / "trained_models" / "agent_lppo_14848346.zip",
+    "gnn_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_gnn_model_epoch_100.pth",
     "dynamic_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_ROT_15_32_5m_10742576.pth",
     "bpe_embeddings_model": FHE_RL_DIR / "trained_models" / "model_Transformer_BPE_ddp_jobid_epoch_5000000.pth",
     "bpe_tokenizer": FHE_RL_DIR / "trained_models" / "bpe_tokenizer.pkl",
@@ -48,6 +60,14 @@ TOKENIZER_CONFIG = {
 AGENT_CONFIG = {
     "device": "cuda" if torch.cuda.is_available() else "cpu",
     "algorithm": RLAlgorithm.LAGRANGIAN_PPO,
+    "embeddings_model_type": EmbeddingsModelType.TRANSFORMER_AUTOENCODER,
+}
+
+# Dotted paths resolved at runtime. Change these to swap env/policy
+# without changing train/test/run function signatures.
+COMPONENT_CONFIG = {
+    "env_class": "fhe_rl.env.fheEnv",
+    "policy_class": "fhe_rl.policy.HierarchicalMaskablePolicy",
 }
 
 def get_model_path(model_key):
@@ -94,6 +114,23 @@ def get_rl_algorithm() -> RLAlgorithm:
     """
     return AGENT_CONFIG["algorithm"]
 
+def get_embeddings_model_type() -> EmbeddingsModelType:
+    """Get the configured expression embedder (TRAE or GNNAE)."""
+    return AGENT_CONFIG["embeddings_model_type"]
+
+def _resolve_class(dotted_path: str):
+    module_path, class_name = dotted_path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, class_name)
+
+def get_env_class():
+    """Resolve the Gym environment class from COMPONENT_CONFIG['env_class']."""
+    return _resolve_class(COMPONENT_CONFIG["env_class"])
+
+def get_policy_class():
+    """Resolve the policy class from COMPONENT_CONFIG['policy_class']."""
+    return _resolve_class(COMPONENT_CONFIG["policy_class"])
+
 def print_config():
     """
     Print the current configuration
@@ -103,6 +140,9 @@ def print_config():
     print(f"Default vocab size: {get_vocab_size()}")
     print(f"Device: {get_device()}")
     print(f"RL Algorithm: {get_rl_algorithm().value}")
+    print(f"Embeddings model: {get_embeddings_model_type().value}")
+    print(f"Env class: {COMPONENT_CONFIG['env_class']}")
+    print(f"Policy class: {COMPONENT_CONFIG['policy_class']}")
     print("\nModel paths:")
     for key, path in MODEL_PATHS.items():
         status = "✓" if path.exists() else "✗"

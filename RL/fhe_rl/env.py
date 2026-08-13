@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, Expr, Const, Var, Op, expr_to_str
+from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, expr_to_str
 import torch
 from .config import get_tokenizer_type
 
@@ -249,6 +249,8 @@ class fheEnv(gym.Env):
         return calculate_cost(parse_sexpr(expr))
     
     def _embed_expression(self, expr: str) -> np.ndarray:
+        if hasattr(self.embeddings_model, "get_embedding"):
+            return self.embeddings_model.get_embedding(expr)
         expr_tree = parse_sexpr(expr)
         with torch.no_grad():
             emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)

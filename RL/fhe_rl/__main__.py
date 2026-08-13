@@ -1,11 +1,10 @@
 
 import sys
-import os
 import argparse
 from .run import run_agent
 from .train import train_agent
 from .test import test_agent, test_agent_v2
-from .utils import load_embeddings
+from .utils import load_embeddings_from_config
 from .TRAE_bpe import BPETokenizer  # Import for pickle compatibility
 from .config import (
     get_model_path, get_tokenizer_type, 
@@ -172,21 +171,6 @@ def usage() -> None:
         "All model paths are loaded from config.py."
     )
     sys.exit(1)
-
-
-def load_embeddings_from_config(tokenizer_type=None):
-    """Load embeddings using the configuration system"""
-    try:
-        # Determine the correct embeddings model based on tokenizer type
-        if tokenizer_type == "bpe" or (tokenizer_type is None and get_tokenizer_type() == "bpe"):
-            embeddings_path = get_model_path("bpe_embeddings_model")
-        else:
-            embeddings_path = get_model_path("dynamic_embeddings_model")
-        
-        return load_embeddings(tokenizer_type=tokenizer_type, checkpoint_path=embeddings_path)
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
 
 
 def main(args=None):

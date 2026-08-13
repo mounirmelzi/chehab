@@ -1,16 +1,15 @@
-import os
-import sys
 from pytrs import (
-    create_rules as _create_rules, parse_sexpr, tokenize,
-    Expr, Const, Var, Op, VARIABLE_RANGE, CONST_OFFSET, 
-    PAREN_CLOSE, PAREN_OPEN, node_to_id, get_normal_depth
+    create_rules as _create_rules, parse_sexpr,
+    Expr, Const, Var, Op, VARIABLE_RANGE, CONST_OFFSET,
+    PAREN_CLOSE, PAREN_OPEN, node_to_id
 )
 import torch
 import torch.nn as nn
+import sys
 
 from .config import (
-    get_model_path, get_tokenizer_type, get_device, get_vocab_size,
-    TOKENIZER_CONFIG, AGENT_CONFIG
+    get_model_path, get_tokenizer_type, get_device,
+    get_embeddings_model_type, EmbeddingsModelType,
 )
 
 if get_tokenizer_type() == "bpe":
@@ -37,7 +36,28 @@ def load_embeddings(tokenizer_type=None, checkpoint_path=None, device=None):
         return load_embedding_model_bpe(checkpoint_path, device)
     else:
         model = load_embedding_model_dynamic(checkpoint_path, device)
-        return model, None  
+        return model, None
+
+def load_embeddings_from_config(tokenizer_type=None):
+    """Load the embedder selected in AGENT_CONFIG['embeddings_model_type'].
+
+    Returns (model, tokenizer) to match the TRAE loader. The GNN extractor
+    has no tokenizer, so the second value is None.
+    """
+    try:
+        embedder_type = get_embeddings_model_type()
+        if embedder_type == EmbeddingsModelType.GNN_AUTOENCODER:
+            from .gnn_embeddings import FHEFeatureExtractor
+            return FHEFeatureExtractor(model_path=get_model_path("gnn_embeddings_model")), None
+        if tokenizer_type == "bpe" or (tokenizer_type is None and get_tokenizer_type() == "bpe"):
+            embeddings_path = get_model_path("bpe_embeddings_model")
+        else:
+            embeddings_path = get_model_path("dynamic_embeddings_model")
+        return load_embeddings(tokenizer_type=tokenizer_type, checkpoint_path=embeddings_path)
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
 def create_rules(path):
     return _create_rules(path=path)
 
