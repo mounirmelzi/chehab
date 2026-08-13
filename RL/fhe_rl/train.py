@@ -5,7 +5,7 @@ from stable_baselines3 import PPO
 from .utils  import load_expressions, create_rules
 from .logger import log_training_details
 from .callbacks import CurriculumCallback
-from .config import get_env_class, get_policy_class
+from .config import get_env_class, get_policy_class, get_wrapper_class
 from stable_baselines3.common.callbacks import EvalCallback
 from .wrappers import (
     LagrangianVecEnvWrapper,
@@ -15,12 +15,8 @@ from .wrappers import (
 from torch.utils.tensorboard import SummaryWriter
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Methods that use the Lagrangian outer loop (wrapper + lambda updates)
-# ──────────────────────────────────────────────────────────────────────────────
-LAGRANGIAN_METHODS = {"lagrangian_od_ov", "lagrangian_perstep", "lagrangian_always_done"}
-
-# Wrapper class for each Lagrangian variant
+# Wrapper class for each Lagrangian variant (used when wrapper_class = "auto";
+# constraint methods not listed here train without a wrapper)
 WRAPPER_MAP = {
     "lagrangian_od_ov":        LagrangianVecEnvWrapper,
     "lagrangian_perstep":      LagrangianPerStepWrapper,
@@ -95,12 +91,22 @@ def train_agent(
         )
     ])
 
-    # ── Wrap with Lagrangian penalty wrapper if applicable ────────────────────
-    use_lagrange = constraint_method in LAGRANGIAN_METHODS
-    if use_lagrange:
-        WrapperCls = WRAPPER_MAP[constraint_method]
+    # ── Wrap env if a wrapper is configured ────────────────────────────────────
+    # "auto" picks the Lagrangian wrapper matching the constraint method;
+    # None disables wrapping; a custom class from COMPONENT_CONFIG is used as-is.
+    wrapper_setting = get_wrapper_class()
+    if wrapper_setting == "auto":
+        WrapperCls = WRAPPER_MAP.get(constraint_method)
+    else:
+        WrapperCls = wrapper_setting
+    if WrapperCls is not None:
         env = WrapperCls(env)
         val_env = WrapperCls(val_env)
+
+    # The Lagrangian outer loop (train -> eval noise -> update lambda) runs only
+    # when the wrapper exposes lambda updates. Custom wrappers without
+    # update_lambda_penalty get the plain model.learn() loop.
+    use_lagrange = hasattr(env, "update_lambda_penalty")
 
     # ── PPO model ────────────────────────────────────────────────────────────
     n_steps = 2048

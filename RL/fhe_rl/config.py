@@ -2,10 +2,17 @@
 Configuration file for FHE RL Agent
 Contains model paths, tokenizer settings, and other configuration parameters.
 
-To plug in a new env or policy (e.g. a multi-objective agent), set
-COMPONENT_CONFIG["env_class"] / COMPONENT_CONFIG["policy_class"] to the
-dotted path of the replacement class. Training, testing, and run all
-resolve those classes through get_env_class() / get_policy_class().
+To plug in a new agent (e.g. a multi-objective one), copy your files into
+fhe_rl/ (env_xxx.py, policy_xxx.py, wrappers_xxx.py) and point the entries
+in COMPONENT_CONFIG to them. Training, testing, and run all resolve these
+classes through get_env_class() / get_policy_class() / get_wrapper_class(),
+so no function signatures need to change:
+
+    COMPONENT_CONFIG = {
+        "env_class": "fhe_rl.env_mo.MultiObjectiveEnv",
+        "policy_class": "fhe_rl.policy_mo.MultiObjectivePolicy",
+        "wrapper_class": "fhe_rl.wrappers_mo.MultiObjectiveWrapper",  # or None
+    }
 """
 
 import importlib
@@ -63,11 +70,17 @@ AGENT_CONFIG = {
     "embeddings_model_type": EmbeddingsModelType.TRANSFORMER_AUTOENCODER,
 }
 
-# Dotted paths resolved at runtime. Change these to swap env/policy
+# Dotted paths resolved at runtime. Change these to swap env/policy/wrapper
 # without changing train/test/run function signatures.
+# wrapper_class values:
+#   "auto"        -> pick the Lagrangian wrapper matching the constraint
+#                    method (current behavior)
+#   None          -> train without any VecEnv wrapper
+#   "pkg.mod.Cls" -> custom VecEnvWrapper class (e.g. multi-objective reward)
 COMPONENT_CONFIG = {
     "env_class": "fhe_rl.env.fheEnv",
     "policy_class": "fhe_rl.policy.HierarchicalMaskablePolicy",
+    "wrapper_class": "auto",
 }
 
 def get_model_path(model_key):
@@ -131,6 +144,16 @@ def get_policy_class():
     """Resolve the policy class from COMPONENT_CONFIG['policy_class']."""
     return _resolve_class(COMPONENT_CONFIG["policy_class"])
 
+def get_wrapper_class():
+    """Resolve the VecEnv wrapper from COMPONENT_CONFIG['wrapper_class'].
+
+    Returns the sentinel string "auto", None, or the resolved class.
+    """
+    value = COMPONENT_CONFIG.get("wrapper_class", "auto")
+    if value is None or value == "auto":
+        return value
+    return _resolve_class(value)
+
 def print_config():
     """
     Print the current configuration
@@ -143,6 +166,7 @@ def print_config():
     print(f"Embeddings model: {get_embeddings_model_type().value}")
     print(f"Env class: {COMPONENT_CONFIG['env_class']}")
     print(f"Policy class: {COMPONENT_CONFIG['policy_class']}")
+    print(f"Wrapper class: {COMPONENT_CONFIG['wrapper_class']}")
     print("\nModel paths:")
     for key, path in MODEL_PATHS.items():
         status = "✓" if path.exists() else "✗"
