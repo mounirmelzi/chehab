@@ -6,16 +6,16 @@ Operator:       fc_plus_act_4
 Input value:    x = 0.95  (all cipher slots set to this value)
 Expected output (plaintext): 37.894200
 Decrypted output (CKKS):     37.894203
-Absolute error:              2.59e-06
+Absolute error:              2.66e-06
 
 Phase                              Time
 ---------------------------- ----------
-KeyGen                             32 ms
+KeyGen                             30 ms
 Encrypt                            76 ms
-Eval (homomorphic)                 39 ms
+Eval (homomorphic)                 38 ms
 Decrypt                             8 ms
 ---------------------------- ----------
-TOTAL                             154 ms
+TOTAL                             152 ms
 
-Precision:  18.6 bits
+Precision:  18.5 bits
 Status:     PASS (>= 10 bits)

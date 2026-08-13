@@ -4,7 +4,7 @@
 
 Budget:       369 bits
 Total steps:  50
-RL time:      10.94 s
+RL time:      10.69 s
 
  Step  Rule                             Cost      Noise  Status
 -----  -------------------------- ---------- ----------  ---------------

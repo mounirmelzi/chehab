@@ -54,6 +54,8 @@ __pycache__/
 
 /logs
 
+.DS_Store
+
 commands.txt
 
 manuscript writing/
