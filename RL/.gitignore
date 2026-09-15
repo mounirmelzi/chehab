@@ -6,3 +6,5 @@ eval/
 old_test_results/
 job_logs.xlsx
 test_results.xlsx
+saved_models/
+pretraining/

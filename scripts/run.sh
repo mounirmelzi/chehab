@@ -35,4 +35,4 @@ cd he
 cmake -S . -B build
 cd build
 make
-./main
+/usr/bin/time -f 'Peak RAM usage: %M KB' ./main
