@@ -49,6 +49,7 @@ FHE_RL_DIR = Path(__file__).parent
 # Model paths configuration
 MODEL_PATHS = {
     "agent_model": FHE_RL_DIR / "trained_models" / "agent_dynamic_llm_data.zip",
+    "mo_agent_model": FHE_RL_DIR / "trained_models" / "agent_pareto_2_full.zip",
     "gnn_agent_model": FHE_RL_DIR / "trained_models" / "agent_lppo_14848346.zip",
     "gnn_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_gnn_model_epoch_100.pth",
     "dynamic_embeddings_model": FHE_RL_DIR / "trained_models" / "embeddings_ROT_15_32_5m_10742576.pth",
@@ -82,6 +83,23 @@ COMPONENT_CONFIG = {
     "policy_class": "fhe_rl.policy.HierarchicalMaskablePolicy",
     "wrapper_class": "auto",
 }
+
+def set_framework(framework_name: str):
+    """
+    Set the framework to use for the RL agent.
+    Updates COMPONENT_CONFIG based on the selected framework.
+    Supported frameworks: 'constrained', 'mo'
+    """
+    if framework_name == "mo":
+        COMPONENT_CONFIG["env_class"] = "fhe_rl.env_mo.fheEnvMO"
+        COMPONENT_CONFIG["policy_class"] = "fhe_rl.policy_mo.HierarchicalMaskablePolicyMO"
+        COMPONENT_CONFIG["wrapper_class"] = None
+    elif framework_name == "constrained":
+        COMPONENT_CONFIG["env_class"] = "fhe_rl.env.fheEnv"
+        COMPONENT_CONFIG["policy_class"] = "fhe_rl.policy.HierarchicalMaskablePolicy"
+        COMPONENT_CONFIG["wrapper_class"] = "auto"
+    else:
+        raise ValueError(f"Unknown framework: {framework_name}")
 
 def get_model_path(model_key):
     """

@@ -101,7 +101,17 @@ int main(int argc, char **argv)
    
   bool const_folding = true; 
   if (argc > 7)
-    const_folding = stoi(argv[7]); 
+    const_folding = stoi(argv[7]);
+
+  int backend = 0;  // 0 = SEAL (default), 1 = Lattigo (Go/CKKS)
+  if (argc > 8)
+    backend = stoi(argv[8]);
+
+  float w_ops = 0.5;
+  float w_keys = 0.5;
+
+  if (argc > 9) w_ops = stof(argv[9]);
+  if (argc > 10) w_keys = stof(argv[10]); 
 
   if (cse)
   {

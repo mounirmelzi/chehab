@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <memory>
 #include <ostream>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -97,7 +98,8 @@ void gen_main_go(
   const std::string &func_name,
   const std::unordered_set<int> &rotation_steps,
   std::ostream &os,
-  const ckks::CKKSParams* ckks_params = nullptr);
+  const ckks::CKKSParams* ckks_params = nullptr,
+  const std::set<std::string> &cipher_input_labels = {});
 
 /**
  * @brief Helper to generate cipher variable name

@@ -52,7 +52,7 @@ R"(package main
 
 import (
 	"fmt"
-	"math"
+	"time"
 
 	"github.com/tuneinsight/lattigo/v5/core/rlwe"
 	"github.com/tuneinsight/lattigo/v5/he/hefloat"
@@ -66,7 +66,7 @@ R"(package main
 
 import (
 	"fmt"
-	"math"
+	"time"
 
 	"github.com/tuneinsight/lattigo/v5/core/rlwe"
 	"github.com/tuneinsight/lattigo/v5/he/hefloat"

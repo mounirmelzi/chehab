@@ -5,11 +5,15 @@
 #include "fheco/ir/func.hpp"
 #include "fheco/passes/prepare_code_gen.hpp"
 #include <algorithm>
-#include <iterator>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <iterator>
+#include <set>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 using namespace std;
 
@@ -51,8 +55,16 @@ void gen_func_lattigo(
   
   os << "}\n\n";
   
+  // Collect unique cipher input labels for main() input preparation
+  std::set<std::string> cipher_input_labels;
+  for (const auto &input_info : func->data_flow().inputs_info())
+  {
+    if (input_info.first->type() == ir::Term::Type::cipher)
+      cipher_input_labels.insert(input_info.second.label_);
+  }
+
   // Generate main function with setup (pass CKKS params)
-  gen_main_go(func_name, rotation_steps, os, ckks_params);
+  gen_main_go(func_name, rotation_steps, os, ckks_params, cipher_input_labels);
 }
 
 void gen_func_signature_go(const string &func_name, ostream &os)
@@ -95,12 +107,18 @@ void gen_input_terms_go(
       os << "\t";
       gen_cipher_var_id_go(object_id, os);
       os << " := encryptedInputs[\"" << input_info.second.label_ << "\"]\n";
+      os << "\t_ = ";
+      gen_cipher_var_id_go(object_id, os);
+      os << "\n";
     }
     else
     {
       os << "\t";
       gen_plain_var_id_go(object_id, os);
       os << " := encodedInputs[\"" << input_info.second.label_ << "\"]\n";
+      os << "\t_ = ";
+      gen_plain_var_id_go(object_id, os);
+      os << "\n";
     }
   }
 }
@@ -470,7 +488,8 @@ void gen_main_go(
   const string &func_name,
   const unordered_set<int> &rotation_steps,
   ostream &os,
-  const ckks::CKKSParams* ckks_params)
+  const ckks::CKKSParams* ckks_params,
+  const set<string> &cipher_input_labels)
 {
   // Use provided params or create defaults
   ckks::CKKSParams params;
@@ -529,7 +548,19 @@ void gen_main_go(
 	for i, r := range rotations {
 		galoisElements[i] = params.GaloisElement(r)
 	}
+
+	keys_time := time.Now()
 	gks := kgen.GenGaloisKeysNew(galoisElements, sk)
+	keys_elapsed := time.Since(keys_time).Seconds() * 1000.0
+
+	var galois_keys_total_size int
+	for _, gk := range gks {
+		if b, err := gk.MarshalBinary(); err == nil {
+			galois_keys_total_size += len(b)
+		}
+	}
+	fmt.Printf("rotation_keys_size_(MB): %f\n", float64(galois_keys_total_size)/(1024.0*1024.0))
+
 	evk := rlwe.NewMemEvaluationKeySet(rlk, gks...)
 
 	// Encoder, Encryptor, Decryptor, Evaluator
@@ -591,19 +622,29 @@ void gen_main_go(
 	encryptedOutputs := make(map[string]*rlwe.Ciphertext)
 	encodedOutputs := make(map[string]*rlwe.Plaintext)
 
-	// TODO: Prepare your inputs here
-	// Example:
-	// values := make([]float64, params.MaxSlots())
-	// for i := range values { values[i] = float64(i) }
-	// pt := hefloat.NewPlaintext(params, params.MaxLevel())
-	// encoder.Encode(values, pt)
-	// ct, _ := enc.EncryptNew(pt)
-	// encryptedInputs["c0"] = ct
+)";
 
+  // Generate encrypted inputs for each unique cipher input label
+  os << "\t// Prepare encrypted inputs\n";
+  os << "\tvalues := make([]float64, params.MaxSlots())\n";
+  os << "\tfor i := range values { values[i] = float64(i) }\n";
+  for (const auto &label : cipher_input_labels)
+  {
+    os << "\t{\n";
+    os << "\t\tpt := hefloat.NewPlaintext(params, params.MaxLevel())\n";
+    os << "\t\tencoder.Encode(values, pt)\n";
+    os << "\t\tct, _ := enc.EncryptNew(pt)\n";
+    os << "\t\tencryptedInputs[\"" << label << "\"] = ct\n";
+    os << "\t}\n";
+  }
+
+  os << R"(
 	// Run computation
+	t := time.Now()
 	)";
   os << func_name;
   os << R"((encryptedInputs, encodedInputs, encryptedOutputs, encodedOutputs, encoder, enc, eval, params)
+	elapsed := time.Since(t).Seconds() * 1000.0
 
 	// Decrypt and print results
 	for name, ct := range encryptedOutputs {
@@ -614,6 +655,9 @@ void gen_main_go(
 	}
 
 	_ = encodedOutputs
+	fmt.Printf("circuit_execution_time_(ms): %f\n", elapsed)
+	fmt.Printf("galois_keys_generation_time_(ms): %f\n", keys_elapsed)
+	fmt.Printf("total_execution_time_(ms): %f\n", elapsed+keys_elapsed)
 	fmt.Println("CKKS computation completed!")
 }
 )";

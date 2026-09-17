@@ -201,6 +201,11 @@ int main(int argc, char **argv) {
     int optimization_method = 0;  // 0 = egraph (default), 1 = RL
     if (argc > 5)
         optimization_method = stoi(argv[5]);
+
+    float w_ops = 0.5;
+    float w_keys = 0.5;
+    if (argc > 11) w_ops = stof(argv[11]);
+    if (argc > 12) w_keys = stof(argv[12]);
     
     if (cse) {
         Compiler::enable_cse();
@@ -239,7 +244,7 @@ int main(int argc, char **argv) {
         cout << " window is " << window << endl;
         /********** vectorization Part *******************************/
         if(VECTORIZATION_ENABLED){
-        Compiler::gen_vectorized_code(func, window,optimization_method);  // add a flag to specify if the benchmark is structured or no
+        Compiler::gen_vectorized_code(func, window,optimization_method, w_ops, w_keys);  // add a flag to specify if the benchmark is structured or no
         }
         /********** Simplification & depth reduction Part ************/
         if(SIMPLIFICATION_ENABLED){

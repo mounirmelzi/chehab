@@ -58,8 +58,8 @@ def load_embeddings_from_config(tokenizer_type=None):
         print(f"Error: {e}")
         sys.exit(1)
 
-def create_rules(path):
-    return _create_rules(path=path)
+def create_rules(path: str, rotations_rules_path: str = None):
+    return _create_rules(path, rotations_rules_path)
 
 def load_embedding_model_dynamic(checkpoint_path=None, device=DEVICE):
     embeddings_model = TRAE()  
@@ -225,6 +225,37 @@ def load_expressions_named(file_path: str):
                 continue
     print(f"Loaded {len(results)} named expressions from {file_path}")
     return results
+
+def mlp_mo(in_dim, hidden_dims, out_dim, *,
+        act=nn.GELU, layernorm=True, dropout=0.0,
+        residual=False, seed=None):
+    """
+    Build an MLP: [in_dim] → hidden_dims* → [out_dim]
+
+    Args
+    ----
+    hidden_dims : list[int]  (e.g. [1024, 1024, 512])
+    residual    : if True, adds skip-connections every two layers
+    """
+
+    if seed is not None:
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+
+    layers, prev = [], in_dim
+    for i, h in enumerate(hidden_dims):
+        layers.append(nn.Linear(prev, h))
+        if layernorm:
+            layers.append(nn.LayerNorm(h))
+        layers.append(act())
+        if dropout > 0:
+            layers.append(nn.Dropout(dropout))
+        # Note: Residual connections removed for simplicity
+        # if residual and prev == h and i % 2 == 1:
+        #     layers.append(Residual())
+        prev = h
+    layers.append(nn.Linear(prev, out_dim))
+    return nn.Sequential(*layers)
 
 
 def mlp(in_dim, hidden_dims, out_dim, *,
