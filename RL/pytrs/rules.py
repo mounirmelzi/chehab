@@ -14,32 +14,38 @@ except ImportError:
     import config as pytrs_config
 
 
-def _create_rules_constrained(path: str) -> dict:
+def _create_rules_constrained(path: str = None, rotations_rules_path: str = None) -> dict:
+    rules = []
+    if path is not None:
+        rules_text = open(path, "r").read().replace("?", "")
+        rules.extend(parse_rules_from_text(rules_text))
 
-    rules_text = open(path, "r").read().replace("?", "")
-    rules = parse_rules_from_text(rules_text)
-
-    rules_dict = {rule.name: rule for rule in rules}
-    return rules_dict
-
-
-def _create_rules_mo(rules_path: str, rotations_rules_path: str = None) -> dict:
-    rules_text = open(rules_path, "r").read().replace("?", "")
-    rules = parse_rules_from_text(rules_text)
-
-    if rotations_rules_path:
+    if rotations_rules_path is not None:
         rotations_rules_text = open(rotations_rules_path, "r").read().replace("?", "")
-        rotations_rules = parse_rules_from_text(rotations_rules_text)
-        rules.extend(rotations_rules)
+        rules.extend(parse_rules_from_text(rotations_rules_text))
 
     rules_dict = {rule.name: rule for rule in rules}
     return rules_dict
 
 
-def create_rules(path: str, rotations_rules_path: str = None) -> dict:
+def _create_rules_mo(rules_path: str = None, rotations_rules_path: str = None) -> dict:
+    rules = []
+    if rules_path is not None:
+        rules_text = open(rules_path, "r").read().replace("?", "")
+        rules.extend(parse_rules_from_text(rules_text))
+
+    if rotations_rules_path is not None:
+        rotations_rules_text = open(rotations_rules_path, "r").read().replace("?", "")
+        rules.extend(parse_rules_from_text(rotations_rules_text))
+
+    rules_dict = {rule.name: rule for rule in rules}
+    return rules_dict
+
+
+def create_rules(path: str = None, rotations_rules_path: str = None) -> dict:
     if getattr(pytrs_config, "framework", "constrained") == "morl":
         return _create_rules_mo(path, rotations_rules_path)
-    return _create_rules_constrained(path)
+    return _create_rules_constrained(path, rotations_rules_path)
 
 
 def group_rules_from_dict(rules_dict):
