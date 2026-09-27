@@ -350,7 +350,7 @@ void Compiler::compile(shared_ptr<ir::Func> func, Ruleset ruleset, trs::RewriteH
  *
  * @param func Shared pointer to the function to be vectorized.
  */
-void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method, float w_ops, float w_keys)
+void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method, float w_ops, float w_keys, const std::string& framework)
 {
   // Utility function to print expressions in prefix notation
   util::ExprPrinter expr_printer(func);
@@ -459,7 +459,7 @@ void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int op
   /*********************************************************/
   // Call the vectorizer function with the computed vector width
   std::cout << "Call the code vectorizer \n";
-  call_vectorizer(vector_width, optimization_method, w_ops, w_keys);
+  call_vectorizer(vector_width, optimization_method, w_ops, w_keys, framework);
   /***********************************************************/
   // Call the script to build the source code that operates on vectors
   format_vectorized_code(func,false);
@@ -485,7 +485,7 @@ void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int op
  * @param func Shared pointer to the function to be vectorized.
  * @param window The number of subvectors to divide the outputs into for vectorization.
  */
-void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method, float w_ops, float w_keys)
+void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method, float w_ops, float w_keys, const std::string& framework)
 {
   if (window < 0)
   {
@@ -516,7 +516,7 @@ void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int wi
   /***************************************************************/
   if (window == 0)
   {
-    gen_vectorized_code(func, optimization_method, w_ops, w_keys);
+    gen_vectorized_code(func, optimization_method, w_ops, w_keys, framework);
     return;
   }
   else
@@ -575,7 +575,7 @@ void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int wi
     if (vector_full_width < window)
     {
       std::cout << "\nresult vector width smaller than window size ==> windows will be considered=0(deactivated)\n";
-      gen_vectorized_code(func, optimization_method, w_ops, w_keys);
+      gen_vectorized_code(func, optimization_method, w_ops, w_keys, framework);
       return;
     }
     int index = 0;
@@ -610,7 +610,7 @@ void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int wi
         }
         expression_file << expression;
         expression_file.close();
-        call_vectorizer(vector_width, optimization_method, w_ops, w_keys);
+        call_vectorizer(vector_width, optimization_method, w_ops, w_keys, framework);
         /********************************************/
         std::string vectorized_file = "../vectorized_code.txt";
         /******************************************************/
@@ -657,7 +657,7 @@ void Compiler::gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int wi
   }
 }
 /***********************************************************************/
-void Compiler::call_vectorizer(int vector_width, int optimization_method, float w_ops, float w_keys)
+void Compiler::call_vectorizer(int vector_width, int optimization_method, float w_ops, float w_keys, const std::string& framework)
 {
   if (optimization_method == 0)
   {
@@ -665,7 +665,7 @@ void Compiler::call_vectorizer(int vector_width, int optimization_method, float 
   }
   else if (optimization_method == 1)
   {
-    call_rl_vectorizer(vector_width, w_ops, w_keys);
+    call_rl_vectorizer(vector_width, w_ops, w_keys, framework);
   }
   else
   {
@@ -689,7 +689,7 @@ void Compiler::call_egraph_vectorizer(int vector_width,int rewrite_rule_family_i
   }
 }
 
-void Compiler::call_rl_vectorizer(int vector_width, float w_ops, float w_keys)
+void Compiler::call_rl_vectorizer(int vector_width, float w_ops, float w_keys, const std::string& framework)
 {
   namespace fs = std::filesystem;
 
@@ -727,7 +727,9 @@ void Compiler::call_rl_vectorizer(int vector_width, float w_ops, float w_keys)
   -----------------------------------------------------------------*/
   std::ostringstream cmd;
   cmd << "python -m fhe_rl ";
-  if (w_ops >= 0.0f && w_keys >= 0.0f) {
+  if (!framework.empty()) {
+      cmd << "--framework " << framework << " ";
+  } else if (w_ops >= 0.0f && w_keys >= 0.0f) {
       cmd << "--framework morl ";
   }
   cmd << "run "

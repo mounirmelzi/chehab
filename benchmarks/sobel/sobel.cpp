@@ -128,7 +128,10 @@ int main(int argc, char **argv)
   float w_keys = 0.5;
 
   if (argc > 9) w_ops = stof(argv[9]);
-  if (argc > 10) w_keys = stof(argv[10]); 
+  if (argc > 10) w_keys = stof(argv[10]);
+
+  std::string framework = "";
+  if (argc > 11) framework = argv[11]; 
 
 
   if (cse)
@@ -166,7 +169,7 @@ int main(int argc, char **argv)
       cout << " window is " << window << endl;
       /********** vectorization Part *******************************/
       if(VECTORIZATION_ENABLED){
-        Compiler::gen_vectorized_code(func, window,optimization_method, w_ops, w_keys);  // add a flag to specify if the benchmark is structured or no
+        Compiler::gen_vectorized_code(func, window,optimization_method, w_ops, w_keys, framework);  // add a flag to specify if the benchmark is structured or no
       }
       /********** Simplification & depth reduction Part ************/
       if(SIMPLIFICATION_ENABLED){
@@ -175,8 +178,24 @@ int main(int argc, char **argv)
         Compiler::compile(func, ruleset, rewrite_heuristic);
       }
       /********** FHE code generation  *****************************/
-      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
-
+      if (backend == 0) {
+        Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+        cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+      } else if (backend == 1) {
+        string go_path = "generated_" + func_name + ".go";
+        ofstream go_os(go_path);
+        if (!go_os) throw logic_error("failed to create Go file");
+        Compiler::gen_lattigo_code(func, go_os);
+        go_os.close();
+        cout << "Generated Lattigo code: " << go_path << endl;
+      } else if (backend == 2) {
+        string cu_path = "generated_" + func_name + ".cu";
+        ofstream cu_os(cu_path);
+        if (!cu_os) throw logic_error("failed to create CUDA file");
+        Compiler::gen_heongpu_code(func, cu_os, 1);
+        cu_os.close();
+        cout << "Generated HEonGPU code: " << cu_path << endl;
+      }
       /************/elapsed = chrono::high_resolution_clock::now() - t;
       cout << elapsed.count() << " ms\n";
       if (call_quantifier)
@@ -209,7 +228,24 @@ int main(int argc, char **argv)
       auto ruleset = Compiler::Ruleset::simplification_ruleset;
       auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
       //Compiler::compile(func, ruleset, rewrite_heuristic, header_os, gen_name + ".hpp", source_os);
-      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os, 29);
+      if (backend == 0) {
+        Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os, 29);
+        cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+      } else if (backend == 1) {
+        string go_path = "generated_" + func_name + ".go";
+        ofstream go_os(go_path);
+        if (!go_os) throw logic_error("failed to create Go file");
+        Compiler::gen_lattigo_code(func, go_os);
+        go_os.close();
+        cout << "Generated Lattigo code: " << go_path << endl;
+      } else if (backend == 2) {
+        string cu_path = "generated_" + func_name + ".cu";
+        ofstream cu_os(cu_path);
+        if (!cu_os) throw logic_error("failed to create CUDA file");
+        Compiler::gen_heongpu_code(func, cu_os, 1);
+        cu_os.close();
+        cout << "Generated HEonGPU code: " << cu_path << endl;
+      }
       /************/elapsed = chrono::high_resolution_clock::now() - t;
       cout << elapsed.count() << " ms\n";
       if (call_quantifier)

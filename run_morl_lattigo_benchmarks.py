@@ -49,7 +49,7 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"Command failed with error:\n{e.stderr}")   
 
-benchmark_folders = ["dot_product"]
+benchmark_folders = ["lin_reg","hamming_dist","poly_reg","l2_distance","dot_product","gx_kernel","gy_kernel","roberts_cross","matrix_mul","max","sort"]
 exceptions = ["max", "sort", "discrete_cosin_transform", "poly_derivative"]
 benchmarks_slot_counts = {
     "max": [3, 4, 5],
@@ -129,7 +129,7 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
     for iteration in range(iterations):
         print(f"===> Running iteration : {iteration + 1}")
         # backend=1 triggers Lattigo Go code generation instead of SEAL C++
-        benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} {optimization_method} {window_size} 1 {cse_enabled} 1 1 {w_ops} {w_keys}"
+        benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} morl {optimization_method} {window_size} 1 {cse_enabled} 1 1 {w_ops} {w_keys}"
         try:
             result = subprocess.run(
                 benchmark_run_command, shell=True, check=False,

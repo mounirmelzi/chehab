@@ -93,7 +93,7 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
 
     for iteration in range(iterations):
         print(f"===> Running iteration : {iteration + 1}")
-        benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} {optimization_method} {window_size} 1 {cse_enabled} 1 0 {w_ops} {w_keys}"
+        benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} morl {optimization_method} {window_size} 1 {cse_enabled} 1 0 {w_ops} {w_keys}"
         try:
             result = subprocess.run(
                 benchmark_run_command, shell=True, check=False,

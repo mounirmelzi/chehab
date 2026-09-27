@@ -55,39 +55,41 @@ int main(int argc, char **argv)
   int slot_count = 1 ;
   if (argc > 2)
     slot_count = stoi(argv[2]);
+  std::string framework = "constrained";
+  if (argc > 3) framework = argv[3];
+
 
   int optimization_method = 0;  // 0 = egraph (default), 1 = RL
-  if (argc > 3)
-    optimization_method = stoi(argv[3]); 
+  if (argc > 4)
+    optimization_method = stoi(argv[4]); 
 
   int window = 0;
-  if (argc > 4) 
-    window = stoi(argv[4]);
+  if (argc > 5) 
+    window = stoi(argv[5]);
 
   bool call_quantifier = true;
-  if (argc > 5)
-    call_quantifier = stoi(argv[5]);
+  if (argc > 6)
+    call_quantifier = stoi(argv[6]);
 
   bool cse = true;
-  if (argc > 6)
-    cse = stoi(argv[6]);
+  if (argc > 7)
+    cse = stoi(argv[7]);
    
   bool const_folding = true; 
-  if (argc > 7)
-    const_folding = stoi(argv[7]); 
+  if (argc > 8)
+    const_folding = stoi(argv[8]); 
 
   int backend = 0;  // 0 = SEAL (default), 1 = Lattigo (Go/CKKS), 2 = HEonGPU (CUDA)
-  if (argc > 8)
-    backend = stoi(argv[8]);
+  if (argc > 9)
+    backend = stoi(argv[9]);
 
   float w_ops = 0.5;
   float w_keys = 0.5;
 
-  if (argc > 9) w_ops = stof(argv[9]);
-  if (argc > 10) w_keys = stof(argv[10]);
-
-  int scheme = 1; // 0 = BFV, 1 = CKKS
-  if (argc > 11) scheme = stoi(argv[11]);
+  if (argc > 10) w_ops = stof(argv[10]);
+  if (argc > 11) w_keys = stof(argv[11]);
+int scheme = 1; // 0 = BFV, 1 = CKKS
+  if (argc > 12) scheme = stoi(argv[12]);
 
   if (cse)
   {
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
     cout << " window is " << window << endl;
     /********** vectorization Part *******************************/
     if(VECTORIZATION_ENABLED){
-      Compiler::gen_vectorized_code(func, window,optimization_method, w_ops, w_keys);  // add a flag to specify if the benchmark is structured or no
+      Compiler::gen_vectorized_code(func, window, optimization_method, w_ops, w_keys, framework);  // add a flag to specify if the benchmark is structured or no
     }
     /********** Simplification & depth reduction Part ************/
     if(SIMPLIFICATION_ENABLED){

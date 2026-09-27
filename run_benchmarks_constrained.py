@@ -97,7 +97,7 @@ for subfolder_name in benchmark_folders:
                 for iteration in range(iterations):
                     print(f"===> Running iteration : {iteration + 1}")
                     # Step 1: Run the first benchmark command
-                    benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} {optimization_method} {window_size} 1 {cse_enabled}  1 "
+                    benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} constrained {optimization_method} {window_size} 1 {cse_enabled}  1 "
                     try: 
                         result = subprocess.run(
                             benchmark_run_command, shell=True, check=True, 

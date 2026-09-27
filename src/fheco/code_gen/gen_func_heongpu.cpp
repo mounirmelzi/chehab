@@ -108,18 +108,29 @@ void gen_func_heongpu(
   os << "    heongpu::Relinkey<SCHEME> relin_key(context);\n";
   os << "    keygen.generate_relin_key(relin_key, secret_key);\n\n";
 
+  os << "    auto rotations = getRotationSteps();\n\n";
+
+  // Snapshot pool usage BEFORE the Galoiskey object is even constructed,
+  // since construction itself can allocate device buffers.
+  os << "    cudaDeviceSynchronize();\n";
+  os << "    size_t pool_usage_before =\n";
+  os << "        heongpu::MemoryPool::instance().get_current_device_pool_memory_usage();\n\n";
+
   os << "    auto t_keys_start = std::chrono::high_resolution_clock::now();\n";
-  os << "    heongpu::Galoiskey<SCHEME> galois_keys(context);\n";
-  os << "    auto rotations = getRotationSteps();\n";
+  // Galoiskey constructor takes the rotation steps vector
+  os << "    heongpu::Galoiskey<SCHEME> galois_keys(context, rotations);\n";
   os << "    if (!rotations.empty()) {\n";
-  os << "        keygen.generate_galois_key(galois_keys, secret_key, rotations);\n";
+  os << "        keygen.generate_galois_key(galois_keys, secret_key);\n";
   os << "    }\n";
   os << "    cudaDeviceSynchronize();\n";
   os << "    auto t_keys_end = std::chrono::high_resolution_clock::now();\n";
   os << "    double keys_elapsed = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(t_keys_end - t_keys_start).count();\n\n";
 
-  // To simulate galois keys size (since heongpu doesn't have an exact byte size method in its basic API, we approximate based on N and bits)
-  os << "    double galois_keys_size_mb = (rotations.size() * poly_modulus_degree * q_bits.size() * 8.0) / (1024.0 * 1024.0);\n";
+  // Galois keys size from actual GPU memory pool delta
+  os << "    size_t pool_usage_after =\n";
+  os << "        heongpu::MemoryPool::instance().get_current_device_pool_memory_usage();\n";
+  os << "    double galois_keys_size_mb =\n";
+  os << "        static_cast<double>(pool_usage_after - pool_usage_before) / (1024.0 * 1024.0);\n";
   os << "    std::cout << \"rotation_keys_size_(MB): \" << galois_keys_size_mb << \"\\n\";\n\n";
 
   os << "    heongpu::HEEncoder<SCHEME> encoder(context);\n";
@@ -176,6 +187,11 @@ void gen_plain_var_id(std::size_t term_id, std::ostream &os) {
 void gen_input_terms(
   const ir::InputTermsInfo &input_terms_info, std::ostream &os, TermsCtxtObjectsInfo &terms_ctxt_objects_info, int scheme)
 {
+  // Track which cipher labels we have already seen.
+  // The first variable referencing a given label gets a REFERENCE (&) to the map entry.
+  // Subsequent variables referencing the same label get a VALUE COPY.
+  std::set<std::string> seen_cipher_labels;
+
   for (const auto &input_info : input_terms_info)
   {
     auto term = input_info.first;
@@ -184,9 +200,26 @@ void gen_input_terms(
     if (term->type() == ir::Term::Type::cipher)
     {
       terms_ctxt_objects_info.emplace(term->id(), CtxtObjectInfo{object_id, term->parents().size()});
-      os << "    heongpu::Ciphertext<SCHEME>& ";
-      gen_cipher_var_id(object_id, os);
-      os << " = encryptedInputs.at(\"" << input_info.second.label_ << "\");\n";
+      
+      const auto &label = input_info.second.label_;
+      if (seen_cipher_labels.find(label) == seen_cipher_labels.end()) {
+        // First occurrence: reference to the map entry
+        seen_cipher_labels.insert(label);
+        os << "    // ";
+        gen_cipher_var_id(object_id, os);
+        os << " is a REFERENCE to the live ciphertext in the map (we mutate it in place).\n";
+        os << "    heongpu::Ciphertext<SCHEME>& ";
+        gen_cipher_var_id(object_id, os);
+        os << " = encryptedInputs.at(\"" << label << "\");\n";
+      } else {
+        // Subsequent occurrence: independent value copy (so in-place ops on this var don't clobber the original)
+        os << "    // ";
+        gen_cipher_var_id(object_id, os);
+        os << " is an independent COPY, so rotating it does not also mutate the original.\n";
+        os << "    heongpu::Ciphertext<SCHEME> ";
+        gen_cipher_var_id(object_id, os);
+        os << " = encryptedInputs.at(\"" << label << "\");\n";
+      }
     }
     else
     {
@@ -309,39 +342,65 @@ void gen_term_eval(
     string op_name(op_it->second);
 
     if (term->op_code().type() == ir::OpCode::Type::rotate) {
-      // Rotate
-      os << "    ops." << op_name << "(";
-      gen_cipher_var_id(term_object_id, os); // dst
-      os << ", ";
-      gen_cipher_var_id(operands_ctxt_objects_ids[0], os); // src
-      os << ", " << term->op_code().generators()[0] << ", galois_keys);\n";
+      // Rotate: ops.rotate_rows_inplace(ct, galois_keys, shift)
+      // If dst != src, copy first so the inplace op works on the right variable
+      if (term_object_id != operands_ctxt_objects_ids[0]) {
+          os << "    ";
+          gen_cipher_var_id(term_object_id, os);
+          os << " = ";
+          gen_cipher_var_id(operands_ctxt_objects_ids[0], os);
+          os << ";\n";
+      }
+      os << "    ops." << op_name << "_inplace(";
+      gen_cipher_var_id(term_object_id, os);
+      os << ", galois_keys, " << term->op_code().generators()[0] << ");\n";
     }
     else if (term->op_code().type() == ir::OpCode::Type::relin) {
-      // Relinearize
-      os << "    ops." << op_name << "(";
-      gen_cipher_var_id(term_object_id, os); // dst
-      os << ", ";
-      gen_cipher_var_id(operands_ctxt_objects_ids[0], os); // src
+      // Relinearize: ops.relinearize_inplace(ct, relin_key)
+      // In CKKS, always followed by rescale_inplace
+      if (term_object_id != operands_ctxt_objects_ids[0]) {
+          os << "    ";
+          gen_cipher_var_id(term_object_id, os);
+          os << " = ";
+          gen_cipher_var_id(operands_ctxt_objects_ids[0], os);
+          os << ";\n";
+      }
+      os << "    ops." << op_name << "_inplace(";
+      gen_cipher_var_id(term_object_id, os);
       os << ", relin_key);\n";
+      // CKKS: relinearize clears relinearization_required_ flag,
+      // then rescale clears rescale_required_ flag
+      if (scheme == 1) {
+          os << "    ops.rescale_inplace(";
+          gen_cipher_var_id(term_object_id, os);
+          os << ");\n";
+      }
     }
     else if (term->op_code().type() == ir::OpCode::Type::rescale) {
-      // Rescale
-      os << "    ops." << op_name << "(";
-      gen_cipher_var_id(term_object_id, os); // dst
-      os << ", ";
-      gen_cipher_var_id(operands_ctxt_objects_ids[0], os); // src
+      // Rescale: ops.rescale_inplace(ct)
+      if (term_object_id != operands_ctxt_objects_ids[0]) {
+          os << "    ";
+          gen_cipher_var_id(term_object_id, os);
+          os << " = ";
+          gen_cipher_var_id(operands_ctxt_objects_ids[0], os);
+          os << ";\n";
+      }
+      os << "    ops.rescale_inplace(";
+      gen_cipher_var_id(term_object_id, os);
       os << ");\n";
     }
     else {
-      // Binary ops
-      os << "    ops." << op_name << "(";
-      gen_cipher_var_id(term_object_id, os); // dst
-      os << ", ";
-      
-      auto operand0 = term->operands()[0];
-      if (operand0->type() == ir::Term::Type::cipher) gen_cipher_var_id(operands_ctxt_objects_ids[0], os);
-      else gen_plain_var_id(operand0->id(), os);
-      
+      // Binary ops: ops.add_inplace, ops.multiply_inplace, ops.sub_inplace, etc.
+      // Copy src into dst if they differ, then operate in-place
+      if (term_object_id != operands_ctxt_objects_ids[0]) {
+          os << "    ";
+          gen_cipher_var_id(term_object_id, os);
+          os << " = ";
+          gen_cipher_var_id(operands_ctxt_objects_ids[0], os);
+          os << ";\n";
+      }
+      os << "    ops." << op_name << "_inplace(";
+      gen_cipher_var_id(term_object_id, os);
       os << ", ";
       
       auto operand1 = term->operands()[1];
@@ -349,6 +408,14 @@ void gen_term_eval(
       else gen_plain_var_id(operand1->id(), os);
       
       os << ");\n";
+
+      // CKKS: multiply_plain sets rescale_required_ without needing relinearize,
+      // so we rescale immediately
+      if (scheme == 1 && op_name == "multiply_plain") {
+          os << "    ops.rescale_inplace(";
+          gen_cipher_var_id(term_object_id, os);
+          os << ");\n";
+      }
     }
   }
 }

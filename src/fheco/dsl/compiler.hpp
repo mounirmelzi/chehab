@@ -59,11 +59,11 @@ public:
   static ir::Term *build_expression(
   const std::shared_ptr<ir::Func> &func, std::map<string, ir::Term *> map, queue<string> &tokens);
   
-  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f);
+  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
 
   static void format_vectorized_code(const std::shared_ptr<ir::Func> &func,bool final_expression_reached);
 
-  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f);
+  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
   
   static void gen_he_code(
     const std::shared_ptr<ir::Func> &func, std::ostream &header_os, std::string_view header_name,
@@ -91,9 +91,9 @@ public:
 
   static void call_egraph_vectorizer(int vector_width,int rewrite_rule_family_index);
   
-  static void call_rl_vectorizer(int vector_width, float w_ops = -1.0f, float w_keys = -1.0f);
+  static void call_rl_vectorizer(int vector_width, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
 
-  static void call_vectorizer(int vector_width, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f);
+  static void call_vectorizer(int vector_width, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
 
   static void call_script();
 
