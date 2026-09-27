@@ -13,12 +13,12 @@ infos = ["benchmark", "w_ops", "w_keys", "noise_budget", "Depth", "Multiplicativ
 full_header = ["benchmark", "w_ops", "w_keys", "noise_budget"] + operations + infos[4:]
 
 benchmark_folders = [
-    "lin_reg", "box_blur", "matrix_mul", "max", "sort",
-    "dot_product", "gx_kernel", "gy_kernel", "hamming_dist",
-    "l2_distance", "poly_reg", "roberts_cross"
+      "lin_reg", "box_blur", "matrix_mul", "max", "sort","l2_distance", "poly_reg", "roberts_cross",
+    "dot_product"
+    
 ]
 
-# Preference sweep, same as run_morl_benchmarks.py
+# Preference sweep, same as run_morl_benchmarks.py  
 pref_list = [ [1.0, 0.0]]
 
 # NEW: noise budget sweep. Edit this list to whatever test budgets you need.
@@ -77,6 +77,13 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build
     try:
         res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              universal_newlines=True, cwd=build_path, timeout=7200, env=run_env)
+
+        # -----------------------------------------------------
+        # AJOUT DES LIGNES DE DEBUG ICI
+        # -----------------------------------------------------
+        print(f"[DEBUG] {subfolder_name} returncode={res.returncode}")
+        print(f"[DEBUG STDOUT]\n{res.stdout}")
+        # -----------------------------------------------------
 
         if res.returncode != 0:
             print(f"\n[CRITICAL ERROR] benchmark {subfolder_name} crashed!")

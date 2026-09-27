@@ -13,7 +13,7 @@ from stable_baselines3 import PPO
 
 sys.path.insert(0, os.getcwd())
 
-from fhe_rl.utils import load_expressions, create_rules, load_embeddings_from_config
+from fhe_rl.utils import load_expressions_named, create_rules, load_embeddings_from_config
 from fhe_rl.env import fheEnv
 from fhe_rl.policy import HierarchicalMaskablePolicy
 from fhe_rl.config import get_model_path
@@ -33,12 +33,13 @@ if not os.path.exists("rotations_rules.txt"):
 rules_list = create_rules("rules.txt", "rotations_rules.txt")
 rules_list["END"] = None
 rule_names = list(rules_list.keys())
-rotate_rule_indices = [i for i, n in enumerate(rule_names) if "rotate" in n.lower()]
+rotate_rule_indices = [i for i, n in enumerate(rule_names) if "rotate" in n.lower() or n.lower().startswith("rot-")]
 print(f"{len(rule_names)} rules loaded. rotate indices: {rotate_rule_indices} "
       f"-> {[rule_names[i] for i in rotate_rule_indices]}\n")
 
-expressions = load_expressions("./fhe_rl/datasets/benchmarks.txt")
-
+named_expressions = load_expressions_named("expression_dot_product.txt")
+expressions = [e for e, _ in named_expressions]
+names = [n for _, n in named_expressions]
 env = fheEnv(
     rules_list,
     expressions,
@@ -102,6 +103,7 @@ _t0 = time.time()
 for expr_idx in range(len(expressions)):
     print(f"\n====================================================================")
     print(f"[{time.time()-_t0:7.1f}s] DEBUT EXPR {expr_idx+1}/{len(expressions)}")
+    print(f"Nom du benchmark : {names[expr_idx]}")
     print(f"Texte du Dataset : {expressions[expr_idx]}")
     print(f"====================================================================")
     
