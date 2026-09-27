@@ -1,7 +1,8 @@
 """
-Run from RL/ with venv active:  python diagnose_rotation_policy_v4.py
+Run from RL/ with venv active:  python diagnose_rotation_policy.py
 
-Ajout : Affichage détaillé étape par étape pour comprendre les choix de l'agent.
+Ajout : Affichage détaillé étape par étape AVEC l'évolution des expressions
+mathématiques (formule initiale, formules intermédiaires, formule finale).
 """
 import os
 import sys
@@ -75,6 +76,21 @@ def rotate_probability(obs):
     return float(sum(rule_probs[r] for r in rotate_rule_indices if r < len(rule_probs))), rule_probs
 
 
+def get_expr_string(env_instance, info_dict):
+    """Fonction robuste pour extraire l'expression de l'environnement"""
+    if "expression" in info_dict:
+        return info_dict["expression"]
+    if "expr" in info_dict:
+        return info_dict["expr"]
+    if hasattr(env_instance, "current_expr"):
+        return str(env_instance.current_expr)
+    if hasattr(env_instance, "expr"):
+        return str(env_instance.expr)
+    if hasattr(env_instance, "get_current_expression"):
+        return str(env_instance.get_current_expression())
+    return "[Expression introuvable - vérifiez l'attribut dans fheEnv]"
+
+
 overall_max_rotate_prob = {tuple(p): 0.0 for p in PREFS_TO_CHECK}
 overall_any_mask_open = {tuple(p): False for p in PREFS_TO_CHECK}
 overall_rotate_taken = {tuple(p): 0 for p in PREFS_TO_CHECK}
@@ -86,6 +102,7 @@ _t0 = time.time()
 for expr_idx in range(len(expressions)):
     print(f"\n====================================================================")
     print(f"[{time.time()-_t0:7.1f}s] DEBUT EXPR {expr_idx+1}/{len(expressions)}")
+    print(f"Texte du Dataset : {expressions[expr_idx]}")
     print(f"====================================================================")
     
     for pref in PREFS_TO_CHECK:
@@ -93,6 +110,10 @@ for expr_idx in range(len(expressions)):
         obs, info = env.reset(options={"budget": BUDGET_TO_CHECK})
         env.set_preference_vector(pref)
         obs["preference_vector"] = np.array(pref, dtype=np.float32)
+
+        # Affichage de l'arbre parsé initialement
+        initial_expr = get_expr_string(env, info)
+        print(f"  [Init] Formule de départ : {initial_expr}")
 
         for step in range(MAX_STEPS_PER_EPISODE):
             mask = env.get_action_mask()
@@ -122,13 +143,16 @@ for expr_idx in range(len(expressions)):
             else:
                 rotate_alert = ""
 
-            # --- AFFICHAGE DE L'ÉTAPE ---
-            print(f"  Step {step:02d} | Rotation permise par C++ : {'OUI' if mask_rotate_open else 'NON'}")
+            print(f"  Step {step:02d} | Rotation permise : {'OUI' if mask_rotate_open else 'NON'}")
             if mask_rotate_open:
-                print(f"           | Probabilité donnée par le réseau aux rotations : {rmass*100:.2f}%")
+                print(f"           | Probabilité donnée aux rotations : {rmass*100:.2f}%")
             print(f"           | Action choisie : {rule_name} (position {taken_position}) {rotate_alert}")
 
             obs, reward, terminated, truncated, step_info = env.step(action)
+            
+            # --- EXTRACTION ET AFFICHAGE DE L'EXPRESSION INTERMEDIAIRE ---
+            current_expr = get_expr_string(env, step_info)
+            print(f"           | Formule actuelle : {current_expr}")
             
             if terminated or truncated:
                 print(f"  -> Fin (Terminated: {terminated}, Truncated: {truncated}) | Récompense finale : {reward:.4f}")
