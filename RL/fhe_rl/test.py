@@ -71,6 +71,7 @@ def test_agent(
             wrapper = env.envs[0]
             fhe_env = wrapper.env
             fhe_env.current_index = expr_idx  # pin cursor: neutralize DummyVecEnv auto-reset double-advance
+            fhe_env.set_preference_vector([1.0, 0.0])
             obs = env.reset()
 
             test_expr = fhe_env.initial_expression
@@ -144,7 +145,7 @@ def test_agent_v2(
     rules_list = create_rules("rules.txt", "rotations_rules.txt")
     rules_list["END"] = None
     max_positions = 16
-
+    W_SWEEP = [1.0, 0.9, 0.7, 0.5, 0.3, 0.1, 0.0] 
     if test_budgets is None:
         test_budgets = [noise_budget]
     if budget_options is None:
@@ -176,126 +177,133 @@ def test_agent_v2(
         print(f"{'='*60}")
 
         env.set_options({"budget": budget})
+        env.envs[0].env.active_budgets = [budget]
 
-        for expr_idx in range(len(expressions)):
-            t0 = time.perf_counter()
+        for w in W_SWEEP:
+            fhe_env = env.envs[0].env
+            fhe_env.set_preference_vector([w, round(1 - w, 1)])
+            print(f"\n  --- Preference pass: w_exec={w}, w_keys={round(1 - w, 1)} ---")
 
-            wrapper = env.envs[0]
-            fhe_env = wrapper.env
-            fhe_env.current_index = expr_idx  # pin cursor: neutralize auto-reset double-advance
-            obs = env.reset()
+            for expr_idx in range(len(expressions)):
+                t0 = time.perf_counter()
 
-            w_vec = fhe_env.current_w
-            n_budget = fhe_env.n_budget
+                wrapper = env.envs[0]
+                fhe_env = wrapper.env
+                fhe_env.current_index = expr_idx  # pin cursor: neutralize auto-reset double-advance
+                obs = env.reset()
 
-            test_expr = fhe_env.initial_expression
-            initial_exec = fhe_env.initial_ops
-            initial_keys = fhe_env.initial_keys
-            initial_noise = float(noise_estimator.estimate(parse_sexpr(test_expr)))
+                w_vec = fhe_env.current_w
+                n_budget = fhe_env.n_budget
 
-            is_feasible = initial_noise <= budget
+                test_expr = fhe_env.initial_expression
+                initial_exec = fhe_env.initial_ops
+                initial_keys = fhe_env.initial_keys
+                initial_noise = float(noise_estimator.estimate(parse_sexpr(test_expr)))
 
-            checkpoints = [{
-                "step": 0,
-                "expression": test_expr,
-                "c_exec": initial_exec,
-                "c_keys": initial_keys,
-                "noise": initial_noise,
-            }]
+                is_feasible = initial_noise <= budget
 
-            done = False
-            steps = 0
+                checkpoints = [{
+                    "step": 0,
+                    "expression": test_expr,
+                    "c_exec": initial_exec,
+                    "c_keys": initial_keys,
+                    "noise": initial_noise,
+                }]
 
-            while not done:
-                action, _ = model.predict(obs, deterministic=True)
-                obs, rewards, dones, infos = env.step(action)
-                done = bool(dones[0])
-                steps += 1
+                done = False
+                steps = 0
 
-                if done:
-                    terminal = infos[0]
-                    cp_expr = terminal["expression"]
-                    cp_exec = terminal["c_exec"]
-                    cp_keys = terminal["c_keys"]
-                    cp_noise = float(terminal["noise"])
+                while not done:
+                    action, _ = model.predict(obs, deterministic=True)
+                    obs, rewards, dones, infos = env.step(action)
+                    done = bool(dones[0])
+                    steps += 1
+
+                    if done:
+                        terminal = infos[0]
+                        cp_expr = terminal["expression"]
+                        cp_exec = terminal["c_exec"]
+                        cp_keys = terminal["c_keys"]
+                        cp_noise = float(terminal["noise"])
+                    else:
+                        cp_expr = fhe_env.expression
+                        cp_exec = fhe_env.curr_ops
+                        cp_keys = fhe_env.curr_keys
+                        cp_noise = float(noise_estimator.estimate(parse_sexpr(cp_expr)))
+
+                    checkpoints.append({
+                        "step": steps,
+                        "expression": cp_expr,
+                        "c_exec": cp_exec,
+                        "c_keys": cp_keys,
+                        "noise": cp_noise,
+                    })
+
+                rl_time_ms = (time.perf_counter() - t0) * 1000
+                agent_final = checkpoints[-1]
+
+                # ── MORL Safety Rollback: Pick best valid checkpoint via scalarized J(e, w) ──
+                valid_checkpoints = [cp for cp in checkpoints if cp["noise"] <= budget]
+            
+                if valid_checkpoints:
+                    def compute_J(cp):
+                        norm_exec = cp["c_exec"] / max(1e-6, initial_exec)
+                        norm_keys = cp["c_keys"] / n_budget
+                        return (w_vec[0] * norm_exec) + (w_vec[1] * norm_keys)
+
+                    best = min(valid_checkpoints, key=compute_J)
+                    safe_expr = best["expression"]
+                    safe_exec = best["c_exec"]
+                    safe_keys = best["c_keys"]
+                    safe_noise = best["noise"]
+                    best_valid_step = best["step"]
+                    safety_activated = (best["step"] != agent_final["step"])
                 else:
-                    cp_expr = fhe_env.expression
-                    cp_exec = fhe_env.curr_ops
-                    cp_keys = fhe_env.curr_keys
-                    cp_noise = float(noise_estimator.estimate(parse_sexpr(cp_expr)))
+                    safe_expr = test_expr
+                    safe_exec = initial_exec
+                    safe_keys = initial_keys
+                    safe_noise = initial_noise
+                    best_valid_step = 0
+                    safety_activated = True
 
-                checkpoints.append({
-                    "step": steps,
-                    "expression": cp_expr,
-                    "c_exec": cp_exec,
-                    "c_keys": cp_keys,
-                    "noise": cp_noise,
+                agent_cr = ((initial_exec - agent_final["c_exec"]) / initial_exec * 100) if initial_exec > 0 else 0
+                safe_cr = ((initial_exec - safe_exec) / initial_exec * 100) if initial_exec > 0 else 0
+
+                expr_name = expr_names[expr_idx] if expr_idx < len(expr_names) else f"expr_{expr_idx}"
+
+                all_results.append({
+                    "w_exec": w,
+                    "Budget": budget,
+                    "Expression #": expr_idx + 1,
+                    "Expression Name": expr_name,
+                    "Is Feasible": is_feasible,
+                    "Initial Exec": initial_exec,
+                    "Initial Keys": initial_keys,
+                    "Initial Noise": round(initial_noise, 2),
+                    "Agent Final Exec": agent_final["c_exec"],
+                    "Agent Final Keys": agent_final["c_keys"],
+                    "Agent Final Noise": round(agent_final["noise"], 2),
+                    "Agent Cost Reduction (%)": round(agent_cr, 2),
+                    "Agent Violated": agent_final["noise"] > budget,
+                    "Safe Final Exec": safe_exec,
+                    "Safe Final Keys": safe_keys,
+                    "Safe Final Noise": round(safe_noise, 2),
+                    "Safe Cost Reduction (%)": round(safe_cr, 2),
+                    "Safe Violated": safe_noise > budget,
+                    "Safety Activated": safety_activated,
+                    "Best Valid Step": best_valid_step,
+                    "Total Steps": steps,
+                    "RL Time (ms)": round(rl_time_ms, 1),
+                    "Noise Margin": round(budget - safe_noise, 2),
+                    "_safe_expr": safe_expr,
                 })
 
-            rl_time_ms = (time.perf_counter() - t0) * 1000
-            agent_final = checkpoints[-1]
-
-            # ── MORL Safety Rollback: Pick best valid checkpoint via scalarized J(e, w) ──
-            valid_checkpoints = [cp for cp in checkpoints if cp["noise"] <= budget]
-            
-            if valid_checkpoints:
-                def compute_J(cp):
-                    norm_exec = cp["c_exec"] / max(1e-6, initial_exec)
-                    norm_keys = cp["c_keys"] / n_budget
-                    return (w_vec[0] * norm_exec) + (w_vec[1] * norm_keys)
-
-                best = min(valid_checkpoints, key=compute_J)
-                safe_expr = best["expression"]
-                safe_exec = best["c_exec"]
-                safe_keys = best["c_keys"]
-                safe_noise = best["noise"]
-                best_valid_step = best["step"]
-                safety_activated = (best["step"] != agent_final["step"])
-            else:
-                safe_expr = test_expr
-                safe_exec = initial_exec
-                safe_keys = initial_keys
-                safe_noise = initial_noise
-                best_valid_step = 0
-                safety_activated = True
-
-            agent_cr = ((initial_exec - agent_final["c_exec"]) / initial_exec * 100) if initial_exec > 0 else 0
-            safe_cr = ((initial_exec - safe_exec) / initial_exec * 100) if initial_exec > 0 else 0
-
-            expr_name = expr_names[expr_idx] if expr_idx < len(expr_names) else f"expr_{expr_idx}"
-
-            all_results.append({
-                "Budget": budget,
-                "Expression #": expr_idx + 1,
-                "Expression Name": expr_name,
-                "Is Feasible": is_feasible,
-                "Initial Exec": initial_exec,
-                "Initial Keys": initial_keys,
-                "Initial Noise": round(initial_noise, 2),
-                "Agent Final Exec": agent_final["c_exec"],
-                "Agent Final Keys": agent_final["c_keys"],
-                "Agent Final Noise": round(agent_final["noise"], 2),
-                "Agent Cost Reduction (%)": round(agent_cr, 2),
-                "Agent Violated": agent_final["noise"] > budget,
-                "Safe Final Exec": safe_exec,
-                "Safe Final Keys": safe_keys,
-                "Safe Final Noise": round(safe_noise, 2),
-                "Safe Cost Reduction (%)": round(safe_cr, 2),
-                "Safe Violated": safe_noise > budget,
-                "Safety Activated": safety_activated,
-                "Best Valid Step": best_valid_step,
-                "Total Steps": steps,
-                "RL Time (ms)": round(rl_time_ms, 1),
-                "Noise Margin": round(budget - safe_noise, 2),
-                "_safe_expr": safe_expr,
-            })
-
-            tag = "FEASIBLE" if is_feasible else "INFEAS"
-            safe_tag = "SAFE" if safe_noise <= budget else "VIOL"
-            print(f"  [{tag}][{safe_tag}] {expr_name}: "
-                  f"Exec {initial_exec}->{safe_exec} ({safe_cr:+.1f}%), "
-                  f"Keys {initial_keys}->{safe_keys}, "
-                  f"Noise {initial_noise:.0f}->{safe_noise:.0f}")
+                tag = "FEASIBLE" if is_feasible else "INFEAS"
+                safe_tag = "SAFE" if safe_noise <= budget else "VIOL"
+                print(f"  [w={w}] [{tag}][{safe_tag}] {expr_name}: "
+                      f"Exec {initial_exec}->{safe_exec} ({safe_cr:+.1f}%), "
+                      f"Keys {initial_keys}->{safe_keys}, "
+                      f"Noise {initial_noise:.0f}->{safe_noise:.0f}")
 
     # Write results
     excel_results = [{k: v for k, v in r.items() if not k.startswith("_")} for r in all_results]
@@ -309,11 +317,11 @@ def test_agent_v2(
         df.to_excel(writer, sheet_name="all_results", index=False)
 
         feasible_rows = []
-        for b in test_budgets:
-            fdf = df[(df["Budget"] == b) & (df["Is Feasible"])]
+        for (b, w), fdf in df[df["Is Feasible"]].groupby(["Budget", "w_exec"], sort=False):
             if len(fdf) == 0: continue
             feasible_rows.append({
                 "Budget": b,
+                "w_exec": w,
                 "Feasible Expressions": len(fdf),
                 "Agent Avg Cost Red (%)": round(fdf["Agent Cost Reduction (%)"].mean(), 2),
                 "Agent Violation Rate (%)": round(fdf["Agent Violated"].mean() * 100, 1),

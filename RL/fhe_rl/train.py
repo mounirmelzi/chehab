@@ -166,7 +166,7 @@ def train_agent(
         pref_list=pref_list,
         best_model_save_path=f"./eval/best_model_{run_name}", 
         log_path=tensorboard_log_dir, 
-        eval_freq=10000,
+        eval_freq=50000,
         n_eval_episodes=len(benchmarks),
         deterministic=True, 
         verbose=1

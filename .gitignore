@@ -60,4 +60,4 @@ commands.txt
 
 manuscript writing/
 manuscript writing/*
-hpc_results/logs/
+hpc_results/logs/RL/test_500k.log
