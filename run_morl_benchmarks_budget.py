@@ -19,13 +19,13 @@ benchmark_folders = [
 ]
 
 # Preference sweep, same as run_morl_benchmarks.py
-pref_list = [[0.8, 0.2], [1.0, 0.0]]
+pref_list = [ [1.0, 0.0]]
 
 # NEW: noise budget sweep. Edit this list to whatever test budgets you need.
 # This is passed through to `python -m fhe_rl run --noise_budget ...` via the
 # FHECO_NOISE_BUDGET env var (see RL/fhe_rl/__main__.py), since the C++ call
 # site (Compiler::call_rl_vectorizer) doesn't expose a --noise_budget flag.
-budget_list = [300,900000]
+budget_list = [300,1000,1000000]
 
 depths = [5, 10]
 regimes = ["50-50", "100-50", "100-100"]
