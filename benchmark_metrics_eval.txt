@@ -1,154 +1,16 @@
 run=> cmake -S . -B build
 run=> cmake --build build
-*****run lin_reg , slot : 4 , w=(0.8,0.2)******
-*****run lin_reg , slot : 4 , w=(1.0,0.0)******
-*****run lin_reg , slot : 8 , w=(0.8,0.2)******
-*****run lin_reg , slot : 8 , w=(1.0,0.0)******
-*****run lin_reg , slot : 16 , w=(0.8,0.2)******
-*****run lin_reg , slot : 16 , w=(1.0,0.0)******
-*****run lin_reg , slot : 32 , w=(0.8,0.2)******
-*****run lin_reg , slot : 32 , w=(1.0,0.0)******
-*****run box_blur , slot : 4 , w=(0.8,0.2)******
-*****run box_blur , slot : 4 , w=(1.0,0.0)******
-*****run box_blur , slot : 8 , w=(0.8,0.2)******
-*****run box_blur , slot : 8 , w=(1.0,0.0)******
-*****run box_blur , slot : 16 , w=(0.8,0.2)******
-*****run box_blur , slot : 16 , w=(1.0,0.0)******
-*****run box_blur , slot : 32 , w=(0.8,0.2)******
-*****run box_blur , slot : 32 , w=(1.0,0.0)******
-*****run matrix_mul , slot : 4 , w=(0.8,0.2)******
-*****run matrix_mul , slot : 4 , w=(1.0,0.0)******
-*****run matrix_mul , slot : 8 , w=(0.8,0.2)******
-*****run matrix_mul , slot : 8 , w=(1.0,0.0)******
-*****run matrix_mul , slot : 16 , w=(0.8,0.2)******
-*****run matrix_mul , slot : 16 , w=(1.0,0.0)******
-*****run matrix_mul , slot : 32 , w=(0.8,0.2)******
-
-[CRITICAL ERROR] benchmark matrix_mul crashed!
---- stderr ---
-/root/chehab-eval/RL/fhe_rl/gnn_embeddings.py:28: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  state_dict = torch.load(model_path, map_location=self.device)
-Vectorizer exited with status 256
-/usr/include/c++/15/bits/stl_vector.h:1370: std::vector<_Tp, _Alloc>::reference std::vector<_Tp, _Alloc>::back() [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; reference = std::__cxx11::basic_string<char>&]: Assertion '!this->empty()' failed.
-Aborted
---------------
-*****run matrix_mul , slot : 32 , w=(1.0,0.0)******
-
-[CRITICAL ERROR] benchmark matrix_mul crashed!
---- stderr ---
-/root/chehab-eval/RL/fhe_rl/gnn_embeddings.py:28: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  state_dict = torch.load(model_path, map_location=self.device)
-Vectorizer exited with status 256
-/usr/include/c++/15/bits/stl_vector.h:1370: std::vector<_Tp, _Alloc>::reference std::vector<_Tp, _Alloc>::back() [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; reference = std::__cxx11::basic_string<char>&]: Assertion '!this->empty()' failed.
-Aborted
---------------
-*****run max , slot : 3 , w=(0.8,0.2)******
-*****run max , slot : 3 , w=(1.0,0.0)******
-*****run max , slot : 4 , w=(0.8,0.2)******
-*****run max , slot : 4 , w=(1.0,0.0)******
-*****run max , slot : 5 , w=(0.8,0.2)******
-*****run max , slot : 5 , w=(1.0,0.0)******
-*****run sort , slot : 3 , w=(0.8,0.2)******
-*****run sort , slot : 3 , w=(1.0,0.0)******
-*****run dot_product , slot : 4 , w=(0.8,0.2)******
-*****run dot_product , slot : 4 , w=(1.0,0.0)******
-*****run dot_product , slot : 8 , w=(0.8,0.2)******
-*****run dot_product , slot : 8 , w=(1.0,0.0)******
-*****run dot_product , slot : 16 , w=(0.8,0.2)******
-*****run dot_product , slot : 16 , w=(1.0,0.0)******
-*****run dot_product , slot : 32 , w=(0.8,0.2)******
-*****run dot_product , slot : 32 , w=(1.0,0.0)******
-*****run gx_kernel , slot : 4 , w=(0.8,0.2)******
-*****run gx_kernel , slot : 4 , w=(1.0,0.0)******
-*****run gx_kernel , slot : 8 , w=(0.8,0.2)******
-*****run gx_kernel , slot : 8 , w=(1.0,0.0)******
-*****run gx_kernel , slot : 16 , w=(0.8,0.2)******
-*****run gx_kernel , slot : 16 , w=(1.0,0.0)******
-*****run gx_kernel , slot : 32 , w=(0.8,0.2)******
-*****run gx_kernel , slot : 32 , w=(1.0,0.0)******
-*****run gy_kernel , slot : 4 , w=(0.8,0.2)******
-*****run gy_kernel , slot : 4 , w=(1.0,0.0)******
-*****run gy_kernel , slot : 8 , w=(0.8,0.2)******
-*****run gy_kernel , slot : 8 , w=(1.0,0.0)******
-*****run gy_kernel , slot : 16 , w=(0.8,0.2)******
-*****run gy_kernel , slot : 16 , w=(1.0,0.0)******
-*****run gy_kernel , slot : 32 , w=(0.8,0.2)******
-*****run gy_kernel , slot : 32 , w=(1.0,0.0)******
-*****run hamming_dist , slot : 4 , w=(0.8,0.2)******
-*****run hamming_dist , slot : 4 , w=(1.0,0.0)******
-*****run hamming_dist , slot : 8 , w=(0.8,0.2)******
-*****run hamming_dist , slot : 8 , w=(1.0,0.0)******
-*****run hamming_dist , slot : 16 , w=(0.8,0.2)******
-*****run hamming_dist , slot : 16 , w=(1.0,0.0)******
-*****run hamming_dist , slot : 32 , w=(0.8,0.2)******
-*****run hamming_dist , slot : 32 , w=(1.0,0.0)******
-*****run l2_distance , slot : 4 , w=(0.8,0.2)******
-*****run l2_distance , slot : 4 , w=(1.0,0.0)******
-*****run l2_distance , slot : 8 , w=(0.8,0.2)******
-*****run l2_distance , slot : 8 , w=(1.0,0.0)******
-*****run l2_distance , slot : 16 , w=(0.8,0.2)******
-*****run l2_distance , slot : 16 , w=(1.0,0.0)******
-*****run l2_distance , slot : 32 , w=(0.8,0.2)******
-*****run l2_distance , slot : 32 , w=(1.0,0.0)******
-*****run poly_reg , slot : 4 , w=(0.8,0.2)******
-*****run poly_reg , slot : 4 , w=(1.0,0.0)******
-*****run poly_reg , slot : 8 , w=(0.8,0.2)******
-*****run poly_reg , slot : 8 , w=(1.0,0.0)******
-*****run poly_reg , slot : 16 , w=(0.8,0.2)******
-*****run poly_reg , slot : 16 , w=(1.0,0.0)******
-*****run poly_reg , slot : 32 , w=(0.8,0.2)******
-*****run poly_reg , slot : 32 , w=(1.0,0.0)******
-*****run roberts_cross , slot : 4 , w=(0.8,0.2)******
-*****run roberts_cross , slot : 4 , w=(1.0,0.0)******
-*****run roberts_cross , slot : 8 , w=(0.8,0.2)******
-*****run roberts_cross , slot : 8 , w=(1.0,0.0)******
-*****run roberts_cross , slot : 16 , w=(0.8,0.2)******
-*****run roberts_cross , slot : 16 , w=(1.0,0.0)******
-*****run roberts_cross , slot : 32 , w=(0.8,0.2)******
-*****run roberts_cross , slot : 32 , w=(1.0,0.0)******
-*****run tree_50-50_5_1 , w=(0.8,0.2)******
-*****run tree_50-50_5_1 , w=(1.0,0.0)******
-*****run tree_50-50_5_2 , w=(0.8,0.2)******
-*****run tree_50-50_5_2 , w=(1.0,0.0)******
-*****run tree_50-50_10_1 , w=(0.8,0.2)******
-*****run tree_50-50_10_1 , w=(1.0,0.0)******
-*****run tree_50-50_10_2 , w=(0.8,0.2)******
-
-[CRITICAL ERROR] benchmark polynomials_coyote crashed!
---- stderr ---
-/root/chehab-eval/RL/fhe_rl/gnn_embeddings.py:28: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  state_dict = torch.load(model_path, map_location=self.device)
-/root/miniconda3/envs/fhe_rl/lib/python3.11/site-packages/gymnasium/core.py:311: UserWarning: [33mWARN: env.set_preference_vector to get variables from other wrappers is deprecated and will be removed in v1.0, to get this variable you can do `env.unwrapped.set_preference_vector` for environment variables or `env.get_wrapper_attr('set_preference_vector')` that will search the reminding wrappers.[0m
-  logger.warn(
-sh: 1: cargo: not found
-/usr/include/c++/15/bits/stl_vector.h:1370: std::vector<_Tp, _Alloc>::reference std::vector<_Tp, _Alloc>::back() [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; reference = std::__cxx11::basic_string<char>&]: Assertion '!this->empty()' failed.
-Aborted
---------------
-*****run tree_50-50_10_2 , w=(1.0,0.0)******
-
-[CRITICAL ERROR] benchmark polynomials_coyote crashed!
---- stderr ---
-/root/chehab-eval/RL/fhe_rl/gnn_embeddings.py:28: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  state_dict = torch.load(model_path, map_location=self.device)
-/root/miniconda3/envs/fhe_rl/lib/python3.11/site-packages/gymnasium/core.py:311: UserWarning: [33mWARN: env.set_preference_vector to get variables from other wrappers is deprecated and will be removed in v1.0, to get this variable you can do `env.unwrapped.set_preference_vector` for environment variables or `env.get_wrapper_attr('set_preference_vector')` that will search the reminding wrappers.[0m
-  logger.warn(
-sh: 1: cargo: not found
-/usr/include/c++/15/bits/stl_vector.h:1370: std::vector<_Tp, _Alloc>::reference std::vector<_Tp, _Alloc>::back() [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; reference = std::__cxx11::basic_string<char>&]: Assertion '!this->empty()' failed.
-Aborted
---------------
-*****run tree_100-50_5_1 , w=(0.8,0.2)******
-*****run tree_100-50_5_1 , w=(1.0,0.0)******
-*****run tree_100-50_5_2 , w=(0.8,0.2)******
-*****run tree_100-50_5_2 , w=(1.0,0.0)******
-*****run tree_100-50_10_1 , w=(0.8,0.2)******
-*****run tree_100-50_10_1 , w=(1.0,0.0)******
-*****run tree_100-50_10_2 , w=(0.8,0.2)******
-*****run tree_100-50_10_2 , w=(1.0,0.0)******
-*****run tree_100-100_5_1 , w=(0.8,0.2)******
-*****run tree_100-100_5_1 , w=(1.0,0.0)******
-*****run tree_100-100_5_2 , w=(0.8,0.2)******
-*****run tree_100-100_5_2 , w=(1.0,0.0)******
-*****run tree_100-100_10_1 , w=(0.8,0.2)******
-*****run tree_100-100_10_1 , w=(1.0,0.0)******
-*****run tree_100-100_10_2 , w=(0.8,0.2)******
-*****run tree_100-100_10_2 , w=(1.0,0.0)******
+*****run lin_reg , slot : 4 , w=(0.8,0.2) , budget=9000000******
+*****run lin_reg , slot : 4 , w=(1.0,0.0) , budget=9000000******
+*****run lin_reg , slot : 8 , w=(0.8,0.2) , budget=9000000******
+*****run lin_reg , slot : 8 , w=(1.0,0.0) , budget=9000000******
+*****run lin_reg , slot : 16 , w=(0.8,0.2) , budget=9000000******
+*****run lin_reg , slot : 16 , w=(1.0,0.0) , budget=9000000******
+*****run lin_reg , slot : 32 , w=(0.8,0.2) , budget=9000000******
+*****run lin_reg , slot : 32 , w=(1.0,0.0) , budget=9000000******
+*****run box_blur , slot : 4 , w=(0.8,0.2) , budget=9000000******
+*****run box_blur , slot : 4 , w=(1.0,0.0) , budget=9000000******
+*****run box_blur , slot : 8 , w=(0.8,0.2) , budget=9000000******
+*****run box_blur , slot : 8 , w=(1.0,0.0) , budget=9000000******
+*****run box_blur , slot : 16 , w=(0.8,0.2) , budget=9000000******
+*****run box_blur , slot : 16 , w=(1.0,0.0) , budget=9000000******

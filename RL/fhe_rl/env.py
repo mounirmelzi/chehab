@@ -317,9 +317,27 @@ class fheEnv(gym.Env):
     # ── MORL Reward Logic ──
     def _reward_vector(self, delta_ops_old, delta_ops_new,
                        delta_keys_old, delta_keys_new) -> np.ndarray:
-        """Compute the 2-D reward vector [r_ops, r_keys]."""
+        """Compute the 2-D reward vector [r_ops, r_keys].
+
+        FIX: r_keys was previously normalized by a fixed constant
+        (self.n_budget, default 5) instead of by delta_keys_old the
+        way r_ops is normalized by delta_ops_old. Since key-cost is
+        typically on a much larger absolute scale than op-count,
+        dividing by a small fixed constant made r_keys' magnitude
+        dwarf r_ops' magnitude on ANY step that touched a rotation
+        key, regardless of w_keys. That made the composed reward
+        effectively ignore w_ops/w_keys and treat every rotation as
+        catastrophic, so the trained policy converged to never
+        emitting rotate actions at any preference setting, and at
+        any checkpoint (this is baked into training, not something
+        a later/earlier checkpoint would fix).
+
+        Now both terms are relative improvements on the same
+        [-1, 1]-ish scale, so the preference weights in
+        _compose_reward actually control the tradeoff as intended.
+        """
         r_ops  = (delta_ops_old  - delta_ops_new)  / delta_ops_old  if delta_ops_old  != 0 else 0.0
-        r_keys = (delta_keys_old - delta_keys_new) / self.n_budget
+        r_keys = (delta_keys_old - delta_keys_new) / delta_keys_old if delta_keys_old != 0 else 0.0
         return np.array([r_ops, r_keys], dtype=np.float32)
 
     def _kl_bonus(self, r_vec: np.ndarray) -> float:

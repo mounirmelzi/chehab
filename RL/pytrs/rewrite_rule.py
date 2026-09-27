@@ -408,17 +408,7 @@ class RewriteRule:
                     unary_operands.append(lane.args[0])
         
         total_vectorizable = len(binary_lanes) + len(unary_lanes)
-        
-        # Special case: for size-2 vectors, allow 1 matching operation
-        # For other sizes, need at least min_count vectorizable operations
-        min_required = 1 if original_size == 2 else self.min_count
-        if total_vectorizable < min_required:
-            return None
-        
-        # Don't match if ALL lanes are vectorizable - let uniform rotation handle that
-        if total_vectorizable == original_size:
-            return None
-        
+
         # Determine identity element and check if operation is non-commutative
         target_op = self.target_ops[0]
         is_non_commutative = target_op in {"-", "/"}
@@ -431,6 +421,46 @@ class RewriteRule:
             identity_value = 1
         else:
             identity_value = 0
+
+        # FIX: lanes that are literal identity-element padding (e.g. the
+        # zero-constant lanes the C++ codegen appends via VECTOR_WIDTH
+        # padding, "(Vec <real_output> 0 0 0)") are not "real" competing
+        # content — they're filler up to the target vector width. Before
+        # this fix, min_required was a flat 2 for any vector wider than 2
+        # lanes, so a benchmark with a single real output (e.g. lin_reg,
+        # dot_product — 1 real lane + N zero-padding lanes) could NEVER
+        # satisfy total_vectorizable >= min_required, no matter how the
+        # policy was trained: rotation actions were masked out at the
+        # matcher level before the RL agent ever saw them.
+        #
+        # Count how many non-vectorizable lanes are genuinely "other real
+        # content" (not identity padding). If none are, there's nothing
+        # at risk of being wrongly absorbed by a too-low threshold, so we
+        # can safely relax min_required down to 1 real vectorizable lane.
+        def _is_identity_padding_lane(lane: Expr) -> bool:
+            return isinstance(lane, Const) and lane.value == identity_value
+
+        vectorizable_lane_idx = set(binary_lanes) | set(unary_lanes)
+        non_vectorizable_non_padding = sum(
+            1
+            for i, lane in enumerate(expr.args)
+            if i not in vectorizable_lane_idx and not _is_identity_padding_lane(lane)
+        )
+
+        # Special case: for size-2 vectors, allow 1 matching operation.
+        # Otherwise: normally need at least min_count vectorizable
+        # operations, UNLESS every other lane is pure identity padding,
+        # in which case 1 real vectorizable lane is enough.
+        if original_size == 2 or non_vectorizable_non_padding == 0:
+            min_required = 1
+        else:
+            min_required = self.min_count
+        if total_vectorizable < min_required:
+            return None
+        
+        # Don't match if ALL lanes are vectorizable - let uniform rotation handle that
+        if total_vectorizable == original_size:
+            return None
         
         # For rotation, we'll prioritize binary operations
         first_half = []

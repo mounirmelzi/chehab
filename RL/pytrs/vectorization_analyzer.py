@@ -246,7 +246,34 @@ class VectorizationAnalyzer:
                                        (isinstance(lane.args[1], Const) and lane.args[1].value in {0, 1}):
                                         special += 1
                     
-                    min_required = 1 if original_size == 2 else min_count
+                    # FIX: mirror the relaxed threshold in
+                    # RewriteRule._apply_flexible_rotation_vectorize —
+                    # lanes that are literal identity-element padding
+                    # (e.g. zero-constant VECTOR_WIDTH padding lanes)
+                    # don't count as "real" competing content, so a
+                    # single real vectorizable lane is enough when
+                    # every other lane is just padding.
+                    _t_op = target_ops[0] if target_ops else None
+                    if _t_op == "*":
+                        identity_value = 1
+                    elif _t_op in {"+", "-"}:
+                        identity_value = 0
+                    elif _t_op == "/":
+                        identity_value = 1
+                    else:
+                        identity_value = 0
+
+                    non_padding_non_vectorizable = sum(
+                        1
+                        for lane in node.args
+                        if not (isinstance(lane, Op) and lane.op in target_ops)
+                        and not (isinstance(lane, Const) and lane.value == identity_value)
+                    )
+
+                    if original_size == 2 or non_padding_non_vectorizable == 0:
+                        min_required = 1
+                    else:
+                        min_required = min_count
                     
                     if vectorizable >= min_required and vectorizable < original_size:
                         coverages.append((vectorizable, original_size, special))

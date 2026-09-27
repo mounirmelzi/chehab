@@ -18,7 +18,8 @@ FHE_RL_DIR = Path(__file__).parent
 # A l'intérieur de config.py
 
 MODEL_PATHS = {
-    "agent_model": PROJECT_ROOT / "checkpoints" / "model_L1_none_film_a" / "rl_model_100000_steps.zip",
+    #"agent_model": PROJECT_ROOT / "checkpoints" / "model_L1_none_film_a" / "rl_model_100000_steps.zip",
+    "agent_model": PROJECT_ROOT / "checkpoints" / "model_jobid_lagrangian_pid_film_a1" / "rl_model_100000_steps.zip",
     "gnn_embeddings_model": PROJECT_ROOT / "trained_models" / "embeddings_gnn_model_epoch_100.pth",
 }
 
