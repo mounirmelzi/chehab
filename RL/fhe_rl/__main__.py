@@ -168,7 +168,12 @@ def parse_arguments(args=None):
     run_parser.add_argument('output_vector_file', help='Output vector file')
     run_parser.add_argument('--w_ops', type=float, default=1.0, help='Weight for execution time/operations')
     run_parser.add_argument('--w_keys', type=float, default=0.0, help='Weight for rotation keys')
-    run_parser.add_argument('--noise_budget', type=int, default=300, help='Noise budget for execution')
+    run_parser.add_argument(
+        '--noise_budget',
+        type=int,
+        default=int(os.environ.get('FHECO_NOISE_BUDGET', 300)),
+        help='Noise budget for execution (env var FHECO_NOISE_BUDGET overrides default 300)'
+    )
 
     # ─── INTERACTIVE COMMAND ──────────────────────────────────────────────────
     add_subparser(subparsers)

@@ -20,11 +20,11 @@ UNCONSTRAINED_BUDGET_THRESHOLD = 100_000
 
 
 class fheEnv(gym.Env):
-    DEFAULT_BUDGET_OPTIONS = [240, 300, 1_000_000]
+    DEFAULT_BUDGET_OPTIONS = [300, 1000, 9000]
     
     def __init__(self, rules_list, expressions, max_positions=2, embeddings_model=None, 
                  budget_options=None, constraint_method="lagrangian_pid", verbose=True,
-                 pref_list=[[1.0, 0.0], [0.0, 1.0]], lambda_env=0.0, lambda_kl=0.0, 
+                 pref_list=[[1.0, 0.0], [0.8, 0.2]], lambda_env=0.0, lambda_kl=0.0, 
                  n_cycle=1, n_budget=5, env_idx=0):
         super().__init__()
         

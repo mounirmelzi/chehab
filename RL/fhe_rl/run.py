@@ -3,8 +3,6 @@ import sys
 import time
 import importlib
 from stable_baselines3 import PPO
-# ... le reste du code reste identique ...
-
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
@@ -25,12 +23,19 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
         sys.exit(1)
         return
     print(expressions)
-    if not os.path.exists("rotations_rules.txt"):
-        print("WARNING: rotations_rules.txt not found in cwd — "
+    
+    # FIX: Resolve rule files using absolute paths relative to the fhe_rl package
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    rules_path = os.path.join(base_dir, "rules.txt")
+    rot_rules_path = os.path.join(base_dir, "rotations_rules.txt")
+    
+    if not os.path.exists(rot_rules_path):
+        print(f"WARNING: {rot_rules_path} not found — "
             "rotation rules will be missing from the action space!")
     else:
-        print(f"rotation rules loaded from: {os.path.abspath('rotations_rules.txt')}")
-    rules_list = create_rules("rules.txt", "rotations_rules.txt")
+        print(f"rotation rules loaded from: {rot_rules_path}")
+        
+    rules_list = create_rules(rules_path, rot_rules_path)
     rules_list["END"] = None
     max_positions = 16
     
@@ -40,13 +45,11 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
             expressions, 
             max_positions=max_positions, 
             embeddings_model=embeddings_model, 
-            # CORRECTION : Déclarer l'espace complet pour correspondre aux poids PyTorch
-            budget_options=[100, 200, 300], 
+            budget_options=[300, 1000, 9000], 
             pref_list=[pref]
         ))
     ])
     
-    # Appliquer le budget spécifique requis par l'évaluation C++
     env.set_options({ "budget": noise_budget })
     env.env_method("set_preference_vector", pref)
     
@@ -74,7 +77,6 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
         done = bool(dones[0])
         steps += 1
         
-        # FIX: On capture les métriques finales AVANT le reset automatique
         if done:
             terminal_info = infos[0]
             final_expr = terminal_info.get("expression", fhe_env.expression)

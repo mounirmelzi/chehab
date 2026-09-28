@@ -24,8 +24,7 @@ void gen_func(
   gen_func_decl(func->name(), header_os);
   header_os << '\n';
   gen_rotation_steps_getter_decl(func->name(), header_os);
-  /*************************************************************/
-  /*************************************************************/
+  
   source_os << source_includes;
   source_os << "#include \"" << header_name << "\"\n";
   source_os << '\n';
@@ -44,25 +43,19 @@ void gen_func(
   source_os << '\n';
   gen_rotation_steps_getter_def(func->name(), rotataion_steps, source_os);
   source_os << '\n';
-  /****************************************************************/
-  //std::cout<<"\n ==>Welcome in encryption params selection : \n";
+  
   param_select::ParameterSelector selector(func, security_level);
   bool use_mod_switch = false ;
   if(automatic_enc_params_enabled){
     param_select::EncParams params = selector.select_params(use_mod_switch); 
     params.print_params(std::cout); 
-    //std::cout<<"Encryption params have been printed succefully\n";
     gen_main_code(params,security_level,automatic_enc_params_enabled);
   }else{ 
     int poly_modulus_degree = 16384 ; 
     param_select::EncParams params = param_select::EncParams(poly_modulus_degree,func->plain_modulus()); 
     gen_main_code(params,security_level,automatic_enc_params_enabled);
   }
-  //std::cout<<"Gen main code has been done \n";
 }
-
-/**************************************************************************************/
-/**************************************************************************************/
 
 void gen_func_decl(const string &func_name, ostream &os)
 {
@@ -179,7 +172,6 @@ void gen_op_terms(const shared_ptr<ir::Func> &func, ostream &os, TermsCtxtObject
 
       auto multip = ++operands_multip[operand->id()];
       auto operand_object_info_it = terms_ctxt_objects_info.find(operand->id());
-      // operand with multiplicity > 1 selected for overwrite
       if (operand_object_info_it == terms_ctxt_objects_info.end())
       {
         operands_ctxt_objects_ids[i] = term_object_id;
@@ -238,7 +230,6 @@ void gen_op_terms(const shared_ptr<ir::Func> &func, ostream &os, TermsCtxtObject
     {
       os << evaluator_id << "." << operation_mapping.at(ir::OpType{term->op_code().type(), move(operands_types)})
          << "(";
-      // operation term needs operands so operands_ctxt_objects_ids cannot be empty
       for (size_t i = 0;; ++i)
       {
         auto operand = term->operands()[i];
@@ -288,7 +279,6 @@ void gen_output_terms(
     if (term->type() == ir::Term::Type::cipher)
     {
       auto ctxt_object_id = terms_ctxt_objects_info.at(term->id()).id_;
-      // an output term has at least one label
       for (auto it = output_info.second.labels_.cbegin();;)
       {
         const auto &label = *it;
@@ -344,6 +334,7 @@ void gen_main_code(fheco::param_select::EncParams params,param_select::EncParams
     #include <fstream>
     #include <iostream>
     #include <ostream> 
+    #include <cstdlib>
     #include "_gen_he_fhe.hpp"
     #include "utils.hpp"
 
@@ -370,19 +361,31 @@ void gen_main_code(fheco::param_select::EncParams params,param_select::EncParams
         throw invalid_argument("failed to open io example file");
       )"
       };
+      
       string str_1_converted{str_1};
-      out<<str_1_converted ;
-      out<<"  EncryptionParameters params(scheme_type::bfv); \n";
-      out<<"  size_t n ="<<params.poly_mod_degree()<<" ;\n";
-      out<<"  params.set_poly_modulus_degree(n);\n";
-      out<<"  params.set_plain_modulus(PlainModulus::Batching(n, "<<params.plain_mod_bit_size()<<")); \n";
+      out << str_1_converted;
+      
+      // FIX: Dynamically read the environment noise budget passed from the Python RL layer
+      out << "  const char* env_budget = std::getenv(\"FHECO_NOISE_BUDGET\");\n";
+      out << "  int target_budget = env_budget ? std::stoi(env_budget) : 300;\n";
+      out << "  size_t n;\n";
+      out << "  if (target_budget >= 9000) { n = 32768; }\n";
+      out << "  else if (target_budget >= 1000) { n = 16384; }\n";
+      out << "  else { n = 8192; }\n\n";
+
+      out << "  EncryptionParameters params(scheme_type::bfv); \n";
+      out << "  params.set_poly_modulus_degree(n);\n";
+      out << "  params.set_plain_modulus(PlainModulus::Batching(n, " << params.plain_mod_bit_size() << ")); \n";
+      
       if(automatic_enc_params_enabled){
-        out<<"  params.set_coeff_modulus(CoeffModulus::Create(n, {";
+        out << "  params.set_coeff_modulus(CoeffModulus::Create(n, {";
         gen_sequence(params.coeff_mod_bit_sizes().cbegin(),params.coeff_mod_bit_sizes().cend(), line_threshold, out);
-        out<<" }));\n";
+        out << " }));\n";
       }else{
-        out<<"params.set_coeff_modulus(CoeffModulus::BFVDefault("<<params.poly_mod_degree()<<"));\n";
+        // FIX: The BFVDefault modulus directly associates to the scaled poly modulus degree N
+        out << "  params.set_coeff_modulus(CoeffModulus::BFVDefault(n));\n";
       }
+      
       string security_level_label = "tc128";
       switch (security_level){
         case param_select::EncParams::SecurityLevel::tc128 :
@@ -413,7 +416,7 @@ void gen_main_code(fheco::param_select::EncParams params,param_select::EncParams
       chrono::high_resolution_clock::time_point keys_time;
       chrono::duration<double, milli> keys_elapsed;
       keys_time = chrono::high_resolution_clock::now();      
-      //keygen.create_galois_keys(galois_keys);
+      
       keygen.create_galois_keys(get_rotation_steps_fhe(), galois_keys);
       keys_elapsed = chrono::high_resolution_clock::now() - keys_time;
 

@@ -15,17 +15,12 @@ full_header = ["benchmark", "w_ops", "w_keys", "noise_budget"] + operations + in
 benchmark_folders = [
       "lin_reg", "box_blur", "matrix_mul", "max", "sort","l2_distance", "poly_reg", "roberts_cross",
     "dot_product"
-    
 ]
 
-# Preference sweep, same as run_morl_benchmarks.py  
-pref_list = [ [1.0, 0.0]]
+# FIX: Added preference configurations to force the agent to care about key reduction
+pref_list = [[1.0, 0.0], [0.5, 0.5], [0.0, 1.0]]
 
-# NEW: noise budget sweep. Edit this list to whatever test budgets you need.
-# This is passed through to `python -m fhe_rl run --noise_budget ...` via the
-# FHECO_NOISE_BUDGET env var (see RL/fhe_rl/__main__.py), since the C++ call
-# site (Compiler::call_rl_vectorizer) doesn't expose a --noise_budget flag.
-budget_list = [300,1000,1000000]
+budget_list = [300, 1000, 9000]
 
 depths = [5, 10]
 regimes = ["50-50", "100-50", "100-100"]
@@ -35,7 +30,6 @@ exceptions = ["max", "sort", "discrete_cosin_transform", "poly_derivative"]
 benchmarks_slot_counts = {"max": [3, 4, 5], "sort": [3], "discrete_cosin_transform": [1], "poly_derivative": [1]}
 slot_counts = [4, 8, 16, 32]
 
-# Build the project once at start
 try:
     print("run=> cmake -S . -B build")
     subprocess.run(['cmake', '-S', '.', '-B', 'build'], check=True,
@@ -49,7 +43,6 @@ except subprocess.CalledProcessError as e:
 
 with open("results_RL_budget.csv", mode='w', newline='') as file:
     csv.writer(file).writerow(full_header)
-
 
 def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build_path, poly_args=None):
     he_path = os.path.join(build_path, "he")
@@ -65,12 +58,6 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build
     else:
         cmd = f"./{subfolder_name} 1 {slot_count} 1 0 1 1 1 0 {w_ops} {w_keys}"
 
-    # NEW: propagate the requested noise budget to the nested
-    # `python -m fhe_rl run` call via the environment. subprocess.run()
-    # inherits the current process's os.environ by default, and the C++
-    # side's std::system() call inherits that same environment, so this
-    # reaches RL/fhe_rl/__main__.py's --noise_budget default without any
-    # change to the benchmark .cpp files or the Compiler API signatures.
     run_env = os.environ.copy()
     run_env["FHECO_NOISE_BUDGET"] = str(noise_budget)
 
@@ -78,12 +65,8 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build
         res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              universal_newlines=True, cwd=build_path, timeout=7200, env=run_env)
 
-        # -----------------------------------------------------
-        # AJOUT DES LIGNES DE DEBUG ICI
-        # -----------------------------------------------------
         print(f"[DEBUG] {subfolder_name} returncode={res.returncode}")
         print(f"[DEBUG STDOUT]\n{res.stdout}")
-        # -----------------------------------------------------
 
         if res.returncode != 0:
             print(f"\n[CRITICAL ERROR] benchmark {subfolder_name} crashed!")
@@ -148,7 +131,6 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build
 
     with open("results_RL_budget.csv", mode='a', newline='') as f:
         csv.writer(f).writerow(row)
-
 
 for sub in benchmark_folders:
     b_path = os.path.join(build_folder, sub)
