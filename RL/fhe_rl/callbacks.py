@@ -91,6 +91,18 @@ class ParetoEvalCallback(BaseCallback):
         # Ensure directories exist
         if self.best_model_save_path is not None:
             os.makedirs(self.best_model_save_path, exist_ok=True)
+            eval_score_file = os.path.join(self.best_model_save_path, "eval_best_score.json")
+            if os.path.exists(eval_score_file):
+                try:
+                    import json
+                    with open(eval_score_file, "r") as f:
+                        data = json.load(f)
+                    self.best_mean_reward = float(data.get("best_mean_reward", -np.inf))
+                    if self.verbose > 0:
+                        print(f"[ParetoEvalCallback] Loaded previous best score: {self.best_mean_reward:.4f} from {eval_score_file}")
+                except Exception as e:
+                    if self.verbose > 0:
+                        print(f"[ParetoEvalCallback] Could not read {eval_score_file}: {e}")
 
     def _on_step(self) -> bool:
         if self.n_calls % self.eval_freq == 0:
@@ -139,10 +151,21 @@ class ParetoEvalCallback(BaseCallback):
             # 3. Check if this is the "Best" model found so far
             if current_mean_reward > self.best_mean_reward:
                 if self.verbose > 0:
-                    print("New best mean reward!")
+                    print(f"New best mean reward! ({self.best_mean_reward:.4f} -> {current_mean_reward:.4f})")
                 
                 if self.best_model_save_path is not None:
                     self.model.save(os.path.join(self.best_model_save_path, "best_model"))
+                    try:
+                        import json
+                        eval_score_file = os.path.join(self.best_model_save_path, "eval_best_score.json")
+                        with open(eval_score_file, "w") as f:
+                            json.dump({
+                                "best_mean_reward": float(current_mean_reward),
+                                "step": int(self.num_timesteps),
+                            }, f, indent=2)
+                    except Exception as e:
+                        if self.verbose > 0:
+                            print(f"[ParetoEvalCallback] Warning: could not write {eval_score_file}: {e}")
                 
                 self.best_mean_reward = current_mean_reward
 

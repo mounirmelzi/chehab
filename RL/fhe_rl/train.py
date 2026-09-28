@@ -77,6 +77,9 @@ def train_agent(
     # Environment creation
     def make_env(rank, exprs):
         def _init():
+            # Seed worker-local Python, NumPy, and PyTorch RNGs
+            np.random.seed(seed + rank)
+            torch.manual_seed(seed + rank)
             env = fheEnv(
                 rules_list, exprs, max_positions=max_positions,
                 embeddings_model=embeddings_model,
@@ -85,17 +88,24 @@ def train_agent(
                 pref_list=pref_list,
                 lambda_env=lambda_env, lambda_kl=lambda_kl,
                 n_cycle=n_cycle, n_budget=n_budget, env_idx=rank,
-                                verbose=False
-
+                verbose=False
             )
             return Monitor(env)
         return _init  
 
     env = SubprocVecEnv([make_env(i, expressions) for i in range(num_envs)], start_method='spawn')
+    pid_wrapper = None
     if constraint_method == "lagrangian_pid":
         from .algos.lagrangian_pid import PIDLagrangianWrapper
-        env = PIDLagrangianWrapper(env)
+        pid_wrapper = PIDLagrangianWrapper(env)
+        env = pid_wrapper
+        # Restore PID state if resuming from checkpoint
+        if checkpoint_path:
+            pid_state_file = checkpoint_path.replace(".zip", "_pid.json")
+            if os.path.exists(pid_state_file):
+                pid_wrapper.load_state(pid_state_file)
     val_env = DummyVecEnv([make_env(0, benchmarks)])
+    val_env.seed(seed)
 
     # PPO model params
     ent_schedule = linear_schedule(ent_coef)
@@ -152,13 +162,32 @@ def train_agent(
     )
 
     # Callbacks
-    checkpoint_callback = CheckpointCallback(
+    class PIDCheckpointCallback(CheckpointCallback):
+        """CheckpointCallback that also saves PID controller state if present."""
+        def __init__(self, *args, pid_wrapper=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._pid_wrapper = pid_wrapper
+
+        def _on_step(self) -> bool:
+            res = super()._on_step()
+            if self._pid_wrapper is not None and self.n_calls % self.save_freq == 0:
+                pid_path = self._checkpoint_path(extension="json").replace("rl_model_", "rl_model_").replace(".json", "_pid.json")
+                try:
+                    self._pid_wrapper.save_state(pid_path)
+                    if self.verbose >= 2:
+                        print(f"Saved PID state to {pid_path}")
+                except Exception as e:
+                    print(f"Warning: could not save PID state to {pid_path}: {e}")
+            return res
+
+    checkpoint_callback = PIDCheckpointCallback(
         save_freq=5000,
         save_path=checkpoint_dir,
         name_prefix="rl_model",
         save_replay_buffer=False,
         save_vecnormalize=False,
-        verbose=1
+        verbose=1,
+        pid_wrapper=pid_wrapper,
     )
 
     pareto_eval_cb = ParetoEvalCallback(

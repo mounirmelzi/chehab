@@ -132,7 +132,7 @@ class fheEnv(gym.Env):
         self.curr_ops, self.curr_keys = self.initial_ops, self.initial_keys
 
         # Budget sampling
-        budget = np.random.choice(self.active_budgets)
+        budget = int(self.np_random.choice(self.active_budgets))
         if isinstance(options, dict):
             budget = options.get("budget", budget)
         self.set_noise_budget(budget)
