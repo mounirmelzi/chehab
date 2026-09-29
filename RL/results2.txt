@@ -1,0 +1,149 @@
+Device: cpu
+[FHE Embedding] Loading model from /root/chehab-eval/RL/trained_models/embeddings_gnn_model_epoch_100.pth...
+[FHE Embedding] Model loaded and frozen successfully.
+Number of unique valid expressions (excluding validation): 1
+['(Vec ( + ( + ( + ( * v1_0 v2_0 ) ( * v1_1 v2_1 ) ) ( + ( * v1_2 v2_2 ) ( * v1_3 v2_3 ) ) ) ( + ( + ( * v1_4 v2_4 ) ( * v1_5 v2_5 ) ) ( + ( * v1_6 v2_6 ) ( * v1_7 v2_7 ) ) ) ) )']
+rotation rules loaded from: /root/chehab-eval/RL/rotations_rules.txt
+[fheEnv] WARNING: budget 30 is not in the training budgets [300, 1000, 9000]. The policy observes it as 300 (nearest); only noise_ratio and the violation check use the real value.
+
+[34m======================================== EPISODE START ========================================[0m
+[1m[35mOptimization Mode[0m  : [36mLOCKED (EVALUATION)[0m
+[1m[35mNoise Budget     [0m  : [33m30[0m
+Noise budget (requested / used by env): 30 / 30
+WARNING: budget 30 is not one of the training budgets [300, 1000, 9000]; the policy sees it as the nearest one. Results are only guaranteed by the feasibility check below.
+WARNING: the INPUT expression already exceeds the budget (noise 40.6 > 30).
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(Vec ( + ( + ( + ( * v1_0 v2_0 ) ( * v1_1 v2_1 ) ) ( + ( * v1_2 v2_2 ) ( * v1_3 v2_3 ) ) ) ( + ( + ( * v1_4 v2_4 ) ( * v1_5 v2_5 ) ) ( + ( * v1_6 v2_6 ) ( * v1_7 v2_7 ) ) ) ) )[0m
+[1m[35mOld exec cost      [0m: [31m3757.0[0m
+[1m[35mOld keys cost      [0m: [31m0.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (Vec (+ (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_2 v2_2) (* v1_3 v2_3))) (+ (+ (* v1_4 v2_4) (* v1_5 v2_5)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) (<< (Vec (+ (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_2 v2_2) (* v1_3 v2_3))) (+ (+ (* v1_4 v2_4) (* v1_5 v2_5)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m3559.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.04216129705309868[0m
+[1m[35mRule name     [0m: [36mrot-add-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (Vec (+ (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_2 v2_2) (* v1_3 v2_3))) (+ (+ (* v1_4 v2_4) (* v1_5 v2_5)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) (<< (Vec (+ (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_2 v2_2) (* v1_3 v2_3))) (+ (+ (* v1_4 v2_4) (* v1_5 v2_5)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m3559.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (Vec (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_4 v2_4) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) (<< (VecAdd (Vec (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_4 v2_4) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m3060.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.11216633766889572[0m
+[1m[35mRule name     [0m: [36madd-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (Vec (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_4 v2_4) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) (<< (VecAdd (Vec (+ (* v1_0 v2_0) (* v1_1 v2_1)) (+ (* v1_4 v2_4) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m3060.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m2561.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.13045752048492432[0m
+[1m[35mRule name     [0m: [36madd-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (Vec (+ (* v1_2 v2_2) (* v1_3 v2_3)) (+ (* v1_6 v2_6) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m2561.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m2062.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.15587662160396576[0m
+[1m[35mRule name     [0m: [36madd-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (Vec (* v1_0 v2_0) (* v1_4 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m2062.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m1662.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.1551891416311264[0m
+[1m[35mRule name     [0m: [36mmul-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (Vec (* v1_1 v2_1) (* v1_5 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m1662.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m1262.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.19253911077976227[0m
+[1m[35mRule name     [0m: [36mmul-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (Vec (* v1_2 v2_2) (* v1_6 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m1262.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m862.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.2535657584667206[0m
+[1m[35mRule name     [0m: [36mmul-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (Vec (* v1_3 v2_3) (* v1_7 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m862.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (VecMul (Vec v1_3 v1_7) (Vec v2_3 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (VecMul (Vec v1_3 v1_7) (Vec v2_3 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m462.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m0.37122970819473267[0m
+[1m[35mRule name     [0m: [36mmul-vectorize[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[36m----------------------------------------------------------------------------------------------------[0m
+[1m[35mOld expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (VecMul (Vec v1_3 v1_7) (Vec v2_3 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (VecMul (Vec v1_3 v1_7) (Vec v2_3 v2_7)))) 1))[0m
+[1m[35mOld exec cost      [0m: [31m462.0[0m
+[1m[35mOld keys cost      [0m: [31m1.0[0m
+[1m[35mNew expression[0m: [33m(VecAdd (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (VecMul (Vec v1_3 v1_7) (Vec v2_3 v2_7)))) (<< (VecAdd (VecAdd (VecMul (Vec v1_0 v1_4) (Vec v2_0 v2_4)) (VecMul (Vec v1_1 v1_5) (Vec v2_1 v2_5))) (VecAdd (VecMul (Vec v1_2 v1_6) (Vec v2_2 v2_6)) (VecMul (Vec v1_3 v1_7) (Vec v2_3 v2_7)))) 1))[0m
+[1m[35mNew exec cost      [0m: [32m462.0[0m
+[1m[35mNew keys cost      [0m: [32m1.0[0m
+[1m[35mReward        [0m: [32m70.16236186027527[0m
+[1m[35mRule name     [0m: [36mEND[0m
+[1m[35mAt position   [0m: [34m0[0m
+[1m[35mBudget         [0m: [33m30[0m
+[1m[35mNoise         [0m: [33m41.768883955154585[0m
+[36m----------------------------------------------------------------------------------------------------[0m
+
+[34m======================================== EPISODE START ========================================[0m
+[1m[35mOptimization Mode[0m  : [36mLOCKED (EVALUATION)[0m
+[1m[35mNoise Budget     [0m  : [33m9000[0m
+WARNING: no expression within budget 30 was found (final noise 41.8). Output may exceed the budget!
+Optimization completed in 0.85 seconds.
+Final exec cost   : 462.0
+Final keys cost   : 1.0
+Final noise (est) : 41.77 / budget 30 [VIOLATED]

@@ -132,7 +132,8 @@ class fheEnv(gym.Env):
         self.curr_ops, self.curr_keys = self.initial_ops, self.initial_keys
 
         # Budget sampling
-        budget = np.random.choice(self.active_budgets)
+        # FIX: use the env's own seeded RNG (reproducible) instead of global np.random
+        budget = int(self.np_random.choice(self.active_budgets))
         if isinstance(options, dict):
             budget = options.get("budget", budget)
         self.set_noise_budget(budget)
@@ -387,7 +388,14 @@ class fheEnv(gym.Env):
         if budget in self.budget_options:
             budget_idx = self.budget_options.index(budget)
         else:
-            # Test budget not in training set — use nearest training budget for encoding
+            # Test budget not in training set — use nearest training budget for encoding.
+            # NOTE: the policy only sees this one-hot, so it cannot tell e.g. 400 from 300.
+            if not getattr(self, "_warned_budget_snap", False):
+                print(f"[fheEnv] WARNING: budget {budget} is not in the training budgets "
+                      f"{self.budget_options}. The policy observes it as "
+                      f"{self.budget_options[min(range(len(self.budget_options)), key=lambda i: abs(self.budget_options[i]-budget))]}"
+                      f" (nearest); only noise_ratio and the violation check use the real value.")
+                self._warned_budget_snap = True
             budget_idx = min(range(len(self.budget_options)),
                              key=lambda i: abs(self.budget_options[i] - budget))
         self.budget_one_hot_encoding[budget_idx] = 1.0

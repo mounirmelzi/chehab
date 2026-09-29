@@ -171,8 +171,21 @@ def parse_arguments(args=None):
     run_parser.add_argument(
         '--noise_budget',
         type=int,
-        default=int(os.environ.get('FHECO_NOISE_BUDGET', 300)),
-        help='Noise budget for execution (env var FHECO_NOISE_BUDGET overrides default 300)'
+        default=None,
+        help='Noise budget for execution (falls back to env var FHECO_NOISE_BUDGET, then 300)'
+    )
+    run_parser.add_argument(
+        '--train_budgets',
+        type=str,
+        default=None,
+        help='Comma-separated budgets the model was TRAINED on (default: 300,1000,9000)'
+    )
+    run_parser.add_argument(
+        '--method',
+        type=str,
+        default='lagrangian_pid',
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc', 'lagrangian_pid'],
+        help='Constraint method the model was trained with (must match the observation space)'
     )
 
     # ─── INTERACTIVE COMMAND ──────────────────────────────────────────────────
@@ -271,9 +284,23 @@ def main(args=None):
         output_file = parsed_args.output_vector_file
         embeddings, _ = load_embeddings_from_config()
         
-        run_agent(input_file, embeddings, agent_zip, output_file, 
-                  noise_budget=parsed_args.noise_budget, 
-                  w_ops=parsed_args.w_ops, w_keys=parsed_args.w_keys)
+        noise_budget = parsed_args.noise_budget
+        if noise_budget is None:
+            env_nb = os.environ.get('FHECO_NOISE_BUDGET')
+            if env_nb is None:
+                print("WARNING: no --noise_budget and FHECO_NOISE_BUDGET is unset -> using 300")
+                noise_budget = 300
+            else:
+                noise_budget = int(env_nb)
+        train_budgets = None
+        if parsed_args.train_budgets:
+            train_budgets = [int(b.strip()) for b in parsed_args.train_budgets.split(',')]
+
+        run_agent(input_file, embeddings, agent_zip, output_file,
+                  noise_budget=noise_budget,
+                  w_ops=parsed_args.w_ops, w_keys=parsed_args.w_keys,
+                  budget_options=train_budgets,
+                  constraint_method=parsed_args.method)
 
     # ────────────────────────── INTERACTIVE ───────────────────────────
     elif mode == "interactive":

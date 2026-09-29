@@ -15,6 +15,17 @@ from .utils import load_expressions, load_expressions_named, create_rules
 from .env import fheEnv
 from .policy import HierarchicalMaskablePolicy
 
+
+def _resolve_train_budgets(budget_options, test_budgets):
+    """The one-hot size/order MUST match the checkpoint's training budgets.
+    Falling back to the test budgets silently breaks that, so fall back to the
+    env defaults instead and warn."""
+    if budget_options is None:
+        budget_options = list(fheEnv.DEFAULT_BUDGET_OPTIONS)
+        print(f"WARNING: --train_budgets not given; assuming the model was trained on "
+              f"{budget_options}. Pass --train_budgets explicitly if that is wrong.")
+    return budget_options
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  test_agent (v1) — Standard Testing
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -36,8 +47,7 @@ def test_agent(
 
     if test_budgets is None:
         test_budgets = [noise_budget]
-    if budget_options is None:
-        budget_options = test_budgets
+    budget_options = _resolve_train_budgets(budget_options, test_budgets)
 
     env = DummyVecEnv([
         lambda: Monitor(
@@ -65,13 +75,15 @@ def test_agent(
         print(f"  Testing with budget = {budget}")
         print(f"{'='*60}")
 
-        env.set_options({"budget": budget})
-
         for expr_idx in range(len(expressions)):
             wrapper = env.envs[0]
             fhe_env = wrapper.env
             fhe_env.current_index = expr_idx  # pin cursor: neutralize DummyVecEnv auto-reset double-advance
+            # FIX: DummyVecEnv consumes the options on the first reset() and clears them,
+            # so the budget must be re-applied before EVERY reset.
+            env.set_options({"budget": budget})
             obs = env.reset()
+            assert fhe_env.budget == budget, f"budget not applied: {fhe_env.budget} != {budget}"
 
             test_expr = fhe_env.initial_expression
             initial_exec = fhe_env.initial_ops
@@ -147,8 +159,7 @@ def test_agent_v2(
 
     if test_budgets is None:
         test_budgets = [noise_budget]
-    if budget_options is None:
-        budget_options = test_budgets
+    budget_options = _resolve_train_budgets(budget_options, test_budgets)
 
     env = DummyVecEnv([
         lambda: Monitor(
@@ -175,15 +186,16 @@ def test_agent_v2(
         print(f"  Testing (v2) with budget = {budget}")
         print(f"{'='*60}")
 
-        env.set_options({"budget": budget})
-
         for expr_idx in range(len(expressions)):
             t0 = time.perf_counter()
 
             wrapper = env.envs[0]
             fhe_env = wrapper.env
             fhe_env.current_index = expr_idx  # pin cursor: neutralize auto-reset double-advance
+            # FIX: re-apply the budget before EVERY reset (options are cleared after one reset)
+            env.set_options({"budget": budget})
             obs = env.reset()
+            assert fhe_env.budget == budget, f"budget not applied: {fhe_env.budget} != {budget}"
 
             w_vec = fhe_env.current_w
             n_budget = fhe_env.n_budget

@@ -241,7 +241,7 @@ def get_total_rotations(expr: Expr) -> int:
 
 def calculate_cost(expr: Expr,
                w_ops=1.0,
-               w_rot=1.0,
+               w_rot=0.0,   # was 1.0: rotation amounts must not leak into the ops objective
                w_depth=1.0,
                w_muldepth=1.0,
                w_keys=1.0
