@@ -260,8 +260,7 @@ def main(args=None):
         train_budgets = None
         if parsed_args.train_budgets:
             train_budgets = [int(b.strip()) for b in parsed_args.train_budgets.split(',')]
-        elif test_budgets:
-            train_budgets = test_budgets
+        
 
         benchmark_file = parsed_args.benchmark or "./fhe_rl/datasets/benchmarks.txt"
         test_fn = test_agent_v2 if parsed_args.test_mode == "v2" else test_agent

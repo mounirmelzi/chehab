@@ -12,13 +12,10 @@ infos = ["benchmark", "w_ops", "w_keys", "noise_budget", "Depth", "Multiplicativ
          "Remaining_noise_budget", 'rotation_keys_size (MB)', 'rotation_keys_count', 'final_ops_cost', 'final_keys_cost']
 full_header = ["benchmark", "w_ops", "w_keys", "noise_budget"] + operations + infos[4:]
 
-benchmark_folders = [
-     "lin_reg", "box_blur", "matrix_mul", "max", "sort","l2_distance", "poly_reg", "roberts_cross",
-    "dot_product"
-]
+benchmark_folders = ["dot_product"]
 
 # FIX: Added preference configurations to force the agent to care about key reduction
-pref_list = [[0.8, 0.2], [0.2, 0.8], [0.5, 0.5], [1.0, 0.0], [0.0, 1.0]]  # (w_ops, w_keys)
+pref_list = [[0.8, 0.2]]
 
 budget_list = [300, 1000, 9000]
 
@@ -41,7 +38,7 @@ except subprocess.CalledProcessError as e:
     print(f"CMake build failed:\n{e.stderr}")
     raise
 
-with open("results_RL_budget.csv", mode='w', newline='') as file:
+with open("results_RL_budget_dp_merged.csv", mode='w', newline='') as file:
     csv.writer(file).writerow(full_header)
 
 def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build_path, poly_args=None):
@@ -129,7 +126,7 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, noise_budget, build
                 v = format(v / 1000, ".3f")
             row.append(v)
 
-    with open("results_RL_budget.csv", mode='a', newline='') as f:
+    with open("results_RL_budget_dp_merged.csv", mode='a', newline='') as f:
         csv.writer(f).writerow(row)
 
 for sub in benchmark_folders:
@@ -141,7 +138,7 @@ for sub in benchmark_folders:
                     print(f"*****run {sub} , slot : {sc} , w=({w_ops},{w_keys}) , budget={budget}******")
                     run_benchmark(sub, sc, w_ops, w_keys, budget, b_path)
 
-poly_path = os.path.join(build_folder, "polynomials_coyote")
+poly_path = "/nonexistent"
 if os.path.isdir(poly_path):
     for reg in regimes:
         for d in depths:
