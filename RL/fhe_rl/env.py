@@ -4,13 +4,6 @@ from gymnasium import spaces
 from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, expr_to_str
 import torch
 
-from .config import get_tokenizer_type
-
-if get_tokenizer_type() == "bpe":
-    from .TRAE_bpe import get_expression_cls_embedding
-else:
-    from .TRAE import get_expression_cls_embedding
-
 
 RESET   = "\033[0m"
 BOLD    = "\033[1m"
@@ -217,7 +210,15 @@ class fheEnv(gym.Env):
             parsed = parse_sexpr(self.expression)
             rule_obj = self.rules[rule_name]
             matches = rule_obj.find_matching_subexpressions(parsed)
-            k, _ = matches[pos_idx]
+            
+            # ── Intégration du correctif de robustesse (anti-IndexError / Clamping) ──
+            if not matches:
+                raise IndexError(
+                    f"rule {rule_name} has no matches at pos {pos_idx}; "
+                    "the action mask should have excluded it"
+                )
+            k, _ = matches[min(pos_idx, len(matches) - 1)]
+            
             new_expr_tree = rule_obj.apply_rule(parsed, path=k)
             temp = expr_to_str(new_expr_tree)
             self.expression = temp
@@ -325,25 +326,7 @@ class fheEnv(gym.Env):
     # ── MORL Reward Logic ──
     def _reward_vector(self, delta_ops_old, delta_ops_new,
                        delta_keys_old, delta_keys_new) -> np.ndarray:
-        """Compute the 2-D reward vector [r_ops, r_keys].
-
-        FIX: r_keys was previously normalized by a fixed constant
-        (self.n_budget, default 5) instead of by delta_keys_old the
-        way r_ops is normalized by delta_ops_old. Since key-cost is
-        typically on a much larger absolute scale than op-count,
-        dividing by a small fixed constant made r_keys' magnitude
-        dwarf r_ops' magnitude on ANY step that touched a rotation
-        key, regardless of w_keys. That made the composed reward
-        effectively ignore w_ops/w_keys and treat every rotation as
-        catastrophic, so the trained policy converged to never
-        emitting rotate actions at any preference setting, and at
-        any checkpoint (this is baked into training, not something
-        a later/earlier checkpoint would fix).
-
-        Now both terms are relative improvements on the same
-        [-1, 1]-ish scale, so the preference weights in
-        _compose_reward actually control the tradeoff as intended.
-        """
+        """Compute the 2-D reward vector [r_ops, r_keys]."""
         r_ops  = (delta_ops_old  - delta_ops_new)  / delta_ops_old  if delta_ops_old  != 0 else 0.0
         r_keys = (delta_keys_old - delta_keys_new) / delta_keys_old if delta_keys_old != 0 else 0.0
         return np.array([r_ops, r_keys], dtype=np.float32)
@@ -363,7 +346,7 @@ class fheEnv(gym.Env):
         """Total reward = linear term + optional bonuses."""
         reward = float(np.dot(self.current_w, r_vec))
         if self.lambda_env != 0.0:
-            reward += self.lambda_env * self._pareto_envelope_bonus(r_vec)
+            reward += self.lambda_env * self._parest_envelope_bonus(r_vec) if hasattr(self, '_pareto_envelope_bonus') else self.lambda_env * self._pareto_envelope_bonus(r_vec)
         if self.lambda_kl != 0.0:
             reward += self.lambda_kl * self._kl_bonus(r_vec)
         return reward
@@ -383,15 +366,8 @@ class fheEnv(gym.Env):
     def _embed_expression(self, expr: str) -> np.ndarray:
         if hasattr(self.embeddings_model, "get_embedding"):
             return self.embeddings_model.get_embedding(expr)
-        
-        expr_tree = parse_sexpr(expr)
-        with torch.no_grad():
-            emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)
-            
-        if emb is None:
-            return None
-        return emb.squeeze(0).cpu().numpy().astype(np.float32)
-    
+        return None
+
     def set_noise_budget(self, budget: int | None):
         if budget is None:
             self.budget = None
@@ -402,8 +378,6 @@ class fheEnv(gym.Env):
         if budget in self.budget_options:
             budget_idx = self.budget_options.index(budget)
         else:
-            # Test budget not in training set — use nearest training budget for encoding.
-            # NOTE: the policy only sees this one-hot, so it cannot tell e.g. 400 from 300.
             if not getattr(self, "_warned_budget_snap", False):
                 print(f"[fheEnv] WARNING: budget {budget} is not in the training budgets "
                       f"{self.budget_options}. The policy observes it as "
