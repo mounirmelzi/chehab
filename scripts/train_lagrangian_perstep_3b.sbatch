@@ -35,7 +35,7 @@ mkdir -p "$PROJ_ROOT/logs"
 # Envs:       12  |  Cores: 16  |  Denom: 1
 # ═══════════════════════════════════════════════════════════════
 METHOD="lagrangian_perstep"
-BUDGETS="240,300,9000000"
+BUDGETS="240,300,9000"
 TIMESTEPS=2000000
 NUM_ENVS=12
 DENOM_FACTOR=1

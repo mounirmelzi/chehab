@@ -24,6 +24,7 @@
 using std::queue;
 using std::string;
 using std::vector;
+
 namespace fheco
 {
 class Compiler
@@ -57,25 +58,14 @@ public:
     std::shared_ptr<ir::Func> func, Ruleset ruleset, trs::RewriteHeuristic rewrite_heuristic);
   
   static ir::Term *build_expression(
-  const std::shared_ptr<ir::Func> &func, std::map<string, ir::Term *> map, queue<string> &tokens);
+    const std::shared_ptr<ir::Func> &func, std::map<string, ir::Term *> map, queue<string> &tokens);
   
-  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method, float w_ops, float w_keys);
+  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
 
   static void format_vectorized_code(const std::shared_ptr<ir::Func> &func, bool final_expression_reached);
 
-  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method, float w_ops, float w_keys);
+  static void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
   
-  // 3-argument public overloads for legacy benchmarks
-  static inline void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int window, int optimization_method)
-  {
-    gen_vectorized_code(func, window, optimization_method, 1.0f, 0.0f);
-  }
-
-  static inline void gen_vectorized_code(const std::shared_ptr<ir::Func> &func, int optimization_method)
-  {
-    gen_vectorized_code(func, optimization_method, 1.0f, 0.0f);
-  }
-
   static void gen_he_code(
     const std::shared_ptr<ir::Func> &func, std::ostream &header_os, std::string_view header_name,
     std::ostream &source_os, std::size_t rotation_keys_threshold = std::numeric_limits<std::size_t>::max(),
@@ -86,6 +76,11 @@ public:
     const std::shared_ptr<ir::Func> &func, std::ostream &go_os,
     std::size_t rotation_keys_threshold = std::numeric_limits<std::size_t>::max(),
     bool insert_rescale = true);
+
+  // Generate HEonGPU (CUDA) code for BFV or CKKS
+  static void gen_heongpu_code(
+    const std::shared_ptr<ir::Func> &func, std::ostream &cu_os, int scheme,
+    std::size_t rotation_keys_threshold = std::numeric_limits<std::size_t>::max());
 
   static inline const std::shared_ptr<ir::Func> &active_func()
   {
@@ -98,9 +93,9 @@ public:
 
   static void call_egraph_vectorizer(int vector_width, int rewrite_rule_family_index);
   
-  static void call_rl_vectorizer(int vector_width, float w_ops, float w_keys);
+  static void call_rl_vectorizer(int vector_width, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
 
-  static void call_vectorizer(int vector_width, int optimization_method, float w_ops, float w_keys);
+  static void call_vectorizer(int vector_width, int optimization_method, float w_ops = -1.0f, float w_keys = -1.0f, const std::string& framework = "");
 
   static void call_script();
 
@@ -109,33 +104,21 @@ public:
   static void delete_func(const std::string &name);
 
   static inline bool cse_enabled() { return cse_enabled_; }
-
   static inline bool order_operands_enabled() { return order_operands_enabled_; }
-
   static inline bool const_folding_enabled() { return const_folding_enabled_; }
-
   static inline bool scalar_vector_shape_enabled() { return scalar_vector_shape_; }
 
   static inline void enable_cse() { cse_enabled_ = true; }
-
   static inline void disable_cse() { cse_enabled_ = false; }
-
   static inline void enable_order_operands() { order_operands_enabled_ = true; }
-
   static inline void disable_order_operands() { order_operands_enabled_ = false; }
-
   static inline void enable_const_folding() { const_folding_enabled_ = true; }
-
   static inline void disable_const_folding() { const_folding_enabled_ = false; }
-
   static inline void enable_scalar_vector_shape() { scalar_vector_shape_ = true; }
-
   static inline void disable_scalar_vector_shape() { scalar_vector_shape_ = false; }
 
   static inline void enable_auto_enc_params_selection() { automatic_enc_params_enabled_ = true; }
-
   static inline void disable_auto_enc_params_selection() { automatic_enc_params_enabled_ = false; }
-
   static inline bool auto_enc_params_selection_enabled() { return automatic_enc_params_enabled_; }
 
 private:
@@ -144,17 +127,11 @@ private:
   static const std::shared_ptr<ir::Func> &add_func(std::shared_ptr<ir::Func> func);
 
   static FuncsTable funcs_table_;
-
   static FuncsTable::const_iterator active_func_it_;
-
   static bool cse_enabled_;
-
   static bool order_operands_enabled_;
-
   static bool const_folding_enabled_;
-
   static bool scalar_vector_shape_;
-
   static bool automatic_enc_params_enabled_;
 };
 

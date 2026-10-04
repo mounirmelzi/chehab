@@ -67,33 +67,33 @@ run_test() {
 }
 
 # ─── 6-budget models (top 2 methods) ──────────────────────────
-run_test 14270905 "v3_mb_6b"         margin_barrier "180,200,220,240,300,9000000" \
+run_test 14270905 "v3_mb_6b"         margin_barrier "180,200,220,240,300,9000" \
     "best_model_model_14270905_margin_barrier"
 
-run_test 14270906 "v3_nmask_6b"      noise_masking  "180,200,220,240,300,9000000" \
+run_test 14270906 "v3_nmask_6b"      noise_masking  "180,200,220,240,300,9000" \
     "best_model_model_14270906_noise_masking"
 
 # ─── 3-budget models ──────────────────────────────────────────
-run_test 14270907 "v3_mb_3b"         margin_barrier "200,300,9000000" \
+run_test 14270907 "v3_mb_3b"         margin_barrier "200,300,9000" \
     "best_model_model_14270907_margin_barrier"
 
-run_test 14270909 "v3_nmask_3b"      noise_masking  "200,300,9000000" \
+run_test 14270909 "v3_nmask_3b"      noise_masking  "200,300,9000" \
     "best_model_model_14270909_noise_masking"
 
-run_test 14270912 "v3_nmask_cur_3b"  noise_masking  "200,300,9000000" \
+run_test 14270912 "v3_nmask_cur_3b"  noise_masking  "200,300,9000" \
     "best_model_model_14270912_noise_masking"
 
-run_test 14270914 "v3_mb_film_3b"    margin_barrier "200,300,9000000" \
+run_test 14270914 "v3_mb_film_3b"    margin_barrier "200,300,9000" \
     "best_model_model_14270914_margin_barrier"
 
 # ─── 5-budget models ──────────────────────────────────────────
-run_test 14270908 "v3_mb_5b"         margin_barrier "180,200,220,240,9000000" \
+run_test 14270908 "v3_mb_5b"         margin_barrier "180,200,220,240,9000" \
     "best_model_model_14270908_margin_barrier"
 
-run_test 14270911 "v3_nmask_5b"      noise_masking  "180,200,220,240,9000000" \
+run_test 14270911 "v3_nmask_5b"      noise_masking  "180,200,220,240,9000" \
     "best_model_model_14270911_noise_masking"
 
-run_test 14270915 "v3_mb_film_5b"    margin_barrier "180,200,220,240,9000000" \
+run_test 14270915 "v3_mb_film_5b"    margin_barrier "180,200,220,240,9000" \
     "best_model_model_14270915_margin_barrier"
 
 

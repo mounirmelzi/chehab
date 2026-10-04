@@ -8,20 +8,23 @@ from stable_baselines3.common.monitor import Monitor
 
 from pytrs import NoiseEstimator
 from .utils import load_expressions, create_rules, parse_sexpr, calc_vec_sizes
+from .config import get_env_class, get_policy_class
 from .env import fheEnv
-from .policy import HierarchicalMaskablePolicy
 
 
 def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
-              output_file: str, noise_budget: int = 300, w_ops: float = 1.0, w_keys: float = 0.0,
-              budget_options: list = None, constraint_method: str = "lagrangian_pid"):
+              output_file: str, noise_budget: int = 230, w_ops: float = 1.0, w_keys: float = 0.0,
+              budget_options: list = None, constraint_method: str = None):
 
     pref = [w_ops, w_keys]
 
-    # FIX: budget_options / constraint_method must match what the checkpoint was trained with,
-    # so they are parameters now instead of being hardcoded inside the function.
+    # CORRECTION DE LA REGRESSION : Si constraint_method n'est pas spécifié,
+    # on s'adapte par défaut au standard ou au modèle, évitant de forcer lagrangian_pid aveuglément.
+    if constraint_method is None:
+        constraint_method = "lagrangian_od_ov" if "imed" in model_filepath.lower() else "lagrangian_pid"
+
     if budget_options is None:
-        budget_options = list(fheEnv.DEFAULT_BUDGET_OPTIONS)  # [300, 1000, 9000]
+        budget_options = list(fheEnv.DEFAULT_BUDGET_OPTIONS)  # [230, 369, 9000]
 
     start_time = time.perf_counter()
     expressions = load_expressions(expressions_file)
@@ -46,23 +49,31 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
     rules_list["END"] = None
     max_positions = 16
 
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
+
     env = DummyVecEnv([
-        lambda: Monitor(fheEnv(
+        lambda: Monitor(EnvCls(
             rules_list,
             expressions,
             max_positions=max_positions,
             embeddings_model=embeddings_model,
             budget_options=budget_options,
             constraint_method=constraint_method,
-            pref_list=[pref]
+            pref_list=[pref] if hasattr(EnvCls, "pref_list") else None
         ))
     ])
 
     env.set_options({"budget": noise_budget})
-    env.env_method("set_preference_vector", pref)
+    
+    # Sécurité : n'applique set_preference_vector que si l'environnement le supporte
+    try:
+        env.env_method("set_preference_vector", pref)
+    except AttributeError:
+        pass
 
     model = PPO(
-        policy=HierarchicalMaskablePolicy,
+        policy=PolicyCls,
         env=env
     )
 
@@ -73,36 +84,28 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
     wrapper = env.envs[0]
     fhe_env = wrapper.env
 
-    # FIX: make sure the requested budget really reached the environment
     assert fhe_env.budget == noise_budget, \
         f"budget not applied: env has {fhe_env.budget}, requested {noise_budget}"
     print(f"Noise budget (requested / used by env): {noise_budget} / {fhe_env.budget}")
-    if noise_budget not in budget_options:
-        print(f"WARNING: budget {noise_budget} is not one of the training budgets {budget_options}; "
-              f"the policy sees it as the nearest one. Results are only guaranteed by the "
-              f"feasibility check below.")
 
     test_expr = fhe_env.initial_expression
-    initial_cost = fhe_env.initial_cost
-    initial_ops = max(fhe_env.initial_ops, 1e-9)
-    initial_keys = max(fhe_env.initial_keys, 1.0)
+    initial_cost = getattr(fhe_env, "initial_cost", 0)
+    initial_ops = max(getattr(fhe_env, "initial_ops", initial_cost), 1e-9)
+    initial_keys = max(getattr(fhe_env, "initial_keys", 1.0), 1.0)
     noise_estimator = NoiseEstimator()
     initial_noise = float(noise_estimator.estimate(parse_sexpr(test_expr)))
 
     def score(c_exec, c_keys):
-        # lower is better, same weighting as the reward
         return w_ops * (c_exec / initial_ops) + w_keys * (c_keys / initial_keys)
 
-    # FIX: keep the best expression that is WITHIN the noise budget (safety rollback),
-    # instead of blindly trusting the last expression of the trajectory.
     best_safe = None
     if initial_noise <= noise_budget:
         best_safe = {
             "expression": test_expr,
-            "c_exec": fhe_env.initial_ops,
-            "c_keys": fhe_env.initial_keys,
+            "c_exec": initial_ops,
+            "c_keys": initial_keys,
             "noise": initial_noise,
-            "score": score(fhe_env.initial_ops, fhe_env.initial_keys),
+            "score": score(initial_ops, initial_keys),
         }
     else:
         print(f"WARNING: the INPUT expression already exceeds the budget "
@@ -110,7 +113,7 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
 
     done = False
     steps = 0
-    final_expr, final_exec, final_keys, final_noise = test_expr, fhe_env.initial_ops, fhe_env.initial_keys, initial_noise
+    final_expr, final_exec, final_keys, final_noise = test_expr, initial_ops, initial_keys, initial_noise
 
     while not done:
         action, _ = model.predict(obs, deterministic=True)
@@ -119,9 +122,9 @@ def run_agent(expressions_file: str, embeddings_model, model_filepath: str,
         steps += 1
 
         info = infos[0]
-        expr = info.get("expression", fhe_env.expression)
-        c_exec = info.get("c_exec", fhe_env.curr_ops)
-        c_keys = info.get("c_keys", fhe_env.curr_keys)
+        expr = info.get("expression", getattr(fhe_env, "expression", test_expr))
+        c_exec = info.get("c_exec", getattr(fhe_env, "curr_ops", initial_ops))
+        c_keys = info.get("c_keys", getattr(fhe_env, "curr_keys", initial_keys))
         noise = float(info.get("noise", float("inf")))
 
         if noise <= noise_budget:

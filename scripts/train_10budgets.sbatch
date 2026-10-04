@@ -29,11 +29,11 @@ export PYTHONPATH="$PROJ_ROOT/RL:$PROJ_ROOT/RL/pytrs:${PYTHONPATH:-}"
 # Create logs directory if it doesn't exist
 mkdir -p "$PROJ_ROOT/logs"
 
-# 10 Budgets Training: [240, 300, 400, 500, 600, 700, 800, 900, 1000, 9000000]
+# 10 Budgets Training: [240, 300, 400, 500, 600, 700, 800, 900, 1000, 9000]
 # Total timesteps: 5,000,000
 # Environments: 8
 # Denom factor: 2 (more frequent lambda updates)
-BUDGETS="240,300,400,500,600,700,800,900,1000,9000000"
+BUDGETS="240,300,400,500,600,700,800,900,1000,9000"
 TIMESTEPS=5000000
 NUM_ENVS=8
 DENOM_FACTOR=2

@@ -35,7 +35,7 @@ mkdir -p "$PROJ_ROOT/logs"
 # Envs:       12  |  Cores: 16  |  Denom: 1
 # ═══════════════════════════════════════════════════════════════
 METHOD="margin_barrier"
-BUDGETS="240,300,400,500,600,700,800,900,1000,9000000"
+BUDGETS="240,300,400,500,600,700,800,900,1000,9000"
 TIMESTEPS=5000000
 NUM_ENVS=12
 DENOM_FACTOR=1

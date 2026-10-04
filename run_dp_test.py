@@ -17,7 +17,7 @@ benchmark_folders = ["dot_product"]
 # FIX: Added preference configurations to force the agent to care about key reduction
 pref_list = [[0.8, 0.2]]
 
-budget_list = [300, 1000, 9000]
+budget_list = [230, 369, 9000]
 
 depths = [5, 10]
 regimes = ["50-50", "100-50", "100-100"]

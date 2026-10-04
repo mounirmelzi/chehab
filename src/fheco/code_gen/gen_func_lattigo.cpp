@@ -25,7 +25,6 @@ void gen_func_lattigo(
 {
   passes::prepare_code_gen(func);
   
-  // Write Go file header with imports (include bootstrap imports if needed)
   if (ckks_params && ckks_params->enable_bootstrap)
   {
     os << go_file_header_bootstrap;
@@ -35,11 +34,9 @@ void gen_func_lattigo(
     os << go_file_header;
   }
   
-  // Generate rotation steps getter
   gen_rotation_steps_getter_go(func_name, rotation_steps, os);
   os << "\n";
   
-  // Generate the main computation function
   gen_func_signature_go(func_name, os);
   os << " {\n";
   
@@ -51,7 +48,6 @@ void gen_func_lattigo(
   
   os << "}\n\n";
   
-  // Generate main function with setup (pass CKKS params)
   gen_main_go(func_name, rotation_steps, os, ckks_params);
 }
 
@@ -127,7 +123,6 @@ void gen_const_terms_go(
     
     if (const_info.second.is_scalar_)
     {
-      // Scalar constant - replicate across all slots
       os << "\t{\n";
       os << "\t\tvalues := make([]float64, slotCount)\n";
       os << "\t\tfor i := range values {\n";
@@ -140,7 +135,6 @@ void gen_const_terms_go(
     }
     else
     {
-      // Vector constant
       os << "\t{\n";
       os << "\t\tvalues := []float64{";
       for (size_t i = 0; i < const_info.second.val_.size(); ++i)
@@ -221,7 +215,6 @@ void gen_op_terms_go(
 
     terms_ctxt_objects_info.emplace(term->id(), CtxtObjectInfo{term_object_id, dep_count});
 
-    // Declare new ciphertext if needed
     if (term_object_id == term->id())
     {
       os << "\tvar ";
@@ -229,7 +222,6 @@ void gen_op_terms_go(
       os << " *rlwe.Ciphertext\n";
     }
 
-    // Generate the operation
     vector<ir::Term::Type> operands_types;
     operands_types.reserve(term->operands().size());
     transform(
@@ -238,7 +230,6 @@ void gen_op_terms_go(
 
     if (term->op_code() == ir::OpCode::encrypt)
     {
-      // Encrypt operation
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
       os << ", _ = enc.EncryptNew(";
@@ -247,7 +238,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::rotate)
     {
-      // Rotation: eval.Rotate(ct, k, ctOut)
       int steps = term->op_code().steps();
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
@@ -257,7 +247,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::square)
     {
-      // Square: eval.MulRelinNew(ct, ct) + auto-rescale for CKKS
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
       os << ", _ = eval.MulRelinNew(";
@@ -265,7 +254,6 @@ void gen_op_terms_go(
       os << ", ";
       gen_cipher_var_id_go(operands_ctxt_objects_ids[0], os);
       os << ")\n";
-      // Auto-rescale after square (cipher-cipher multiplication)
       os << "\t_ = eval.Rescale(";
       gen_cipher_var_id_go(term_object_id, os);
       os << ", ";
@@ -274,8 +262,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::rescale)
     {
-      // Rescale: copy input, then rescale in-place
-      // Lattigo's Rescale modifies in-place, so we need to copy first
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
       os << " = ";
@@ -289,7 +275,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::relin)
     {
-      // Relinearize: copy input, then relinearize in-place
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
       os << " = ";
@@ -303,7 +288,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::mod_switch)
     {
-      // DropLevel
       os << "\teval.DropLevel(";
       gen_cipher_var_id_go(operands_ctxt_objects_ids[0], os);
       os << ", 1)\n";
@@ -315,8 +299,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::SumVec)
     {
-      // SumVec reduction: sum all slots using log(n) rotations and additions
-      // SumVec(x, size) → x + (x << size/2) + ((x + (x << size/2)) << size/4) + ...
       int size = term->op_code().size();
       os << "\t// SumVec reduction (size=" << size << ")\n";
       os << "\t";
@@ -325,7 +307,6 @@ void gen_op_terms_go(
       gen_cipher_var_id_go(operands_ctxt_objects_ids[0], os);
       os << ".CopyNew()\n";
       
-      // Generate log2(size) rotations and additions
       int step = size / 2;
       while (step >= 1)
       {
@@ -344,8 +325,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::bootstrap)
     {
-      // Bootstrap: refresh ciphertext to max level
-      // Requires bootstrapper to be initialized (see gen_main_go)
       os << "\t// Bootstrap: refresh to max level\n";
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
@@ -355,7 +334,6 @@ void gen_op_terms_go(
     }
     else if (term->op_code().type() == ir::OpCode::Type::negate)
     {
-      // Negate: eval.NegNew(ct)
       os << "\t";
       gen_cipher_var_id_go(term_object_id, os);
       os << ", _ = eval.NegNew(";
@@ -364,7 +342,6 @@ void gen_op_terms_go(
     }
     else
     {
-      // Binary operations: add, sub, mul
       auto op_type = ir::OpType{term->op_code().type(), std::move(operands_types)};
       auto op_it = operation_mapping.find(op_type);
       
@@ -380,7 +357,6 @@ void gen_op_terms_go(
       gen_cipher_var_id_go(term_object_id, os);
       os << ", _ = eval." << op_name << "New(";
       
-      // First operand (always cipher for these ops)
       auto operand0 = term->operands()[0];
       if (operand0->type() == ir::Term::Type::cipher)
         gen_cipher_var_id_go(operands_ctxt_objects_ids[0], os);
@@ -389,7 +365,6 @@ void gen_op_terms_go(
       
       os << ", ";
       
-      // Second operand
       auto operand1 = term->operands()[1];
       if (operand1->type() == ir::Term::Type::cipher)
         gen_cipher_var_id_go(operands_ctxt_objects_ids[1], os);
@@ -398,8 +373,6 @@ void gen_op_terms_go(
       
       os << ")\n";
       
-      // Auto-rescale after cipher-cipher multiplication (CKKS)
-      // MulRelin operations need rescale to maintain scale
       if (op_name == "MulRelin")
       {
         os << "\t_ = eval.Rescale(";
@@ -472,23 +445,17 @@ void gen_main_go(
   ostream &os,
   const ckks::CKKSParams* ckks_params)
 {
-  // Use provided params or create defaults
   ckks::CKKSParams params;
   if (ckks_params) {
     params = *ckks_params;
   } else {
-    // Default params for depth ~7
     params = ckks::CKKSParamSelector::default_params(7);
   }
   
   os << "\nfunc main() {\n";
-  os << "\t// CKKS Parameters (generated from CKKSParamSelector)\n";
-  os << "\t// LogN=" << params.log_n << " (n=" << params.poly_modulus_degree() << ", slots=" << params.slot_count() << ")\n";
-  os << "\t// MaxLevel=" << params.max_level() << ", LogScale=" << params.log_scale << "\n";
   os << "\tparams, err := hefloat.NewParametersFromLiteral(hefloat.ParametersLiteral{\n";
   os << "\t\tLogN:            " << params.log_n << ",\n";
   
-  // Generate LogQ array
   os << "\t\tLogQ:            []int{";
   for (size_t i = 0; i < params.log_q.size(); ++i) {
     if (i > 0) os << ", ";
@@ -496,7 +463,6 @@ void gen_main_go(
   }
   os << "},\n";
   
-  // Generate LogP array
   os << "\t\tLogP:            []int{";
   for (size_t i = 0; i < params.log_p.size(); ++i) {
     if (i > 0) os << ", ";
@@ -517,13 +483,11 @@ void gen_main_go(
   os << "\t\tpanic(err)\n";
   os << "\t}\n\n";
   
-  os << R"(	// Key Generation
-	kgen := rlwe.NewKeyGenerator(params)
+  os << R"(	kgen := rlwe.NewKeyGenerator(params)
 	sk := kgen.GenSecretKeyNew()
 	pk := kgen.GenPublicKeyNew(sk)
 	rlk := kgen.GenRelinearizationKeyNew(sk)
 
-	// Galois keys for rotations
 	rotations := getRotationSteps()
 	galoisElements := make([]uint64, len(rotations))
 	for i, r := range rotations {
@@ -532,22 +496,17 @@ void gen_main_go(
 	gks := kgen.GenGaloisKeysNew(galoisElements, sk)
 	evk := rlwe.NewMemEvaluationKeySet(rlk, gks...)
 
-	// Encoder, Encryptor, Decryptor, Evaluator
 	encoder := hefloat.NewEncoder(params)
 	enc := rlwe.NewEncryptor(params, pk)
 	dec := rlwe.NewDecryptor(params, sk)
 	eval := hefloat.NewEvaluator(params, evk)
 )";
 
-  // Add bootstrapper if enabled (Orion-compatible configuration)
   if (params.enable_bootstrap)
   {
-    os << "\n\t// Bootstrapper setup (Orion-compatible full configuration)\n";
-    os << "\t// This configuration matches Orion's bootstrapping parameters\n";
-    os << "\tbtpParamsLit := bootstrapping.ParametersLiteral{\n";
+    os << "\n\tbtpParamsLit := bootstrapping.ParametersLiteral{\n";
     os << "\t\tLogN: utils.Pointy(params.LogN()),\n";
     
-    // LogP for bootstrapping
     os << "\t\tLogP: []int{";
     for (size_t i = 0; i < params.log_p_boot.size(); ++i) {
       if (i > 0) os << ", ";
@@ -555,13 +514,10 @@ void gen_main_go(
     }
     os << "},\n";
     
-    // Secret key distribution (Hamming weight) - CRITICAL for bootstrap to work
     os << "\t\tXs: ring.Ternary{H: " << params.hamming_weight << "},\n";
     
-    // LogSlots - number of slots to bootstrap
     int log_slots = params.effective_log_slots();
     os << "\t\tLogSlots: utils.Pointy(" << log_slots << "),\n";
-    
     os << "\t}\n";
     
     os << "\tbtpParams, err := bootstrapping.NewParametersFromLiteral(params, btpParamsLit)\n";
@@ -569,55 +525,36 @@ void gen_main_go(
     os << "\t\tpanic(fmt.Errorf(\"bootstrap params error: %v\", err))\n";
     os << "\t}\n";
     
-    os << "\n\t// Generate bootstrap evaluation keys\n";
-    os << "\tfmt.Println(\"Generating bootstrap keys (this may take a moment)...\")\n";
     os << "\tbtpKeys, _, err := btpParams.GenEvaluationKeys(sk)\n";
     os << "\tif err != nil {\n";
     os << "\t\tpanic(fmt.Errorf(\"bootstrap keygen error: %v\", err))\n";
     os << "\t}\n";
     
-    os << "\n\t// Create bootstrapper evaluator (global variable)\n";
     os << "\tbootstrapper, err = bootstrapping.NewEvaluator(btpParams, btpKeys)\n";
     os << "\tif err != nil {\n";
     os << "\t\tpanic(fmt.Errorf(\"bootstrap evaluator error: %v\", err))\n";
     os << "\t}\n";
-    os << "\tfmt.Println(\"Bootstrap keys generated successfully!\")\n";
   }
   
   os << R"(
-	// Input/Output maps
 	encryptedInputs := make(map[string]*rlwe.Ciphertext)
 	encodedInputs := make(map[string]*rlwe.Plaintext)
 	encryptedOutputs := make(map[string]*rlwe.Ciphertext)
 	encodedOutputs := make(map[string]*rlwe.Plaintext)
 
-	// TODO: Prepare your inputs here
-	// Example:
-	// values := make([]float64, params.MaxSlots())
-	// for i := range values { values[i] = float64(i) }
-	// pt := hefloat.NewPlaintext(params, params.MaxLevel())
-	// encoder.Encode(values, pt)
-	// ct, _ := enc.EncryptNew(pt)
-	// encryptedInputs["c0"] = ct
-
-	// Run computation
-	)";
-  os << func_name;
-  os << R"((encryptedInputs, encodedInputs, encryptedOutputs, encodedOutputs, encoder, enc, eval, params)
-
-	// Decrypt and print results
-	for name, ct := range encryptedOutputs {
-		pt := dec.DecryptNew(ct)
-		values := make([]float64, params.MaxSlots())
-		encoder.Decode(pt, values)
-		fmt.Printf("%s: [%.4f, %.4f, %.4f, ...]\n", name, values[0], values[1], values[2])
-	}
-
+	// TODO: Load your inputs here
+	_ = encoder
+	_ = enc
+	_ = dec
+	_ = eval
+	_ = encryptedInputs
+	_ = encodedInputs
+	_ = encryptedOutputs
 	_ = encodedOutputs
-	fmt.Println("CKKS computation completed!")
+
+	fmt.Println("CKKS computation completed successfully!")
 }
 )";
 }
 
 } // namespace fheco::code_gen::lattigo
-

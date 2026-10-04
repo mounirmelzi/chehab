@@ -1,0 +1,6 @@
+w_ops,metric,n,geomean_ratio (mine/imed),improvement %,wins,ties,losses,win_rate %,imed_mean,mine_mean
+0.0,weighted_cost,23,1.0,0.0,0,23,0,0.0,0.0,0.0
+0.2,weighted_cost,23,1.4446,-44.5,7,9,7,30.4,1067.7565,1994.658
+0.5,weighted_cost,23,3.376,-237.6,1,11,11,4.3,809.1522,4614.2319
+0.8,weighted_cost,23,2.1638,-116.4,7,5,11,30.4,941.113,3598.7449
+1.0,weighted_cost,23,1.7175,-71.7,8,2,13,34.8,467.6087,1558.7681

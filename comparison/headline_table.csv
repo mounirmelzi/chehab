@@ -1,0 +1,10 @@
+family,n_points,final_keys_cost | geomean_ratio,final_ops_cost | geomean_ratio,weighted_cost | geomean_ratio,final_keys_cost | win_rate,final_ops_cost | win_rate,weighted_cost | win_rate
+box_blur,5,1.0,10.5663,10.5663,20.0,20.0,20.0
+dot_product,20,0.6004,1.4068,1.4065,40.0,20.0,20.0
+l2_distance,20,0.5456,3.5119,3.51,60.0,15.0,15.0
+lin_reg,20,1.0,0.8265,0.8263,30.0,30.0,30.0
+matrix_mul,5,1.0,2.7768,2.7768,20.0,0.0,0.0
+max,15,0.7402,1.2243,1.2242,46.7,20.0,20.0
+poly_reg,20,1.0,0.3808,0.8821,25.0,45.0,25.0
+roberts_cross,5,1.0,32.2346,32.2257,40.0,0.0,0.0
+sort,5,0.7186,2.1104,2.1103,40.0,20.0,20.0

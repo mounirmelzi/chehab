@@ -68,42 +68,42 @@ run_test() {
 
 # ─── Group A: Margin Barrier [230,233,236,369,9M] ─────────────
 run_test 14385919 "v4_mb_A" \
-    margin_barrier "230,233,236,369,9000000" \
+    margin_barrier "230,233,236,369,9000" \
     "best_model_model_14385919_margin_barrier"
 
 # ─── Group B: Margin Barrier [230,236,369,372,9M] ─────────────
 run_test 14385920 "v4_mb_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "best_model_model_14385920_margin_barrier"
 
 # ─── Group A: MB+FiLM [230,233,236,369,9M] ────────────────────
 run_test 14385921 "v4_mb_film_A" \
-    margin_barrier "230,233,236,369,9000000" \
+    margin_barrier "230,233,236,369,9000" \
     "best_model_model_14385921_margin_barrier"
 
 # ─── Group B: MB+FiLM [230,236,369,372,9M] ────────────────────
 run_test 14385922 "v4_mb_film_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "best_model_model_14385922_margin_barrier"
 
 # ─── Group A: Noise Masking [230,233,236,369,9M] ──────────────
 run_test 14385923 "v4_nmask_A" \
-    noise_masking "230,233,236,369,9000000" \
+    noise_masking "230,233,236,369,9000" \
     "best_model_model_14385923_noise_masking"
 
 # ─── Group B: Noise Masking [230,236,369,372,9M] ──────────────
 run_test 14385924 "v4_nmask_B" \
-    noise_masking "230,236,369,372,9000000" \
+    noise_masking "230,236,369,372,9000" \
     "best_model_model_14385924_noise_masking"
 
 # ─── Group C: MB+FiLM [172,230,236,369,9M] ────────────────────
 run_test 14385925 "v4_mb_film_C" \
-    margin_barrier "172,230,236,369,9000000" \
+    margin_barrier "172,230,369,9000" \
     "best_model_model_14385925_margin_barrier"
 
 # ─── Group C: Noise Masking [172,233,369,372,9M] ──────────────
 run_test 14385926 "v4_nmask_C" \
-    noise_masking "172,233,369,372,9000000" \
+    noise_masking "172,233,369,372,9000" \
     "best_model_model_14385926_noise_masking"
 
 

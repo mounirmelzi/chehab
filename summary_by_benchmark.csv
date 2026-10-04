@@ -1,0 +1,140 @@
+family,metric,n_rows,imed_avg,mine_avg,diff (mine-imed),diff %
+box_blur,final_ops_cost,5,4225.4,4961.8,736.4,17.4
+box_blur,final_keys_cost,5,0.2,0.0,-0.2,-100.0
+box_blur,add,5,8.4,9.6,1.2,14.3
+box_blur,sub,5,0.0,0.0,0.0,
+box_blur,multiply_plain,5,0.0,0.0,0.0,
+box_blur,rotate_rows,5,0.2,0.0,-0.2,-100.0
+box_blur,negate,5,0.0,0.0,0.0,
+box_blur,multiply,5,0.0,0.0,0.0,
+box_blur,Depth,5,4.8,4.4,-0.4,-8.3
+box_blur,Multiplicative Depth,5,0.0,0.0,0.0,
+box_blur,rotation_keys_size (MB),4,4.6433,0.0628,-4.5805,-98.6
+box_blur,Remaining_noise_budget,4,358.5,144.25,-214.25,-59.8
+box_blur,compile_time (s),5,11.2778,6.6,-4.6778,-41.5
+box_blur,circuit_execution_time (s),4,0.2102,0.047,-0.1632,-77.6
+box_blur,galois_keys_generation_time (s),4,0.0285,0.0,-0.0285,-100.0
+box_blur,total_execution_time (s),4,0.2388,0.047,-0.1918,-80.3
+dot_product,final_ops_cost,20,3347.35,4255.95,908.6,27.1
+dot_product,final_keys_cost,20,1.4,0.65,-0.75,-53.6
+dot_product,add,20,9.45,11.2,1.75,18.5
+dot_product,sub,20,0.0,0.0,0.0,
+dot_product,multiply_plain,20,0.0,0.0,0.0,
+dot_product,rotate_rows,20,1.5,0.65,-0.85,-56.7
+dot_product,negate,20,0.0,0.0,0.0,
+dot_product,multiply,20,8.8,10.4,1.6,18.2
+dot_product,Depth,20,7.05,5.5,-1.55,-22.0
+dot_product,Multiplicative Depth,20,1.0,1.0,0.0,0.0
+dot_product,rotation_keys_size (MB),16,31.7501,2.1023,-29.6478,-93.4
+dot_product,Remaining_noise_budget,16,325.9375,112.5,-213.4375,-65.5
+dot_product,compile_time (s),20,14.483,14.2555,-0.2276,-1.6
+dot_product,circuit_execution_time (s),16,1.4468,0.3711,-1.0756,-74.3
+dot_product,galois_keys_generation_time (s),16,0.1983,0.012,-0.1863,-93.9
+dot_product,total_execution_time (s),16,1.6451,0.383,-1.2621,-76.7
+l2_distance,final_ops_cost,20,6383.6,16724.75,10341.15,162.0
+l2_distance,final_keys_cost,20,1.35,0.3,-1.05,-77.8
+l2_distance,add,20,9.6,12.5,2.9,30.2
+l2_distance,sub,20,9.05,13.2,4.15,45.9
+l2_distance,multiply_plain,20,0.0,0.0,0.0,
+l2_distance,rotate_rows,20,1.35,0.3,-1.05,-77.8
+l2_distance,negate,20,0.0,0.0,0.0,
+l2_distance,multiply,20,9.05,13.2,4.15,45.9
+l2_distance,Depth,20,7.9,5.8,-2.1,-26.6
+l2_distance,Multiplicative Depth,20,1.0,1.0,0.0,0.0
+l2_distance,rotation_keys_size (MB),16,30.6206,1.0041,-29.6165,-96.7
+l2_distance,Remaining_noise_budget,16,325.25,111.5,-213.75,-65.7
+l2_distance,compile_time (s),20,28.5394,17.9282,-10.6113,-37.2
+l2_distance,circuit_execution_time (s),16,1.5179,0.4718,-1.0462,-68.9
+l2_distance,galois_keys_generation_time (s),16,0.1898,0.0054,-0.1844,-97.1
+l2_distance,total_execution_time (s),16,1.7077,0.4771,-1.2306,-72.1
+lin_reg,final_ops_cost,20,2367.35,2337.6,-29.75,-1.3
+lin_reg,final_keys_cost,20,0.45,0.0,-0.45,-100.0
+lin_reg,add,20,2.0,2.0,0.0,0.0
+lin_reg,sub,20,0.0,0.0,0.0,
+lin_reg,multiply_plain,20,0.7,1.0,0.3,42.9
+lin_reg,rotate_rows,20,0.45,0.0,-0.45,-100.0
+lin_reg,negate,20,0.0,0.0,0.0,
+lin_reg,multiply,20,1.0,1.0,0.0,0.0
+lin_reg,Depth,20,3.45,3.0,-0.45,-13.0
+lin_reg,Multiplicative Depth,20,1.0,1.0,0.0,0.0
+lin_reg,rotation_keys_size (MB),16,10.2906,0.0628,-10.2277,-99.4
+lin_reg,Remaining_noise_budget,16,346.9375,143.9375,-203.0,-58.5
+lin_reg,compile_time (s),20,11.7918,6.2187,-5.573,-47.3
+lin_reg,circuit_execution_time (s),16,0.1337,0.0106,-0.1231,-92.1
+lin_reg,galois_keys_generation_time (s),16,0.0644,0.0,-0.0644,-100.0
+lin_reg,total_execution_time (s),16,0.1982,0.0106,-0.1877,-94.7
+matrix_mul,final_ops_cost,5,5901.6,7488.4,1586.8,26.9
+matrix_mul,final_keys_cost,5,0.2,0.0,-0.2,-100.0
+matrix_mul,add,5,2.8,3.0,0.2,7.1
+matrix_mul,sub,5,0.0,0.0,0.0,
+matrix_mul,multiply_plain,5,0.0,0.0,0.0,
+matrix_mul,rotate_rows,5,0.2,0.0,-0.2,-100.0
+matrix_mul,negate,5,0.0,0.0,0.0,
+matrix_mul,multiply,5,3.6,4.0,0.4,11.1
+matrix_mul,Depth,5,3.2,3.0,-0.2,-6.3
+matrix_mul,Multiplicative Depth,5,1.0,1.0,0.0,0.0
+matrix_mul,rotation_keys_size (MB),4,4.6433,0.0628,-4.5805,-98.6
+matrix_mul,Remaining_noise_budget,4,327.5,113.0,-214.5,-65.5
+matrix_mul,compile_time (s),5,10.75,6.5766,-4.1734,-38.8
+matrix_mul,circuit_execution_time (s),4,0.6738,0.1112,-0.5625,-83.5
+matrix_mul,galois_keys_generation_time (s),4,0.0282,0.0,-0.0282,-100.0
+matrix_mul,total_execution_time (s),4,0.702,0.1112,-0.5908,-84.2
+max,final_ops_cost,15,6229.0667,10148.1333,3919.0667,62.9
+max,final_keys_cost,15,1.6,0.9333,-0.6667,-41.7
+max,add,15,10.4,12.1333,1.7333,16.7
+max,sub,15,0.3333,0.0667,-0.2667,-80.0
+max,multiply_plain,15,0.0,0.0,0.0,
+max,rotate_rows,15,1.4667,0.9333,-0.5333,-36.4
+max,negate,15,4.6,7.2667,2.6667,58.0
+max,multiply,15,9.6667,10.8667,1.2,12.4
+max,Depth,15,8.8,10.6667,1.8667,21.2
+max,Multiplicative Depth,15,2.7333,3.0,0.2667,9.8
+max,rotation_keys_size (MB),11,34.6251,2.8012,-31.8239,-91.9
+max,Remaining_noise_budget,11,264.5455,51.8182,-212.7273,-80.4
+max,compile_time (s),15,33.2901,14.5011,-18.789,-56.4
+max,circuit_execution_time (s),11,1.7284,0.344,-1.3844,-80.1
+max,galois_keys_generation_time (s),11,0.2163,0.0143,-0.202,-93.4
+max,total_execution_time (s),11,1.9446,0.3583,-1.5864,-81.6
+poly_reg,final_ops_cost,20,3956.9,212.0,-3744.9,-94.6
+poly_reg,final_keys_cost,20,0.5,0.0,-0.5,-100.0
+poly_reg,add,20,3.0,3.0,0.0,0.0
+poly_reg,sub,20,0.0,0.0,0.0,
+poly_reg,multiply_plain,20,0.0,0.0,0.0,
+poly_reg,rotate_rows,20,0.5,0.0,-0.5,-100.0
+poly_reg,negate,20,0.0,0.0,0.0,
+poly_reg,multiply,20,2.0,2.0,0.0,0.0
+poly_reg,Depth,20,5.5,5.0,-0.5,-9.1
+poly_reg,Multiplicative Depth,20,2.0,2.0,0.0,0.0
+poly_reg,rotation_keys_size (MB),16,11.42,0.0628,-11.3572,-99.4
+poly_reg,Remaining_noise_budget,16,295.6875,82.1875,-213.5,-72.2
+poly_reg,compile_time (s),20,10.5004,8.5494,-1.951,-18.6
+poly_reg,circuit_execution_time (s),16,0.4204,0.0941,-0.3263,-77.6
+poly_reg,galois_keys_generation_time (s),16,0.0699,0.0,-0.0699,-100.0
+poly_reg,total_execution_time (s),16,0.4902,0.0941,-0.3961,-80.8
+roberts_cross,final_ops_cost,5,6359.4,19585.4,13226.0,208.0
+roberts_cross,final_keys_cost,5,0.4,0.0,-0.4,-100.0
+roberts_cross,add,5,2.8,6.8,4.0,142.9
+roberts_cross,sub,5,1.2,0.0,-1.2,-100.0
+roberts_cross,multiply_plain,5,0.0,0.0,0.0,
+roberts_cross,rotate_rows,5,0.4,0.0,-0.4,-100.0
+roberts_cross,negate,5,2.4,17.6,15.2,633.3
+roberts_cross,multiply,5,1.8,2.2,0.4,22.2
+roberts_cross,Depth,5,4.8,20.0,15.2,316.7
+roberts_cross,Multiplicative Depth,5,1.0,1.0,0.0,0.0
+roberts_cross,rotation_keys_size (MB),4,9.1611,0.0628,-9.0983,-99.3
+roberts_cross,Remaining_noise_budget,4,327.25,113.0,-214.25,-65.5
+roberts_cross,compile_time (s),5,11.9052,18.3988,6.4936,54.5
+roberts_cross,circuit_execution_time (s),4,0.335,0.1278,-0.2072,-61.9
+roberts_cross,galois_keys_generation_time (s),4,0.056,0.0,-0.056,-100.0
+roberts_cross,total_execution_time (s),4,0.391,0.1278,-0.2632,-67.3
+sort,final_ops_cost,5,3804.8,11752.4,7947.6,208.9
+sort,final_keys_cost,5,1.6,0.8,-0.8,-50.0
+sort,add,5,0.0,9.6,9.6,
+sort,sub,5,0.0,0.2,0.2,
+sort,multiply_plain,5,0.0,0.0,0.0,
+sort,rotate_rows,5,0.0,0.8,0.8,
+sort,negate,5,0.0,3.6,3.6,
+sort,multiply,5,0.0,8.8,8.8,
+sort,Depth,5,0.0,9.6,9.6,
+sort,Multiplicative Depth,5,0.0,3.0,3.0,
+sort,compile_time (s),5,0.0,26.2006,26.2006,

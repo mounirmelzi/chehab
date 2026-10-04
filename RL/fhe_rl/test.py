@@ -12,15 +12,15 @@ from stable_baselines3.common.monitor import Monitor
 
 from pytrs import parse_sexpr, NoiseEstimator
 from .utils import load_expressions, load_expressions_named, create_rules
-from .env import fheEnv
-from .policy import HierarchicalMaskablePolicy
+# IMPORTATION DYNAMIQUE AU LIEU DES IMPORTS STATIQUES
+from .config import get_env_class, get_policy_class
 
 
 def _resolve_train_budgets(budget_options):
-    """The one-hot size/order must match the checkpoint's TRAINING budgets. Falling back to
-    the test budgets silently breaks that, so fall back to the env defaults and warn."""
+    """The one-hot size/order must match the checkpoint's TRAINING budgets."""
     if budget_options is None:
-        budget_options = list(fheEnv.DEFAULT_BUDGET_OPTIONS)
+        EnvCls = get_env_class()
+        budget_options = list(EnvCls.DEFAULT_BUDGET_OPTIONS)
         print(f"WARNING: --train_budgets not given; assuming the model was trained on "
               f"{budget_options}. Pass --train_budgets explicitly if that is wrong.")
     return budget_options
@@ -48,9 +48,13 @@ def test_agent(
         test_budgets = [noise_budget]
     budget_options = _resolve_train_budgets(budget_options)
 
+    # RÉSOLUTION DYNAMIQUE DES CLASSES
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
+
     env = DummyVecEnv([
         lambda: Monitor(
-            fheEnv(
+            EnvCls(
                 rules_list,
                 expressions,
                 max_positions=max_positions,
@@ -61,8 +65,7 @@ def test_agent(
         )
     ])
 
-    model = PPO(policy=HierarchicalMaskablePolicy, env=env)
-    # Compatibility hack for loading older models
+    model = PPO(policy=PolicyCls, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
     noise_estimator = NoiseEstimator()
@@ -79,16 +82,18 @@ def test_agent(
         for expr_idx in range(len(expressions)):
             wrapper = env.envs[0]
             fhe_env = wrapper.env
-            fhe_env.current_index = expr_idx  # pin cursor: neutralize DummyVecEnv auto-reset double-advance
-            fhe_env.set_preference_vector([1.0, 0.0])
-            # FIX: DummyVecEnv consumes the options on the first reset() and clears them,
-            # so re-apply the budget before EVERY reset (otherwise expr 2+ get a random budget)
+            fhe_env.current_index = expr_idx
+            
+            # SÉCURITÉ POUR LA RÉTROCOMPATIBILITÉ
+            if hasattr(fhe_env, "set_preference_vector"):
+                fhe_env.set_preference_vector([1.0, 0.0])
+            
             env.set_options({"budget": budget})
             obs = env.reset()
             assert fhe_env.budget == budget, f"budget not applied: {fhe_env.budget} != {budget}"
 
             test_expr = fhe_env.initial_expression
-            initial_exec = fhe_env.initial_ops
+            initial_exec = getattr(fhe_env, "initial_ops", getattr(fhe_env, "initial_cost", 0))
             initial_noise = noise_estimator.estimate(parse_sexpr(test_expr))
 
             done = False
@@ -102,7 +107,7 @@ def test_agent(
 
             terminal = infos[0]
             last_expr = terminal["expression"]
-            last_exec = terminal["c_exec"]
+            last_exec = terminal.get("c_exec", terminal.get("cost", 0))
             final_noise = float(terminal["noise"])
             cost_reduction = ((initial_exec - last_exec) / initial_exec * 100) if initial_exec > 0 else 0
             budget_violated = final_noise > budget
@@ -163,9 +168,13 @@ def test_agent_v2(
         test_budgets = [noise_budget]
     budget_options = _resolve_train_budgets(budget_options)
 
+    # RÉSOLUTION DYNAMIQUE DES CLASSES
+    EnvCls = get_env_class()
+    PolicyCls = get_policy_class()
+
     env = DummyVecEnv([
         lambda: Monitor(
-            fheEnv(
+            EnvCls(
                 rules_list,
                 expressions,
                 max_positions=max_positions,
@@ -176,7 +185,7 @@ def test_agent_v2(
         )
     ])
 
-    model = PPO(policy=HierarchicalMaskablePolicy, env=env)
+    model = PPO(policy=PolicyCls, env=env)
     sys.modules["fhe_rl_new"] = importlib.import_module("fhe_rl")
     model = model.load(model_filepath)
     noise_estimator = NoiseEstimator()
@@ -193,23 +202,28 @@ def test_agent_v2(
 
         for w in W_SWEEP:
             fhe_env = env.envs[0].env
-            fhe_env.set_preference_vector([w, round(1 - w, 1)])
-            print(f"\n  --- Preference pass: w_exec={w}, w_keys={round(1 - w, 1)} ---")
+            
+            # SÉCURITÉ : Ne configurer les préférences que si l'agent est MORL
+            if hasattr(fhe_env, "set_preference_vector"):
+                fhe_env.set_preference_vector([w, round(1 - w, 1)])
+                print(f"\n  --- Preference pass: w_exec={w}, w_keys={round(1 - w, 1)} ---")
+            else:
+                print(f"\n  --- Single-Objective Pass (No preferences) ---")
 
             for expr_idx in range(len(expressions)):
                 t0 = time.perf_counter()
 
                 wrapper = env.envs[0]
                 fhe_env = wrapper.env
-                fhe_env.current_index = expr_idx  # pin cursor: neutralize auto-reset double-advance
+                fhe_env.current_index = expr_idx
                 obs = env.reset()
 
-                w_vec = fhe_env.current_w
-                n_budget = fhe_env.n_budget
+                w_vec = getattr(fhe_env, "current_w", [1.0, 0.0])
+                n_budget = getattr(fhe_env, "n_budget", 5)
 
                 test_expr = fhe_env.initial_expression
-                initial_exec = fhe_env.initial_ops
-                initial_keys = fhe_env.initial_keys
+                initial_exec = getattr(fhe_env, "initial_ops", getattr(fhe_env, "initial_cost", 0))
+                initial_keys = getattr(fhe_env, "initial_keys", 0)
                 initial_noise = float(noise_estimator.estimate(parse_sexpr(test_expr)))
 
                 is_feasible = initial_noise <= budget
@@ -234,13 +248,13 @@ def test_agent_v2(
                     if done:
                         terminal = infos[0]
                         cp_expr = terminal["expression"]
-                        cp_exec = terminal["c_exec"]
-                        cp_keys = terminal["c_keys"]
+                        cp_exec = terminal.get("c_exec", terminal.get("cost", 0))
+                        cp_keys = terminal.get("c_keys", 0)
                         cp_noise = float(terminal["noise"])
                     else:
                         cp_expr = fhe_env.expression
-                        cp_exec = fhe_env.curr_ops
-                        cp_keys = fhe_env.curr_keys
+                        cp_exec = getattr(fhe_env, "curr_ops", getattr(fhe_env, "current_cost", 0))
+                        cp_keys = getattr(fhe_env, "curr_keys", 0)
                         cp_noise = float(noise_estimator.estimate(parse_sexpr(cp_expr)))
 
                     checkpoints.append({
@@ -254,13 +268,12 @@ def test_agent_v2(
                 rl_time_ms = (time.perf_counter() - t0) * 1000
                 agent_final = checkpoints[-1]
 
-                # ── MORL Safety Rollback: Pick best valid checkpoint via scalarized J(e, w) ──
                 valid_checkpoints = [cp for cp in checkpoints if cp["noise"] <= budget]
             
                 if valid_checkpoints:
                     def compute_J(cp):
                         norm_exec = cp["c_exec"] / max(1e-6, initial_exec)
-                        norm_keys = cp["c_keys"] / n_budget
+                        norm_keys = cp["c_keys"] / n_budget if n_budget > 0 else 1
                         return (w_vec[0] * norm_exec) + (w_vec[1] * norm_keys)
 
                     best = min(valid_checkpoints, key=compute_J)
@@ -316,8 +329,11 @@ def test_agent_v2(
                       f"Exec {initial_exec}->{safe_exec} ({safe_cr:+.1f}%), "
                       f"Keys {initial_keys}->{safe_keys}, "
                       f"Noise {initial_noise:.0f}->{safe_noise:.0f}")
+            
+            # Casser la boucle W_SWEEP si l'environnement ne supporte pas le MORL
+            if not hasattr(fhe_env, "set_preference_vector"):
+                break
 
-    # Write results
     excel_results = [{k: v for k, v in r.items() if not k.startswith("_")} for r in all_results]
     df = pd.DataFrame(excel_results)
 
@@ -355,6 +371,12 @@ def test_agent_v2(
                 best_per_expr[name] = r
         with open(save_optimized, "w") as f:
             for name, r in best_per_expr.items():
+                idx = r["Expression #"] - 1
+                
+                # CORRECTION MAJEURE : Filet de sécurité C++ (Inspiré d'Imed)
                 safe_expr = r.get("_safe_expr", "")
+                if not safe_expr:
+                    safe_expr = expressions[idx]
+                    
                 f.write(f"{safe_expr}:{name}\n")
         print(f"RL-optimized expressions saved to: {save_optimized}")

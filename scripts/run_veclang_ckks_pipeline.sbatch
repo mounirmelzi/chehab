@@ -88,7 +88,7 @@ cd "$PROJ_ROOT/RL"
 BEST_AGENT_DIR="best_model_model_14385922_margin_barrier"
 BEST_AGENT="$PROJ_ROOT/RL/eval/${BEST_AGENT_DIR}/best_model.zip"
 METHOD="margin_barrier"
-TRAIN_BUDGETS="230,236,369,372,9000000"
+TRAIN_BUDGETS="230,236,369,372,9000"
 
 if [ ! -f "$BEST_AGENT" ]; then
     echo "WARN: Best agent not found at $BEST_AGENT"
@@ -96,7 +96,7 @@ if [ ! -f "$BEST_AGENT" ]; then
     BEST_AGENT_DIR="best_model_model_14529416_nato_sc"
     BEST_AGENT="$PROJ_ROOT/RL/eval/${BEST_AGENT_DIR}/best_model.zip"
     METHOD="nato_sc"
-    TRAIN_BUDGETS="230,236,369,9000000"
+    TRAIN_BUDGETS="230,369,9000"
 fi
 
 E2E_OUTPUT="$RESULTS_DIR/e2e_rl_optimized.xlsx"

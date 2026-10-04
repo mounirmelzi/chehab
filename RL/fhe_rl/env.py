@@ -4,6 +4,13 @@ from gymnasium import spaces
 from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, expr_to_str
 import torch
 
+from .config import get_tokenizer_type
+
+if get_tokenizer_type() == "bpe":
+    from .TRAE_bpe import get_expression_cls_embedding
+else:
+    from .TRAE import get_expression_cls_embedding
+
 
 RESET   = "\033[0m"
 BOLD    = "\033[1m"
@@ -20,7 +27,7 @@ UNCONSTRAINED_BUDGET_THRESHOLD = 100_000
 
 
 class fheEnv(gym.Env):
-    DEFAULT_BUDGET_OPTIONS = [300, 1000, 9000]
+    DEFAULT_BUDGET_OPTIONS = [230, 369, 9000]
     
     def __init__(self, rules_list, expressions, max_positions=2, embeddings_model=None, 
                  budget_options=None, constraint_method="lagrangian_pid", verbose=True,
@@ -376,8 +383,15 @@ class fheEnv(gym.Env):
     def _embed_expression(self, expr: str) -> np.ndarray:
         if hasattr(self.embeddings_model, "get_embedding"):
             return self.embeddings_model.get_embedding(expr)
-        return None
-
+        
+        expr_tree = parse_sexpr(expr)
+        with torch.no_grad():
+            emb = get_expression_cls_embedding(expr_tree, self.embeddings_model)
+            
+        if emb is None:
+            return None
+        return emb.squeeze(0).cpu().numpy().astype(np.float32)
+    
     def set_noise_budget(self, budget: int | None):
         if budget is None:
             self.budget = None

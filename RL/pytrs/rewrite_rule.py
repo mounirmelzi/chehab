@@ -16,7 +16,7 @@ BINARY_VEC_OPS = {"VecMul", "VecAdd", "VecMinus"}
 
 
 def _simd_lane_count(e: Expr) -> Optional[int]:
-    """Lane count of the SIMD value *e* evaluates to (None if not a vector)."""
+    """Lane count of the SIMD value *e* evaluates to (None if not a vector)[cite: 15]."""
     if isinstance(e, Op):
         if e.op == "Vec":
             return len(e.args)
@@ -28,7 +28,7 @@ def _simd_lane_count(e: Expr) -> Optional[int]:
 class RewriteRule:
     """
     A single rewrite rule: when LHS pattern matches, replace by RHS template.
-    Now supports flexible vectorization and rotation vectorization with binary/unary operations.
+    Supports flexible vectorization, rotation vectorization, and de-rotation[cite: 15, 16].
     """
 
     def __init__(self, name: str, lhs: Expr, rhs: Expr, rule_type: str = "normal"):
@@ -36,28 +36,24 @@ class RewriteRule:
         self.rule_type = rule_type
         
         if rule_type == "vectorize":
-            # Simple uniform vectorization - extract operator names from Var names
             self.scalar_op = lhs.name if isinstance(lhs, Var) else str(lhs)
             self.vector_op = rhs.name if isinstance(rhs, Var) else str(rhs)
             self.lhs = None
             self.rhs = None
         elif rule_type == "vectorize-flexible":
-            # Flexible vectorization - extract operator names from Var names
             scalar_op = lhs.name if isinstance(lhs, Var) else str(lhs)
             self.target_ops = [scalar_op]
             self.vector_op = rhs.name if isinstance(rhs, Var) else str(rhs)
-            self.min_count = 2  # minimum matching operations to vectorize
+            self.min_count = 2
             self.lhs = None
             self.rhs = None
         elif rule_type == "vectorize-rotation":
-            # Uniform rotation vectorization
             self.scalar_op = lhs.name if isinstance(lhs, Var) else str(lhs)
             self.vector_op = rhs.name if isinstance(rhs, Var) else str(rhs)
-            self.max_vector_size = MAX_VECTOR_SIZE  # size limit for resulting vector
+            self.max_vector_size = MAX_VECTOR_SIZE
             self.lhs = None
             self.rhs = None
         elif rule_type == "vectorize-rotation-flexible":
-            # Flexible rotation vectorization
             scalar_op = lhs.name if isinstance(lhs, Var) else str(lhs)
             self.target_ops = [scalar_op]
             self.vector_op = rhs.name if isinstance(rhs, Var) else str(rhs)
@@ -66,7 +62,6 @@ class RewriteRule:
             self.lhs = None
             self.rhs = None
         else:
-            # Regular rule behavior
             self.lhs = Pattern(lhs)
             self.rhs = rhs
             
@@ -74,15 +69,12 @@ class RewriteRule:
         if name not in ["rotation-mul", "rotation-add", "rotation-sub", "rotation-neg"]:
             from .rule_parser import parse_rules_from_text
             self.rotation_rules = parse_rules_from_text("""
-                                                        Rewrite { name: "rotation-mul", searcher: (VecMul x (<< x a)), applier: (VecMul x (<< x a)) }
-                                                        Rewrite { name: "rotation-add", searcher: (VecAdd x (<< x a)), applier: (VecAdd x (<< x a)) }
-                                                        Rewrite { name: "rotation-sub", searcher: (VecMinus x (<< x a)), applier: (VecMinus x (<< x a)) }
-                                                        """)
+                Rewrite { name: "rotation-mul", searcher: (VecMul x (<< x a)), applier: (VecMul x (<< x a)) }
+                Rewrite { name: "rotation-add", searcher: (VecAdd x (<< x a)), applier: (VecAdd x (<< x a)) }
+                Rewrite { name: "rotation-sub", searcher: (VecMinus x (<< x a)), applier: (VecMinus x (<< x a)) }
+            """)
 
     def coverage_progress(self, expr_tree: Expr):
-        """
-        Returns coverage statistics for *this* rule's search pattern.
-        """
         if self.rule_type == "vectorize":
             return VectorizationAnalyzer.vectorize_coverage(expr_tree, self.scalar_op)
         elif self.rule_type == "vectorize-flexible":
@@ -95,10 +87,6 @@ class RewriteRule:
             return VectorizationAnalyzer.analyze_lane_coverages(self.lhs.expr, expr_tree)
 
     def apply(self, expr: Expr) -> Optional[Expr]:
-        """
-        If rule matches *expr* at the top level, return transformed Expr;
-        else None.
-        """
         if self.rule_type == "vectorize":
             return self._apply_vectorize(expr)
         elif self.rule_type == "vectorize-flexible":
@@ -108,7 +96,6 @@ class RewriteRule:
         elif self.rule_type == "vectorize-rotation-flexible":
             return self._apply_flexible_rotation_vectorize(expr)
         else:
-            # Regular rule logic
             subst = self.lhs.match(expr)
             if subst is None:
                 return None
@@ -121,17 +108,7 @@ class RewriteRule:
         parent: Optional[Expr] = None,
         parent_idx: Optional[int] = None,
     ) -> Optional[Expr]:
-        """self.apply() plus the sibling-lane-count precondition.
-
-        Rotation-vectorization rewrites double the lane count of the Vec
-        they fire on.  If that Vec is an operand of a binary SIMD op
-        (VecAdd/VecMinus/VecMul) whose sibling keeps the old lane count,
-        the rewrite breaks the equal-lanes invariant of the parent (the
-        "VecMinus operands must be equal-length vectors" eval crash).
-        Such rewrites are refused (return None).  Siblings that are `<<`
-        rotation nodes are exempt: _apply_via_path rebuilds them in
-        lockstep from the rewritten vector.
-        """
+        """Guard against invalid lane configurations during rotation vectorization[cite: 15]."""
         rewritten = self.apply(target)
         if rewritten is None:
             return None
@@ -148,480 +125,239 @@ class RewriteRule:
         return rewritten
 
     def _apply_vectorize(self, expr: Expr) -> Optional[Expr]:
-        """Apply uniform vectorization - handles both binary and unary operations."""
         if not (isinstance(expr, Op) and expr.op == "Vec"):
             return None
-            
         if len(expr.args) < 2:
             return None
-            
-        # Check if we're dealing with binary or unary operations
         first_lane = expr.args[0]
         if not isinstance(first_lane, Op) or first_lane.op != self.scalar_op:
             return None
-        
         is_unary = len(first_lane.args) == 1
         is_binary = len(first_lane.args) == 2
-        
         if not (is_unary or is_binary):
             return None
-        
         if is_binary:
-            # Binary operations (e.g., subtraction: (- a b))
-            left_operands = []
-            right_operands = []
-            
+            left_ops, right_ops = [], []
             for lane in expr.args:
-                if not (isinstance(lane, Op) and 
-                       lane.op == self.scalar_op and 
-                       len(lane.args) == 2):
+                if not (isinstance(lane, Op) and lane.op == self.scalar_op and len(lane.args) == 2):
                     return None
-                    
-                left_operands.append(lane.args[0])
-                right_operands.append(lane.args[1])
-            
-            left_vec = Op("Vec", left_operands)
-            right_vec = Op("Vec", right_operands)
-            result = Op(self.vector_op, [left_vec, right_vec])
-            
-        else:  # is_unary
-            # Unary operations (e.g., negation: (- a))
+                left_ops.append(lane.args[0])
+                right_ops.append(lane.args[1])
+            result = Op(self.vector_op, [Op("Vec", left_ops), Op("Vec", right_ops)])
+        else:
             operands = []
-            
             for lane in expr.args:
-                if not (isinstance(lane, Op) and 
-                       lane.op == self.scalar_op and 
-                       len(lane.args) == 1):
+                if not (isinstance(lane, Op) and lane.op == self.scalar_op and len(lane.args) == 1):
                     return None
-                    
                 operands.append(lane.args[0])
-            
-            operand_vec = Op("Vec", operands)
-            # For unary operations, we only need one operand
-            result = Op(self.vector_op, [operand_vec])
-        
+            result = Op(self.vector_op, [Op("Vec", operands)])
         return result if result.validate_expression() else None
 
     def _apply_flexible_vectorize(self, expr: Expr) -> Optional[Expr]:
-        """Apply flexible vectorization - handles both binary and unary operations with correct ordering."""
-        if not (isinstance(expr, Op) and expr.op == "Vec"):
+        if not (isinstance(expr, Op) and expr.op == "Vec") or len(expr.args) < 2:
             return None
-            
-        if len(expr.args) < 2:
-            return None
-            
-        # Analyze which lanes can be vectorized and determine operation type
-        binary_lanes = []
-        unary_lanes = []
-        binary_left_operands = []
-        binary_right_operands = []
-        unary_operands = []
-        
+        binary_lanes, unary_lanes = [], []
+        bin_left, bin_right, un_ops = [], [], []
         for i, lane in enumerate(expr.args):
             if isinstance(lane, Op) and lane.op in self.target_ops:
                 if len(lane.args) == 2:
                     binary_lanes.append(i)
-                    binary_left_operands.append(lane.args[0])
-                    binary_right_operands.append(lane.args[1])
+                    bin_left.append(lane.args[0])
+                    bin_right.append(lane.args[1])
                 elif len(lane.args) == 1:
                     unary_lanes.append(i)
-                    unary_operands.append(lane.args[0])
-        
-        total_vectorizable = len(binary_lanes) + len(unary_lanes)
-        
-        # Need at least min_count vectorizable operations
-        if total_vectorizable < self.min_count:
+                    un_ops.append(lane.args[0])
+        total = len(binary_lanes) + len(unary_lanes)
+        if total < self.min_count or total == len(expr.args):
             return None
-        
-        # Don't match if ALL lanes are vectorizable - let uniform rule handle that
-        if total_vectorizable == len(expr.args):
-            return None
-        
-        # Determine identity element and check if operation is non-commutative
         target_op = self.target_ops[0]
-        is_non_commutative = target_op in {"-", "/"}
-        
-        if target_op == "*":
-            identity_value = 1
-        elif target_op in {"+", "-"}:
-            identity_value = 0
-        elif target_op == "/":
-            identity_value = 1
-        else:
-            identity_value = 0
-        
-        # Decide whether to handle as binary or unary based on which is more common
+        identity_value = 1 if target_op == "*" else 0
         if len(binary_lanes) >= len(unary_lanes):
-            # Handle as binary operations
-            left_vec_elements = []
-            right_vec_elements = []
-            
-            binary_idx = 0
-            unary_idx = 0
-            
+            left_els, right_els, b_idx, u_idx = [], [], 0, 0
             for i in range(len(expr.args)):
                 if i in binary_lanes:
-                    left_vec_elements.append(binary_left_operands[binary_idx])
-                    right_vec_elements.append(binary_right_operands[binary_idx])
-                    binary_idx += 1
+                    left_els.append(bin_left[b_idx])
+                    right_els.append(bin_right[b_idx])
+                    b_idx += 1
                 elif i in unary_lanes:
-                    # Convert unary to binary with identity
-                    left_vec_elements.append(unary_operands[unary_idx])
-                    right_vec_elements.append(Const(identity_value))
-                    unary_idx += 1
+                    left_els.append(un_ops[u_idx])
+                    right_els.append(Const(identity_value))
+                    u_idx += 1
                 else:
-                    # Non-vectorizable expression
-                    if is_non_commutative:
-                        # For non-commutative ops: put non-matching expr on LEFT, identity on RIGHT
-                        # This ensures: non_matching_expr OP identity = non_matching_expr
-                        left_vec_elements.append(expr.args[i])
-                        right_vec_elements.append(Const(identity_value))
-                    else:
-                        # For commutative ops: can put identity on either side
-                        left_vec_elements.append(Const(identity_value))
-                        right_vec_elements.append(expr.args[i])
-            
-            left_vec = Op("Vec", left_vec_elements)
-            right_vec = Op("Vec", right_vec_elements)
-            result = Op(self.vector_op, [left_vec, right_vec])
-            
+                    left_els.append(expr.args[i])
+                    right_els.append(Const(identity_value))
+            result = Op(self.vector_op, [Op("Vec", left_els), Op("Vec", right_els)])
         else:
-            # Handle as unary operations
-            operand_vec_elements = []
-            
-            binary_idx = 0
-            unary_idx = 0
-            
+            op_els, b_idx, u_idx = [], 0, 0
             for i in range(len(expr.args)):
                 if i in unary_lanes:
-                    operand_vec_elements.append(unary_operands[unary_idx])
-                    unary_idx += 1
+                    op_els.append(un_ops[u_idx])
+                    u_idx += 1
                 elif i in binary_lanes:
-                    # For binary ops in unary context, we could take first operand
-                    # For now, let's take the first operand
-                    operand_vec_elements.append(binary_left_operands[binary_idx])
-                    binary_idx += 1
+                    op_els.append(bin_left[b_idx])
+                    b_idx += 1
                 else:
-                    # Non-vectorizable expression - wrap in target operation
-                    operand_vec_elements.append(expr.args[i])
-            
-            operand_vec = Op("Vec", operand_vec_elements)
-            result = Op(self.vector_op, [operand_vec])
-        
+                    op_els.append(expr.args[i])
+            result = Op(self.vector_op, [Op("Vec", op_els)])
         return result if result.validate_expression() else None
 
     def _apply_rotation_vectorize(self, expr: Expr) -> Optional[Expr]:
-        """Apply uniform rotation vectorization - handles both binary and unary operations."""
         if not (isinstance(expr, Op) and expr.op == "Vec"):
             return None
-            
         original_size = len(expr.args)
-        if original_size < 1:
+        if original_size < 1 or original_size * 2 > self.max_vector_size:
             return None
-            
-        # Check size limit
-        new_size = original_size * 2
-        if new_size > self.max_vector_size:
-            return None
-            
-        # Check if we're dealing with binary or unary operations
         first_lane = expr.args[0]
         if not isinstance(first_lane, Op) or first_lane.op != self.scalar_op:
             return None
-        
         is_unary = len(first_lane.args) == 1
         is_binary = len(first_lane.args) == 2
-        
         if not (is_unary or is_binary):
             return None
-        
         if is_binary:
-            # Binary operations - extract both operands
-            first_operands = []
-            second_operands = []
-            
+            first_ops, second_ops = [], []
             for lane in expr.args:
-                if not (isinstance(lane, Op) and 
-                       lane.op == self.scalar_op and 
-                       len(lane.args) == 2):
+                if not (isinstance(lane, Op) and lane.op == self.scalar_op and len(lane.args) == 2):
                     return None
-                first_operands.append(lane.args[0])
-                second_operands.append(lane.args[1])
-            
-            # Create doubled vector: [first_operands..., second_operands...]
-            doubled_vector_elements = first_operands + second_operands
-            
-        else:  # is_unary
-            # Unary operations - duplicate the operands
+                first_ops.append(lane.args[0])
+                second_ops.append(lane.args[1])
+            doubled = first_ops + second_ops
+        else:
             operands = []
-            
             for lane in expr.args:
-                if not (isinstance(lane, Op) and 
-                       lane.op == self.scalar_op and 
-                       len(lane.args) == 1):
+                if not (isinstance(lane, Op) and lane.op == self.scalar_op and len(lane.args) == 1):
                     return None
                 operands.append(lane.args[0])
-            
-            # Create doubled vector: [operands..., operands...]
-            doubled_vector_elements = operands + operands
-        
-        doubled_vector = Op("Vec", doubled_vector_elements)
-        
-        # Create rotation with shift = original_size
-        shift_amount = Const(original_size)
-        rotated_vector = Op("<<", [doubled_vector, shift_amount])
-        
-        # Create final result
+            doubled = operands + operands
+        doubled_vector = Op("Vec", doubled)
+        rotated_vector = Op("<<", [doubled_vector, Const(original_size)])
         result = Op(self.vector_op, [doubled_vector, rotated_vector])
-        
         return result if result.validate_expression() else None
 
     def _apply_flexible_rotation_vectorize(self, expr: Expr) -> Optional[Expr]:
-        """Apply flexible rotation vectorization - handles both binary and unary operations with correct ordering."""
         if not (isinstance(expr, Op) and expr.op == "Vec"):
             return None
-            
         original_size = len(expr.args)
-        if original_size < 2:
+        if original_size < 2 or original_size * 2 > self.max_vector_size:
             return None
-            
-        # Check size limit
-        new_size = original_size * 2
-        if new_size > self.max_vector_size:
-            return None
-            
-        # Analyze which lanes can be vectorized
-        binary_lanes = []
-        unary_lanes = []
-        binary_first_operands = []
-        binary_second_operands = []
-        unary_operands = []
-        
+        binary_lanes, unary_lanes = [], []
+        bin_first, bin_second, un_ops = [], [], []
         for i, lane in enumerate(expr.args):
             if isinstance(lane, Op) and lane.op in self.target_ops:
                 if len(lane.args) == 2:
                     binary_lanes.append(i)
-                    binary_first_operands.append(lane.args[0])
-                    binary_second_operands.append(lane.args[1])
+                    bin_first.append(lane.args[0])
+                    bin_second.append(lane.args[1])
                 elif len(lane.args) == 1:
                     unary_lanes.append(i)
-                    unary_operands.append(lane.args[0])
+                    un_ops.append(lane.args[0])
+        total = len(binary_lanes) + len(unary_lanes)
         
-        total_vectorizable = len(binary_lanes) + len(unary_lanes)
-
-        # Determine identity element and check if operation is non-commutative
-        target_op = self.target_ops[0]
-        is_non_commutative = target_op in {"-", "/"}
-        
-        if target_op == "*":
-            identity_value = 1
-        elif target_op in {"+", "-"}:
-            identity_value = 0
-        elif target_op == "/":
-            identity_value = 1
-        else:
-            identity_value = 0
-
-        # FIX: lanes that are literal identity-element padding (e.g. the
-        # zero-constant lanes the C++ codegen appends via VECTOR_WIDTH
-        # padding, "(Vec <real_output> 0 0 0)") are not "real" competing
-        # content — they're filler up to the target vector width. Before
-        # this fix, min_required was a flat 2 for any vector wider than 2
-        # lanes, so a benchmark with a single real output (e.g. lin_reg,
-        # dot_product — 1 real lane + N zero-padding lanes) could NEVER
-        # satisfy total_vectorizable >= min_required, no matter how the
-        # policy was trained: rotation actions were masked out at the
-        # matcher level before the RL agent ever saw them.
-        #
-        # Count how many non-vectorizable lanes are genuinely "other real
-        # content" (not identity padding). If none are, there's nothing
-        # at risk of being wrongly absorbed by a too-low threshold, so we
-        # can safely relax min_required down to 1 real vectorizable lane.
         def _is_identity_padding_lane(lane: Expr) -> bool:
-            return isinstance(lane, Const) and lane.value == identity_value
+            return isinstance(lane, Const) and lane.value == (1 if self.target_ops[0] == "*" else 0)
 
-        vectorizable_lane_idx = set(binary_lanes) | set(unary_lanes)
+        vectorizable_idx = set(binary_lanes) | set(unary_lanes)
         non_vectorizable_non_padding = sum(
-            1
-            for i, lane in enumerate(expr.args)
-            if i not in vectorizable_lane_idx and not _is_identity_padding_lane(lane)
+            1 for i, lane in enumerate(expr.args)
+            if i not in vectorizable_idx and not _is_identity_padding_lane(lane)
         )
+        min_required = 1 if (original_size == 2 or non_vectorizable_non_padding == 0) else self.min_count
+        if total < min_required or total == original_size:
+            return None
 
-        # Special case: for size-2 vectors, allow 1 matching operation.
-        # Otherwise: normally need at least min_count vectorizable
-        # operations, UNLESS every other lane is pure identity padding,
-        # in which case 1 real vectorizable lane is enough.
-        if original_size == 2 or non_vectorizable_non_padding == 0:
-            min_required = 1
-        else:
-            min_required = self.min_count
-        if total_vectorizable < min_required:
-            return None
-        
-        # Don't match if ALL lanes are vectorizable - let uniform rotation handle that
-        if total_vectorizable == original_size:
-            return None
-        
-        # For rotation, we'll prioritize binary operations
-        first_half = []
-        second_half = []
-        
-        binary_idx = 0
-        unary_idx = 0
-        
+        target_op = self.target_ops[0]
+        identity_value = 1 if target_op == "*" else 0
+        first_half, second_half, b_idx, u_idx = [], [], 0, 0
         for i in range(original_size):
             if i in binary_lanes:
-                # Binary operation - use both operands
-                first_half.append(binary_first_operands[binary_idx])
-                second_half.append(binary_second_operands[binary_idx])
-                binary_idx += 1
+                first_half.append(bin_first[b_idx])
+                second_half.append(bin_second[b_idx])
+                b_idx += 1
             elif i in unary_lanes:
-                # Unary operation - duplicate the operand
-                first_half.append(unary_operands[unary_idx])
-                second_half.append(unary_operands[unary_idx])
-                unary_idx += 1
+                first_half.append(un_ops[u_idx])
+                second_half.append(un_ops[u_idx])
+                u_idx += 1
             else:
-                # Non-matching expression
-                if is_non_commutative:
-                    # For non-commutative ops: put non-matching expr on LEFT, identity on RIGHT
-                    # This ensures: non_matching_expr OP identity = non_matching_expr
-                    first_half.append(expr.args[i])
-                    second_half.append(Const(identity_value))
-                else:
-                    # For commutative ops: can put identity on either side
-                    first_half.append(expr.args[i])
-                    second_half.append(Const(identity_value))
-        
-        # Create doubled vector: [first_half..., second_half...]
-        doubled_vector_elements = first_half + second_half
-        doubled_vector = Op("Vec", doubled_vector_elements)
-        
-        # Create rotation with shift = original_size
-        shift_amount = Const(original_size)
-        rotated_vector = Op("<<", [doubled_vector, shift_amount])
-        
-        # Create final result
+                first_half.append(expr.args[i])
+                second_half.append(Const(identity_value))
+        doubled_vector = Op("Vec", first_half + second_half)
+        rotated_vector = Op("<<", [doubled_vector, Const(original_size)])
         result = Op(self.vector_op, [doubled_vector, rotated_vector])
-        
         return result if result.validate_expression() else None
 
     def _build_rhs(self, template: Expr, subst: Dict[str, Expr]) -> Expr:
-        """Instantiate RHS template using the substitution dict."""
         if isinstance(template, Var):
             return subst[template.name]
         if isinstance(template, Const):
             return Const(template.value)
         if isinstance(template, Op):
-            return Op(
-                template.op,
-                [self._build_rhs(arg, subst) for arg in template.args]
-            )
+            return Op(template.op, [self._build_rhs(arg, subst) for arg in template.args])
         raise TypeError("unknown Expr in RHS build")
 
-    def find_matching_subexpressions(
-        self, expr: Expr
-    ) -> List[Tuple[List[int], Expr]]:
+    def find_matching_subexpressions(self, expr: Expr) -> List[Tuple[List[int], Expr]]:
         if self.rule_type in ["vectorize", "vectorize-flexible", "vectorize-rotation", "vectorize-rotation-flexible"]:
             return self._find_vectorize_matches(expr)
+        elif self.rule_type == "de-rotate":
+            matches = []
+            self._find_matches_recursive(expr, [], matches)
+            valid = [(p, m) for p, m in matches if self._apply_via_path(expr, p) is not None]
+            return [([], expr)] if valid else []
         else:
-            # Regular rules
             matches: List[Tuple[List[int], Expr]] = []
             self._find_matches_recursive(expr, [], matches)
-            return [
-                (p, m) for p, m in matches
-                if self._apply_via_path(expr, p) is not None
-            ]
+            return [(p, m) for p, m in matches if self._apply_via_path(expr, p) is not None]
 
     def _find_vectorize_matches(self, expr: Expr) -> List[Tuple[List[int], Expr]]:
-        """Find vectorization matches for all vectorization rule types."""
         matches = []
-        
-        def _find_recursive(current: Expr, path: List[int],
-                            parent: Optional[Expr] = None,
-                            parent_idx: Optional[int] = None):
+        def _find_recursive(current: Expr, path: List[int], parent: Optional[Expr] = None, parent_idx: Optional[int] = None):
             if isinstance(current, Op) and current.op == "Vec":
                 if self._apply_guarded(current, parent, parent_idx) is not None:
                     matches.append((path.copy(), current))
-            
             if isinstance(current, Op):
-                rotation = False
-                for rule in self.rotation_rules:
-                    if rule.lhs.match(current) is not None:
-                        rotation = True
-                        break
+                rotation = any(rule.lhs.match(current) is not None for rule in self.rotation_rules)
                 if not rotation or self.name.startswith("rotate_"):
-                        for i, child in enumerate(current.args):
-                            _find_recursive(child, path + [i], current, i)
+                    for i, child in enumerate(current.args):
+                        _find_recursive(child, path + [i], current, i)
                 else:
                     _find_recursive(current.args[0], path + [0], current, 0)
         _find_recursive(expr, [])
         return matches
 
-    def _find_matches_recursive(
-        self, current: Expr, path: List[int],
-        matches: List[Tuple[List[int], Expr]]
-    ):
-        # Use a deque for BFS
+    def _find_matches_recursive(self, current: Expr, path: List[int], matches: List[Tuple[List[int], Expr]]):
         queue = deque([(path, current)])
         while queue:
             cur_path, node = queue.popleft()
-
-            # check for a match
             if self.lhs.match(node) is not None:
                 matches.append((cur_path.copy(), node))
-
-            # enqueue children one level deeper
             if isinstance(node, Op):
-                rotation = False
-                
-                for rule in self.rotation_rules:
-                    if rule.lhs.match(node) is not None:
-                        rotation = True
-                if not rotation or self.name.startswith("rotate_"): 
+                if self.rule_type == "de-rotate":
                     for i, child in enumerate(node.args):
                         queue.append((cur_path + [i], child))
                 else:
-                    queue.append((cur_path + [0], node.args[0]))
+                    rotation = any(rule.lhs.match(node) is not None for rule in self.rotation_rules)
+                    if not rotation:
+                        for i, child in enumerate(node.args):
+                            queue.append((cur_path + [i], child))
+                    else:
+                        queue.append((cur_path + [0], node.args[0]))
 
     def _apply_via_path(self, expr: Expr, path: List[int]) -> Optional[Expr]:
         WRAPPER_OPS = {"VecMul", "VecAdd", "VecMinus"}
 
-        def rec(node: Expr, subpath: List[int],
-                parent: Optional[Expr] = None,
-                parent_idx: Optional[int] = None) -> Expr:
-            # reached the target node – lane-count-guarded replacement
+        def rec(node: Expr, subpath: List[int], parent: Optional[Expr] = None, parent_idx: Optional[int] = None) -> Expr:
             if not subpath:
                 return self._apply_guarded(node, parent, parent_idx) or node
-
-            # leaf that cannot hold children
             if not isinstance(node, Op):
                 return node
-
             idx = subpath[0]
-
-            # ────────────────────────────────────────────────────────────
-            # Special case: we are stepping into the **first operand** of
-            # a wrapper (rotation) op.  After we rewrite that operand we
-            # must rebuild the *companion* operand so it references the
-            # fresh vector.
-            # ────────────────────────────────────────────────────────────
-            if (node.op in WRAPPER_OPS and idx == 0
-                    and self.rule_type in {"vectorize", "vectorize-flexible",
-                                           "vectorize-rotation", "vectorize-rotation-flexible"}):
-                new_vec  = rec(node.args[0], subpath[1:], node, 0)   # rewrite left
-                other    = node.args[1]
-                new_other = other  # default: no change
-                # common form  (<< old_vec shift)
-                if (isinstance(other, Op)
-                        and other.op == "<<" and len(other.args) >= 1):
+            if node.op in WRAPPER_OPS and idx == 0 and self.rule_type in {"vectorize", "vectorize-flexible", "vectorize-rotation", "vectorize-rotation-flexible"}:
+                new_vec = rec(node.args[0], subpath[1:], node, 0)
+                other = node.args[1]
+                new_other = other
+                if isinstance(other, Op) and other.op == "<<" and len(other.args) >= 1:
                     new_other = Op("<<", [new_vec, *other.args[1:]])
-                # else:
-                #     # generic deep replace if the structure is different
-                #     new_other = self._replace_expr(other, node.args[0], new_vec)
-
                 return Op(node.op, [new_vec, new_other])
 
-            # default path – just recurse
             new_args = [
                 rec(a, subpath[1:], node, i) if i == idx else a
                 for i, a in enumerate(node.args)
@@ -632,26 +368,30 @@ class RewriteRule:
 
     @staticmethod
     def _replace_expr(node: Expr, old: Expr, new: Expr) -> Expr:
-        """Deep structural substitution: replace every occurrence of *old*
-        (pointer-equal **or** structurally equal) by *new* inside *node*."""
         if node is old or node == old:
             return new
         if isinstance(node, Op):
-            return Op(node.op, [RewriteRule._replace_expr(a, old, new)
-                                for a in node.args])
+            return Op(node.op, [RewriteRule._replace_expr(a, old, new) for a in node.args])
         return node
 
-    def apply_rule(
-        self,
-        expr:  Expr,
-        match: Optional[Expr] = None,
-        path:  Optional[List[int]] = None
-    ) -> Expr:
+    def apply_rule(self, expr: Expr, match: Optional[Expr] = None, path: Optional[List[int]] = None) -> Expr:
+        if self.rule_type == "de-rotate":
+            return self._apply_rule_everywhere(expr)
         if path is not None:
             return self._apply_via_path(expr, path)
         if match is not None:
             return self._apply_rule_match(expr, match)
         return self.apply(expr) or expr
+
+    def _apply_rule_everywhere(self, expr: Expr) -> Expr:
+        while True:
+            matches = []
+            self._find_matches_recursive(expr, [], matches)
+            valid = [(p, m) for p, m in matches if self._apply_via_path(expr, p) is not None]
+            if not valid:
+                break
+            expr = self._apply_via_path(expr, valid[0][0])
+        return expr
 
     def _apply_rule_match(self, expr: Expr, match: Expr) -> Expr:
         if expr is match:
@@ -661,10 +401,9 @@ class RewriteRule:
             return Op(expr.op, new_args)
         return expr
 
-    def apply_rule_check(self, expr: Expr, match: Expr | None = None
-                         ) -> Tuple[Expr, bool]:
+    def apply_rule_check(self, expr: Expr, match: Expr | None = None) -> Tuple[Expr, bool]:
         subst_expr = self.apply_rule(expr, match)
-        val_map    = generate_random_assignments(expr)
+        val_map = generate_random_assignments(expr)
         return (
             subst_expr,
             evaluate_expr(expr, val_map) == evaluate_expr(subst_expr, val_map)

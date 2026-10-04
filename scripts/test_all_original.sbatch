@@ -34,7 +34,7 @@ mkdir -p "$PROJ_ROOT/RL/test_results"
 # ═══════════════════════════════════════════════════════════════
 
 BENCH="./fhe_rl/datasets/benchmarks.txt"
-TEST_BUDGETS="230,236,369,9000000"
+TEST_BUDGETS="230,369,9000"
 
 echo "Original benchmarks: $(wc -l < "$BENCH") expressions"
 echo "Test budgets: $TEST_BUDGETS"
@@ -84,28 +84,28 @@ stdbuf -oL -eL python -u ../scripts/test_unconstrained_threshold.py \
 
 # ─── V4 agents ────────────────────────────────────────────────
 run_constrained "v4_mb_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "best_model_model_14385920_margin_barrier"
 
 run_constrained "v4_mb_film_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "best_model_model_14385922_margin_barrier"
 
 run_constrained "v4_nmask_B" \
-    noise_masking "230,236,369,372,9000000" \
+    noise_masking "230,236,369,372,9000" \
     "best_model_model_14385924_noise_masking"
 
 # ─── V5 agents ────────────────────────────────────────────────
 run_constrained "v5_ppo_natosc_A" \
-    nato_sc "230,233,236,369,9000000" \
+    nato_sc "230,233,236,369,9000" \
     "best_model_model_14529413_nato_sc"
 
 run_constrained "v5_lagpid_natosc" \
-    nato_sc "230,236,369,9000000" \
+    nato_sc "230,369,9000" \
     "best_model_model_14529416_nato_sc"
 
 run_constrained "v5_focops_natosc" \
-    nato_sc "230,236,369,9000000" \
+    nato_sc "230,369,9000" \
     "best_model_model_14544615_nato_sc"
 
 

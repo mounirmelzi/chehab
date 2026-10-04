@@ -30,7 +30,7 @@ mkdir -p "$PROJ_ROOT/logs"
 
 # Lagrangian OD_OV + Embed — [200,300,9M]
 METHOD="lagrangian_od_ov"
-BUDGETS="200,300,9000000"
+BUDGETS="200,300,9000"
 TIMESTEPS=5000000
 NUM_ENVS=8
 DENOM_FACTOR=2
