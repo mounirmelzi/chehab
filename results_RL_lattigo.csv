@@ -1,0 +1,5 @@
+benchmark,w_ops,w_keys,add,sub,multiply_plain,rotate_rows,negate,multiply,Depth,Multiplicative Depth,compile_time (s),circuit_execution_time (s),galois_keys_generation_time (s),total_execution_time (s),Remaining_noise_budget,rotation_keys_size (MB),final_ops_cost,final_keys_cost
+dot_product_4,0.8,0.2,2,0,0,2,0,1,5,1,5.766,0.028,0.038,0.066,6.00061,210.0,2.0
+dot_product_4,1.0,0.0,2,0,0,3,0,1,6,1,6.165,0.043,0.058,0.102,9.000916,261.0,3.0
+dot_product_8,0.8,0.2,3,0,0,3,0,1,7,1,6.294,0.035,0.055,0.090,9.000916,263.0,3.0
+dot_product_8,1.0,0.0,3,0,0,4,0,1,8,1,6.299,0.051,0.076,0.127,12.001221,314.0,4.0

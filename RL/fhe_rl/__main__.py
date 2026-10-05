@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 
-# Support du framework hérité d'Imed (--framework constrained/morl)[cite: 12]
+# Support framework flag (--framework constrained/morl)
 framework_parser = argparse.ArgumentParser(add_help=False)
 framework_parser.add_argument("--framework", choices=["constrained", "morl"], default="constrained", help='Framework to use (default: constrained)')
 args, _ = framework_parser.parse_known_args()
@@ -17,19 +17,20 @@ from .train import train_agent
 from .train_mo import train_agent_mo
 from .test import test_agent, test_agent_v2
 from .utils import load_embeddings_from_config
-from .TRAE_bpe import BPETokenizer  # Import pour la compatibilité pickle[cite: 12]
+from .TRAE_bpe import BPETokenizer  # Import for pickle compatibility
 from .morl import run_interactive, add_subparser
 from .config import (
     get_model_path, get_tokenizer_type, 
     print_config, set_framework
 )
 
+
 def parse_arguments(args=None):
     """Parse command line arguments"""
     global framework_parser
     parser = argparse.ArgumentParser(description="FHE RL Agent", parents=[framework_parser])
     
-    # Ajout du choix du tokenizer d'Imed[cite: 12]
+    # Tokenizer type selection
     parser.add_argument(
         '--tokenizer_type', 
         choices=['dynamic', 'bpe'], 
@@ -60,13 +61,21 @@ def parse_arguments(args=None):
         help='Comma-separated list of noise budgets (e.g., "230,369,9000")'
     )
     train_parser.add_argument(
-        '--total_timesteps',
+        '--total_timesteps', '--timesteps',
+        dest='total_timesteps',
         type=int,
         default=2_000_000,
         help='Total training timesteps (default: 2000000)'
     )
     train_parser.add_argument(
-        '--n_envs',
+        '--eval_freq',
+        type=int,
+        default=10000,
+        help='Evaluation frequency for MORL (default: 10000)'
+    )
+    train_parser.add_argument(
+        '--n_envs', '--num_envs',
+        dest='n_envs',
         type=int,
         default=8,
         help='Number of parallel environments (default: 8)'
@@ -111,7 +120,7 @@ def parse_arguments(args=None):
         help='Enable curriculum budget scheduling'
     )
     
-    # MORL hyperparameters (Vos ajouts)
+    # MORL hyperparameters
     train_parser.add_argument(
         '--n_cycle',
         type=int,
@@ -168,6 +177,7 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_pid',
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc', 'lagrangian_pid'],
         help='Constraint method the model was trained with (default: lagrangian_pid)'
     )
     test_parser.add_argument(
@@ -226,6 +236,7 @@ def parse_arguments(args=None):
 
     return parser.parse_args(args)
 
+
 def usage() -> None:
     print(
         "Usage:\n"
@@ -237,11 +248,12 @@ def usage() -> None:
     )
     sys.exit(1)
 
+
 def main(args=None):
     """Main function with configuration support"""
     parsed_args = parse_arguments(args)
     
-    # Configuration dynamique du framework (Imed / MORL)[cite: 12]
+    # Configure framework (Imed / MORL)
     framework_name = "mo" if parsed_args.framework == "morl" else parsed_args.framework
     set_framework(framework_name)
     
@@ -273,6 +285,7 @@ def main(args=None):
                 n_budget=parsed_args.n_budget,
                 lambda_env=parsed_args.lambda_env,
                 lambda_kl=parsed_args.lambda_kl,
+                eval_freq=parsed_args.eval_freq,
             )
         else:
             train_agent(
@@ -307,6 +320,8 @@ def main(args=None):
         train_budgets = None
         if parsed_args.train_budgets:
             train_budgets = [int(b.strip()) for b in parsed_args.train_budgets.split(',')]
+        elif test_budgets:
+            train_budgets = test_budgets
 
         benchmark_file = parsed_args.benchmark or "./fhe_rl/datasets/benchmarks.txt"
         test_fn = test_agent_v2 if parsed_args.test_mode == "v2" else test_agent
@@ -355,6 +370,7 @@ def main(args=None):
     else:
         print("Invalid command. Use 'train', 'test', 'run', or 'interactive'.")
         usage()
+
 
 if __name__ == "__main__":
     main()

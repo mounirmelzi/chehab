@@ -124,11 +124,11 @@ class RewriteRule:
         """self.apply() plus the sibling-lane-count precondition.
 
         Rotation-vectorization rewrites double the lane count of the Vec
-        they fire on.  If that Vec is an operand of a binary SIMD op
+        they fire on. If that Vec is an operand of a binary SIMD op
         (VecAdd/VecMinus/VecMul) whose sibling keeps the old lane count,
         the rewrite breaks the equal-lanes invariant of the parent (the
         "VecMinus operands must be equal-length vectors" eval crash).
-        Such rewrites are refused (return None).  Siblings that are `<<`
+        Such rewrites are refused (return None). Siblings that are `<<`
         rotation nodes are exempt: _apply_via_path rebuilds them in
         lockstep from the rewritten vector.
         """
@@ -493,10 +493,9 @@ class RewriteRule:
                     if rule.lhs.match(current) is not None:
                         rotation = True
                         break
-                # FIX: mis à jour avec self.rule_type == "de-rotate" comme sur l'image
                 if not rotation or self.rule_type == "de-rotate":
-                        for i, child in enumerate(current.args):
-                            _find_recursive(child, path + [i], current, i)
+                    for i, child in enumerate(current.args):
+                        _find_recursive(child, path + [i], current, i)
                 else:
                     _find_recursive(current.args[0], path + [0], current, 0)
         _find_recursive(expr, [])
@@ -514,17 +513,19 @@ class RewriteRule:
                 matches.append((cur_path.copy(), node))
 
             if isinstance(node, Op):
-                rotation = False
-                
-                for rule in self.rotation_rules:
-                    if rule.lhs.match(node) is not None:
-                        rotation = True
-                # FIX: mis à jour avec self.rule_type == "de-rotate" comme sur l'image
-                if not rotation or self.rule_type == "de-rotate": 
+                if self.rule_type == "de-rotate":
                     for i, child in enumerate(node.args):
                         queue.append((cur_path + [i], child))
                 else:
-                    queue.append((cur_path + [0], node.args[0]))
+                    rotation = False
+                    for rule in self.rotation_rules:
+                        if rule.lhs.match(node) is not None:
+                            rotation = True
+                    if not rotation:
+                        for i, child in enumerate(node.args):
+                            queue.append((cur_path + [i], child))
+                    else:
+                        queue.append((cur_path + [0], node.args[0]))
 
     def _apply_via_path(self, expr: Expr, path: List[int]) -> Optional[Expr]:
         WRAPPER_OPS = {"VecMul", "VecAdd", "VecMinus"}
@@ -545,10 +546,7 @@ class RewriteRule:
                                            "vectorize-rotation", "vectorize-rotation-flexible"}):
                 new_vec  = rec(node.args[0], subpath[1:], node, 0)   
                 other    = node.args[1]
-                new_other = other  
-                if (isinstance(other, Op)
-                        and other.op == "<<" and len(other.args) >= 1):
-                    new_other = Op("<<", [new_vec, *other.args[1:]])
+                new_other = self._replace_expr(other, node.args[0], new_vec)
 
                 return Op(node.op, [new_vec, new_other])
 
@@ -575,7 +573,6 @@ class RewriteRule:
         match: Optional[Expr] = None,
         path:  Optional[List[int]] = None
     ) -> Expr:
-        # FIX: Ajout du support de la règle "de-rotate" pour réécrire partout en un seul appel
         if self.rule_type == "de-rotate":
             return self._apply_rule_everywhere(expr)
         if path is not None:
@@ -584,7 +581,6 @@ class RewriteRule:
             return self._apply_rule_match(expr, match)
         return self.apply(expr) or expr
 
-    # FIX: Ajout complet de la méthode _apply_rule_everywhere pour les règles de type "de-rotate"
     def _apply_rule_everywhere(self, expr: Expr) -> Expr:
         """de-rotate: rewrite every occurrence of the offset in one call."""
         while True:

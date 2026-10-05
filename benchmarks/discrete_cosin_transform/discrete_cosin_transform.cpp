@@ -47,35 +47,60 @@ void print_bool_arg(bool arg, const string &name, ostream &os)
 {
   os << (arg ? name : "no_" + name);
 }
+
 int main(int argc, char **argv)
 {
   bool vectorize_code = true;
   if (argc > 1)
     vectorize_code = stoi(argv[1]);
   
-  int slot_count = 1 ;
+  int slot_count = 1;
   if (argc > 2)
     slot_count = stoi(argv[2]);
 
+  // Détection automatique du décalage d'index CLI
+  int arg_idx = 3;
+  std::string framework = "constrained";
+  if (argc > 3) {
+    std::string third_arg = argv[3];
+    if (third_arg == "constrained" || third_arg == "mo" || third_arg == "morl" || !isdigit(third_arg[0])) {
+      framework = third_arg;
+      arg_idx = 4;
+    }
+  }
+
   int optimization_method = 0;  // 0 = egraph (default), 1 = RL
-  if (argc > 3)
-    optimization_method = stoi(argv[3]); 
+  if (argc > arg_idx)
+    optimization_method = stoi(argv[arg_idx]); 
 
   int window = 0;
-  if (argc > 4) 
-    window = stoi(argv[4]);
+  if (argc > arg_idx + 1) 
+    window = stoi(argv[arg_idx + 1]);
 
   bool call_quantifier = true;
-  if (argc > 5)
-    call_quantifier = stoi(argv[5]);
+  if (argc > arg_idx + 2)
+    call_quantifier = stoi(argv[arg_idx + 2]);
 
   bool cse = true;
-  if (argc > 6)
-    cse = stoi(argv[6]);
+  if (argc > arg_idx + 3)
+    cse = stoi(argv[arg_idx + 3]);
    
   bool const_folding = true; 
-  if (argc > 7)
-    const_folding = stoi(argv[7]); 
+  if (argc > arg_idx + 4)
+    const_folding = stoi(argv[arg_idx + 4]);
+
+  int backend = 0;  // 0 = SEAL (default), 1 = Lattigo (Go/CKKS), 2 = HEonGPU
+  if (argc > arg_idx + 5)
+    backend = stoi(argv[arg_idx + 5]);
+
+  float w_ops = 0.5;
+  float w_keys = 0.5;
+  if (argc > arg_idx + 7) {
+    w_ops = stof(argv[arg_idx + 6]);
+    w_keys = stof(argv[arg_idx + 7]);
+  } else if (argc > arg_idx + 6) {
+    w_ops = stof(argv[arg_idx + 6]);
+  }
 
   if (cse)
   {
@@ -93,9 +118,11 @@ int main(int argc, char **argv)
   else
     Compiler::disable_const_folding(); 
   //Compiler::enable_auto_enc_params_selection();
+  
   chrono::high_resolution_clock::time_point t;
   chrono::duration<double, milli> elapsed;
   string func_name = "fhe";
+  
   /**************/t = chrono::high_resolution_clock::now();
   if (vectorize_code)
   {
@@ -110,18 +137,38 @@ int main(int argc, char **argv)
     if (!source_os)
       throw logic_error("failed to create source file");
     cout << " window is " << window << endl;
+    
     /********** vectorization Part *******************************/
     if(VECTORIZATION_ENABLED){
-      Compiler::gen_vectorized_code(func, window, optimization_method);  // add a flag to specify if the benchmark is structured or no
+      Compiler::gen_vectorized_code(func, window, optimization_method, w_ops, w_keys, framework);
     }
+    
     /********** Simplification & depth reduction Part ************/
     if(SIMPLIFICATION_ENABLED){
       auto ruleset = Compiler::Ruleset::depth;
       auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
       Compiler::compile(func, ruleset, rewrite_heuristic);
     }
+    
     /********** FHE code generation  *****************************/
-    Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+    if (backend == 0) {
+      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+      cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+    } else if (backend == 1) {
+      string go_path = "generated_" + func_name + ".go";
+      ofstream go_os(go_path);
+      if (!go_os) throw logic_error("failed to create Go file");
+      Compiler::gen_lattigo_code(func, go_os);
+      go_os.close();
+      cout << "Generated Lattigo code: " << go_path << endl;
+    } else if (backend == 2) {
+      string cu_path = "generated_" + func_name + ".cu";
+      ofstream cu_os(cu_path);
+      if (!cu_os) throw logic_error("failed to create CUDA file");
+      Compiler::gen_heongpu_code(func, cu_os, 1);
+      cu_os.close();
+      cout << "Generated HEonGPU code: " << cu_path << endl;
+    }
     
     /************/elapsed = chrono::high_resolution_clock::now() - t;
     cout << elapsed.count() << " ms\n";
@@ -149,10 +196,30 @@ int main(int argc, char **argv)
     if (!source_os)
       throw logic_error("failed to create source file");
     cout << " window is " << window << endl;
+    
     auto ruleset = Compiler::Ruleset::simplification_ruleset;
     auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
     Compiler::compile(func, ruleset, rewrite_heuristic);
-    Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+    
+    if (backend == 0) {
+      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+      cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+    } else if (backend == 1) {
+      string go_path = "generated_" + func_name + ".go";
+      ofstream go_os(go_path);
+      if (!go_os) throw logic_error("failed to create Go file");
+      Compiler::gen_lattigo_code(func, go_os);
+      go_os.close();
+      cout << "Generated Lattigo code: " << go_path << endl;
+    } else if (backend == 2) {
+      string cu_path = "generated_" + func_name + ".cu";
+      ofstream cu_os(cu_path);
+      if (!cu_os) throw logic_error("failed to create CUDA file");
+      Compiler::gen_heongpu_code(func, cu_os, 1);
+      cu_os.close();
+      cout << "Generated HEonGPU code: " << cu_path << endl;
+    }
+    
     /************/elapsed = chrono::high_resolution_clock::now() - t;
     cout << elapsed.count() << " ms\n";
     if (call_quantifier)

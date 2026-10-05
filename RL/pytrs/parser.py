@@ -24,7 +24,12 @@ def tokenize(s):
     # Handle parentheses and split by whitespace
     return s.replace('(', ' ( ').replace(')', ' ) ').split()
 
-def parse_tokens(tokens, parent=None):
+try:
+    from . import config as pytrs_config
+except ImportError:
+    import config as pytrs_config
+
+def _parse_tokens_constrained(tokens, parent=None):
     """
     Recursively parse tokens into Expr objects.
     Returns a tuple of (Expr, remaining_tokens).
@@ -55,3 +60,31 @@ def parse_tokens(tokens, parent=None):
             return Const(num), tokens
         except ValueError:
             return Var(token, parent), tokens
+
+def _parse_tokens_mo(tokens, parent=None):
+    if not tokens:
+        raise SyntaxError("Unexpected EOF")
+    token = tokens.pop(0)
+    if token == '(':
+        if not tokens:
+            raise SyntaxError("Unexpected EOF after '('")
+        op = tokens.pop(0)
+        args = []
+        while tokens and tokens[0] != ')':
+            arg, tokens = _parse_tokens_mo(tokens, parent=op)
+            args.append(arg)
+            if not tokens:
+                raise SyntaxError("Unexpected EOF, expecting ')'")
+        if not tokens:
+            raise SyntaxError("Unexpected EOF, expecting ')'")
+        tokens.pop(0)
+        return Op(op, args), tokens
+    elif token.isdigit() or ((token.startswith('-') or token.startswith('+') ) and token[1:].isdigit()):
+        return Const(int(token)), tokens
+    else:
+        return Var(token, parent), tokens
+
+def parse_tokens(tokens, parent=None):
+    if getattr(pytrs_config, "framework", "constrained") == "morl":
+        return _parse_tokens_mo(tokens, parent)
+    return _parse_tokens_constrained(tokens, parent)

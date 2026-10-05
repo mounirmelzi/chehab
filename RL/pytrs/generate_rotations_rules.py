@@ -14,17 +14,17 @@ def generate_rotation_rules():
     
     for rot in rotations:
         half = rot // 2
-        rule = f'Rewrite {{ name: "rotate_{rot}", searcher: (<< ?a {rot}), applier: (<< (<< ?a {half}) {half}) }}'
+        rule = f'Rewrite {{ name: "rotate_{rot}", type: "de-rotate", searcher: (<< ?a {rot}), applier: (<< (<< ?a {half}) {half}) }}'
         rules.append(rule)
     
     # Special case: rotation of 9
     # 9 = 3 + 3 + 3
-    rule_9 = 'Rewrite { name: "rotate_9", searcher: (<< ?a 9), applier: (<< (<< (<< ?a 3) 3) 3) }'
+    rule_9 = 'Rewrite { name: "rotate_9", type: "de-rotate", searcher: (<< ?a 9), applier: (<< (<< (<< ?a 3) 3) 3) }'
     rules.append(rule_9)
     
     # Special case: rotation of 3
     # 3 = 1 + 2
-    rule_3 = 'Rewrite { name: "rotate_3", searcher: (<< ?a 3), applier: (<< (<< ?a 1) 2) }'
+    rule_3 = 'Rewrite { name: "rotate_3", type: "de-rotate", searcher: (<< ?a 3), applier: (<< (<< ?a 1) 2) }'
     rules.append(rule_3)
     
     return rules

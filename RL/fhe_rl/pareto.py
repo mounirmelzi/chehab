@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def generate_pref_list(n_points: int):
     """
     Generates a list of preference vectors.

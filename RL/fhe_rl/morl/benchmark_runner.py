@@ -81,13 +81,13 @@ def _build_cmd(benchmark: str, slot_count: int, w_ops: float,
         return (
             f"./{benchmark} {tree_depth} {instance} {regime} "
             f"{VECTORIZE_CODE} {OPTIMIZATION_METHOD} {WINDOW_SIZE} "
-            f"1 {CSE_ENABLED} 1 {w_ops} {w_keys}"
+            f"1 {CSE_ENABLED} 1 0 {w_ops} {w_keys}"
         )
     else:
         return (
             f"./{benchmark} {VECTORIZE_CODE} {slot_count} "
             f"{OPTIMIZATION_METHOD} {WINDOW_SIZE} 1 {CSE_ENABLED} 1 "
-            f"{w_ops} {w_keys}"
+            f"0 {w_ops} {w_keys}"
         )
 
 

@@ -234,7 +234,7 @@ int main(int argc, char **argv)
   if (argc > 3)
     kernel_size = stoi(argv[3]);
   
-  int backend = 0;  // 0 = SEAL, 1 = Lattigo
+  int backend = 0;  // 0 = SEAL, 1 = Lattigo, 2 = HEonGPU
   if (argc > 4)
     backend = stoi(argv[4]);
   
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
   cout << "Mode: " << (mode == 0 ? "encrypted kernel" : (mode == 1 ? "plain kernel" : "multilayer")) << endl;
   cout << "Image size: " << img_width << "x" << img_width << endl;
   cout << "Kernel size: " << kernel_size << "x" << kernel_size << endl;
-  cout << "Backend: " << (backend == 0 ? "SEAL" : "Lattigo") << endl;
+  cout << "Backend: " << (backend == 0 ? "SEAL" : (backend == 1 ? "Lattigo" : "HEonGPU")) << endl;
   cout << endl;
   
   t = chrono::high_resolution_clock::now();
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
     Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
     cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
   }
-  else
+  else if (backend == 1)
   {
     // Lattigo backend (CKKS)
     string go_path = "generated_" + func_name + ".go";
@@ -326,8 +326,19 @@ int main(int argc, char **argv)
     // Generate with rescale insertion enabled
     Compiler::gen_lattigo_code(func, go_os, numeric_limits<size_t>::max(), true);
     go_os.close();
-    
     cout << "Generated Lattigo (CKKS) code: " << go_path << endl;
+  }
+  else if (backend == 2)
+  {
+    // HEonGPU backend
+    string cu_path = "generated_" + func_name + ".cu";
+    ofstream cu_os(cu_path);
+    
+    if (!cu_os) throw logic_error("failed to create CUDA file");
+    
+    Compiler::gen_heongpu_code(func, cu_os, 1);
+    cu_os.close();
+    cout << "Generated HEonGPU code: " << cu_path << endl;
   }
   
   elapsed = chrono::high_resolution_clock::now() - t;
@@ -346,10 +357,10 @@ int main(int argc, char **argv)
   cout << "\n=== Usage ===" << endl;
   cout << "./conv2d [mode] [img_width] [kernel_size] [backend] [quantifier]" << endl;
   cout << "  mode: 0=encrypted kernel, 1=plain kernel, 2=multilayer" << endl;
-  cout << "  backend: 0=SEAL, 1=Lattigo" << endl;
+  cout << "  backend: 0=SEAL, 1=Lattigo, 2=HEonGPU" << endl;
   cout << "\nExamples:" << endl;
   cout << "  ./conv2d 0 4 3 1  # 4x4 img, 3x3 kernel, Lattigo" << endl;
-  cout << "  ./conv2d 2 6 3 1  # 6x6 img, multilayer, Lattigo" << endl;
+  cout << "  ./conv2d 2 6 3 2  # 6x6 img, multilayer, HEonGPU" << endl;
   
   return 0;
 }

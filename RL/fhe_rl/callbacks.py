@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 import torch
 from stable_baselines3.common.callbacks import BaseCallback
@@ -36,8 +37,10 @@ class CurriculumCallback(BaseCallback):
     ----------
     budget_phases : list[list[int]]
         Budget lists for each phase. Phase 0 is used from the start.
+        Example: [[60, 80], [60, 80, 100, 200], [60, 80, 100, 200, 1000000]]
     phase_boundaries : list[float]
         Training progress thresholds (0→1) at which to advance.
+        Example: [0.33, 0.66] means phase 1 starts at 33% and phase 2 at 66%.
     """
 
     def __init__(self, budget_phases, phase_boundaries, verbose=0):
@@ -88,13 +91,12 @@ class ParetoEvalCallback(BaseCallback):
         # Track best performance (Average across the Pareto Front)
         self.best_mean_reward = -np.inf
 
-        # Ensure directories exist
+        # Ensure directories exist and attempt to load previous best evaluation
         if self.best_model_save_path is not None:
             os.makedirs(self.best_model_save_path, exist_ok=True)
             eval_score_file = os.path.join(self.best_model_save_path, "eval_best_score.json")
             if os.path.exists(eval_score_file):
                 try:
-                    import json
                     with open(eval_score_file, "r") as f:
                         data = json.load(f)
                     self.best_mean_reward = float(data.get("best_mean_reward", -np.inf))
@@ -129,15 +131,14 @@ class ParetoEvalCallback(BaseCallback):
                 all_means.append(mean_r)
                 all_lengths.append(np.mean(episode_lengths))
 
-            # 1. Calculate the Global Score
+            # 1. Calculate Global Score
             current_mean_reward = np.mean(all_means)
             current_mean_length = np.mean(all_lengths)
 
-            # 2. Log to Tensorboard/Logger (standard EvalCallback style)
+            # 2. Log to Tensorboard/Logger
             self.logger.record("eval/pareto_avg_reward", current_mean_reward)
             self.logger.record("eval/pareto_avg_ep_length", current_mean_length)
             
-            # Optional: Log specific weight performance for deeper insight
             for i, w in enumerate(self.pref_list):
                 self.logger.record(f"eval/reward_w_{w[1]}", all_means[i])
             
@@ -148,7 +149,7 @@ class ParetoEvalCallback(BaseCallback):
                       f"episode_reward={current_mean_reward:.2f} +/- {np.std(all_means):.2f}")
                 print(f"Episode length: {current_mean_length:.2f} +/- {np.std(all_lengths):.2f}")
 
-            # 3. Check if this is the "Best" model found so far
+            # 3. Check and save best model
             if current_mean_reward > self.best_mean_reward:
                 if self.verbose > 0:
                     print(f"New best mean reward! ({self.best_mean_reward:.4f} -> {current_mean_reward:.4f})")
@@ -156,7 +157,6 @@ class ParetoEvalCallback(BaseCallback):
                 if self.best_model_save_path is not None:
                     self.model.save(os.path.join(self.best_model_save_path, "best_model"))
                     try:
-                        import json
                         eval_score_file = os.path.join(self.best_model_save_path, "eval_best_score.json")
                         with open(eval_score_file, "w") as f:
                             json.dump({
@@ -169,7 +169,6 @@ class ParetoEvalCallback(BaseCallback):
                 
                 self.best_mean_reward = current_mean_reward
 
-            # Trigger potential logging for SB3 monitoring
             self.logger.dump(step=self.num_timesteps)
 
         return True

@@ -70,29 +70,40 @@ int main(int argc, char **argv)
   int slot_count = 1 ;
   if (argc > 2)
     slot_count = stoi(argv[2]);
+  std::string framework = "constrained";
+  if (argc > 3) framework = argv[3];
+
 
   int optimization_method = 0;  // 0 = egraph (default), 1 = RL
-  if (argc > 3)
-    optimization_method = stoi(argv[3]); 
+  if (argc > 4)
+    optimization_method = stoi(argv[4]); 
 
   int window = 0;
-  if (argc > 4) 
-    window = stoi(argv[4]);
+  if (argc > 5) 
+    window = stoi(argv[5]);
 
   bool call_quantifier = true;
-  if (argc > 5)
-    call_quantifier = stoi(argv[5]);
+  if (argc > 6)
+    call_quantifier = stoi(argv[6]);
 
   bool cse = true;
-  if (argc > 6)
-    cse = stoi(argv[6]);
+  if (argc > 7)
+    cse = stoi(argv[7]);
    
   bool const_folding = true; 
-  if (argc > 7)
-    const_folding = stoi(argv[7]); 
+  if (argc > 8)
+    const_folding = stoi(argv[8]);
 
+  int backend = 0;  // 0 = SEAL (default), 1 = Lattigo (Go/CKKS)
+  if (argc > 9)
+    backend = stoi(argv[9]);
 
-  if (cse)
+  float w_ops = 0.5;
+  float w_keys = 0.5;
+
+  if (argc > 10) w_ops = stof(argv[10]);
+  if (argc > 11) w_keys = stof(argv[11]);
+if (cse)
   {
     Compiler::enable_cse();
     Compiler::enable_order_operands();
@@ -127,7 +138,7 @@ int main(int argc, char **argv)
     cout << " window is " << window << endl;
     /********** vectorization Part *******************************/
     if(VECTORIZATION_ENABLED){
-      Compiler::gen_vectorized_code(func, window,optimization_method);  // add a flag to specify if the benchmark is structured or no
+      Compiler::gen_vectorized_code(func, window, optimization_method, w_ops, w_keys, framework);  // add a flag to specify if the benchmark is structured or no
     }
     /********** Simplification & depth reduction Part ************/
     if(SIMPLIFICATION_ENABLED){
@@ -136,8 +147,24 @@ int main(int argc, char **argv)
       Compiler::compile(func, ruleset, rewrite_heuristic);
     }
     /********** FHE code generation  *****************************/
-    Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
-    
+    if (backend == 0) {
+      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+      cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+    } else if (backend == 1) {
+      string go_path = "generated_" + func_name + ".go";
+      ofstream go_os(go_path);
+      if (!go_os) throw logic_error("failed to create Go file");
+      Compiler::gen_lattigo_code(func, go_os);
+      go_os.close();
+      cout << "Generated Lattigo code: " << go_path << endl;
+    } else if (backend == 2) {
+      string cu_path = "generated_" + func_name + ".cu";
+      ofstream cu_os(cu_path);
+      if (!cu_os) throw logic_error("failed to create CUDA file");
+      Compiler::gen_heongpu_code(func, cu_os, 1);
+      cu_os.close();
+      cout << "Generated HEonGPU code: " << cu_path << endl;
+    }
     /************/elapsed = chrono::high_resolution_clock::now() - t;
     cout << elapsed.count() << " ms\n";
     if (call_quantifier)
@@ -167,7 +194,24 @@ int main(int argc, char **argv)
     auto ruleset = Compiler::Ruleset::simplification_ruleset;
     auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
     Compiler::compile(func, ruleset, rewrite_heuristic);
-    Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+    if (backend == 0) {
+      Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
+      cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
+    } else if (backend == 1) {
+      string go_path = "generated_" + func_name + ".go";
+      ofstream go_os(go_path);
+      if (!go_os) throw logic_error("failed to create Go file");
+      Compiler::gen_lattigo_code(func, go_os);
+      go_os.close();
+      cout << "Generated Lattigo code: " << go_path << endl;
+    } else if (backend == 2) {
+      string cu_path = "generated_" + func_name + ".cu";
+      ofstream cu_os(cu_path);
+      if (!cu_os) throw logic_error("failed to create CUDA file");
+      Compiler::gen_heongpu_code(func, cu_os, 1);
+      cu_os.close();
+      cout << "Generated HEonGPU code: " << cu_path << endl;
+    }
     /************/elapsed = chrono::high_resolution_clock::now() - t;
     cout<<"Compile time : \n";
     cout << elapsed.count() << " ms\n";

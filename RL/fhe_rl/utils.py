@@ -1,28 +1,33 @@
 import os
 import sys
+import pickle
+import torch
+import torch.nn as nn
 from pytrs import (
     create_rules as _create_rules, parse_sexpr,
     Expr, Const, Var, Op, VARIABLE_RANGE, CONST_OFFSET,
     PAREN_CLOSE, PAREN_OPEN, node_to_id
 )
-import torch
-import torch.nn as nn
 
 from .config import (
     get_model_path, get_tokenizer_type, get_device,
     get_embeddings_model_type, EmbeddingsModelType,
 )
 
-# Restauration des imports dynamiques TRAE / BPE (absents de votre version)
-if get_tokenizer_type() == "bpe":
+try:
+    if get_tokenizer_type() == "bpe":
+        from .TRAE_bpe import TRAE, get_expression_cls_embedding, BPETokenizer
+    else:   
+        from .TRAE import TRAE, get_expression_cls_embedding
+except ImportError:
+    # Si le fichier TRAE classique n'existe plus, on force TRAE_bpe
     from .TRAE_bpe import TRAE, get_expression_cls_embedding, BPETokenizer
-else:   
-    from .TRAE import TRAE, get_expression_cls_embedding
 
 DEVICE = get_device()
 
+
 def load_embeddings(tokenizer_type=None, checkpoint_path=None, device=None):
-    """Charge les embeddings via TRAE ou BPE de manière dynamique."""
+    """Load embeddings via TRAE or BPE dynamically."""
     if tokenizer_type is None:
         tokenizer_type = get_tokenizer_type()
     if device is None:
@@ -38,8 +43,13 @@ def load_embeddings(tokenizer_type=None, checkpoint_path=None, device=None):
         model = load_embedding_model_dynamic(checkpoint_path, device)
         return model, None
 
+
 def load_embeddings_from_config(tokenizer_type=None):
-    """Charge l'embedder configuré (GNN ou TRAE/BPE)[cite: 11, 12]."""
+    """Load the embedder selected in AGENT_CONFIG['embeddings_model_type'].
+
+    Returns (model, tokenizer) to match the TRAE loader. The GNN extractor
+    has no tokenizer, so the second value is None.
+    """
     try:
         embedder_type = get_embeddings_model_type()
         if embedder_type == EmbeddingsModelType.GNN_AUTOENCODER:
@@ -56,8 +66,10 @@ def load_embeddings_from_config(tokenizer_type=None):
         print(f"Error: {e}")
         sys.exit(1)
 
+
 def create_rules(rules_path: str, rotations_rules_path: str = None):
-    return _create_rules(rules_path=rules_path, rotations_rules_path=rotations_rules_path)
+    return _create_rules(rules_path, rotations_rules_path)
+
 
 def load_embedding_model_dynamic(checkpoint_path=None, device=DEVICE):
     embeddings_model = TRAE()  
@@ -67,6 +79,7 @@ def load_embedding_model_dynamic(checkpoint_path=None, device=DEVICE):
     embeddings_model.to(device) 
     embeddings_model.eval()
     return embeddings_model
+
 
 def load_embedding_model_bpe(checkpoint_path=None, device=DEVICE):
     state_dict = torch.load(checkpoint_path, map_location=device, weights_only=True)
@@ -80,7 +93,6 @@ def load_embedding_model_bpe(checkpoint_path=None, device=DEVICE):
         vocab_size = 1000
     
     try:
-        import pickle
         tokenizer_paths = ["./fhe_rl/trained_models/bpe_tokenizer.pkl"]
         loaded_tokenizer = None
         for path in tokenizer_paths:
@@ -92,7 +104,7 @@ def load_embedding_model_bpe(checkpoint_path=None, device=DEVICE):
                 continue
         
         if loaded_tokenizer is None:
-            raise FileNotFoundError("BPE tokenizer not found")
+            raise FileNotFoundError("BPE tokenizer not found in expected paths")
         
         from . import TRAE_bpe as TRAE_module
         TRAE_module.config.vocab_size = vocab_size
@@ -110,11 +122,13 @@ def load_embedding_model_bpe(checkpoint_path=None, device=DEVICE):
     embeddings_model.eval()
     return embeddings_model, None
 
+
 def get_token_sequence(exp_str: str):
     expr = parse_sexpr(exp_str)
     flat = flatten_expr(expr)
     node_ids = tuple(entry["node_id"] for entry in flat)
     return node_ids
+
 
 def dfs_traverse(expr, depth=0, node_list=None):
     if node_list is None:
@@ -128,6 +142,7 @@ def dfs_traverse(expr, depth=0, node_list=None):
     else:
         node_list.append((expr, depth))
     return node_list
+
 
 def flatten_expr(expr):
     node_list = dfs_traverse(expr, 0)
@@ -146,8 +161,9 @@ def flatten_expr(expr):
         results.append({"node_id": nid})
     return results
 
+
 def load_expressions(file_path: str, validation_exprs=[]):
-    """Chargement robuste avec filtrage par taille de vecteur (provenant d'Imed)."""
+    """Load expressions with vector-size filtering and deduplication."""
     validation_token_set = set()
     for val in validation_exprs:
         exp_str = val.strip()
@@ -155,7 +171,7 @@ def load_expressions(file_path: str, validation_exprs=[]):
         validation_token_set.add(token_seq)
         
     unique_expressions = {}
-    recap = {"1":0, "4":0, "8":0, "9":0, "16":0, "25":0, "32":0}
+    recap = {"1": 0, "4": 0, "8": 0, "9": 0, "16": 0, "25": 0, "32": 0}
     
     with open(file_path, "r") as f:
         for line in f:
@@ -165,7 +181,7 @@ def load_expressions(file_path: str, validation_exprs=[]):
             try:
                 expr = parse_sexpr(exp_str)
                 vec_size = len(expr.args)
-                if str(vec_size) not in recap.keys():
+                if str(vec_size) not in recap:
                     continue
                 token_seq = get_token_sequence(exp_str)
                 if token_seq in validation_token_set:
@@ -180,7 +196,10 @@ def load_expressions(file_path: str, validation_exprs=[]):
     print("Number of unique valid expressions (excluding validation):", len(unique_expressions))
     return list(unique_expressions.values())
 
+
 def load_expressions_named(file_path: str):
+    """Load expressions with their names from a benchmark file.
+    Returns list of (expression_str, name) tuples, preserving order."""
     results = []
     with open(file_path, "r") as f:
         for line in f:
@@ -203,9 +222,11 @@ def load_expressions_named(file_path: str):
     print(f"Loaded {len(results)} named expressions from {file_path}")
     return results
 
+
 def mlp_mo(in_dim, hidden_dims, out_dim, *,
            act=nn.GELU, layernorm=True, dropout=0.0,
            residual=False, seed=None):
+    """Build an MLP: [in_dim] -> hidden_dims* -> [out_dim] with optional seeding."""
     if seed is not None:
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
@@ -221,9 +242,11 @@ def mlp_mo(in_dim, hidden_dims, out_dim, *,
     layers.append(nn.Linear(prev, out_dim))
     return nn.Sequential(*layers)
 
+
 def mlp(in_dim, hidden_dims, out_dim, *,
         act=nn.GELU, layernorm=True, dropout=0.0,
         residual=False):
+    """Build an MLP: [in_dim] -> hidden_dims* -> [out_dim]."""
     layers, prev = [], in_dim
     for h in hidden_dims:
         layers.append(nn.Linear(prev, h))
@@ -236,13 +259,14 @@ def mlp(in_dim, hidden_dims, out_dim, *,
     layers.append(nn.Linear(prev, out_dim))
     return nn.Sequential(*layers)
 
+
 def predict_method(
-        self,
-        observation,
-        state=None,
-        episode_start=None,
-        deterministic: bool = False,
-    ):
+    self,
+    observation,
+    state=None,
+    episode_start=None,
+    deterministic: bool = False,
+):
     device = next(self.parameters()).device
     if isinstance(observation, dict):
         obs = {k: torch.as_tensor(v, device=device) for k, v in observation.items()}
@@ -250,6 +274,7 @@ def predict_method(
         obs = torch.as_tensor(observation, device=device)
     actions, _, _ = self.forward(obs, deterministic=deterministic)
     return actions.cpu().numpy(), state
+
 
 def calc_vec_sizes(expr: Expr):
     vec_sizes = []
