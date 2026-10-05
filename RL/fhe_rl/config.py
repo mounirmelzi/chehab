@@ -61,7 +61,9 @@ TOKENIZER_CONFIG = {
 AGENT_CONFIG = {
     "device": "cuda" if torch.cuda.is_available() else "cpu",
     "algorithm": RLAlgorithm.LAGRANGIAN_PPO,
-    "embeddings_model_type": EmbeddingsModelType.TRANSFORMER_AUTOENCODER,
+    "embeddings_model_type": EmbeddingsModelType.GNN_AUTOENCODER,
+   
+
 }
 
 # Dotted paths resolved at runtime. (Restauré d'Imed)
