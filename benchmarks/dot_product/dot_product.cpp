@@ -91,10 +91,7 @@ int main(int argc, char **argv)
 int scheme = 1; // 0 = BFV, 1 = CKKS
   if (argc > 12) scheme = stoi(argv[12]);
 
-  float w_ops = 0.5;
-  float w_keys = 0.5;
-  if (argc > 9) w_ops = stof(argv[9]);
-  if (argc > 10) w_keys = stof(argv[10]);
+ 
 
   if (cse)
   {

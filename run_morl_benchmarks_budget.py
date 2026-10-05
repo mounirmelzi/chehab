@@ -17,10 +17,10 @@ infos.extend(operations)
 infos.extend(additional_infos)
 
 benchmark_folders = [
-    "lin_reg", "box_blur", "matrix_mul", "max", "sort", "l2_distance",
-    "poly_reg", "roberts_cross", "dot_product"
+  "dot_product"
 ]
-
+#  "lin_reg", "box_blur", "matrix_mul", "max", "sort", "l2_distance",
+    #"poly_reg", "roberts_cross", 
 pref_list = [[0.8, 0.2], [1.0, 0.0]]  # Points de grille grossière pour la bisection
 budget_list = [230, 369, 9000]
 
