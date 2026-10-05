@@ -2,9 +2,9 @@ import pandas as pd
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
 from typing import Union
-from expr import Expr, Op
-from parser import parse_sexpr
-from cost import get_multiplicative_depth, get_normal_depth
+from .expr import Expr, Op
+from .parser import parse_sexpr
+from .cost import get_multiplicative_depth, get_normal_depth
 
 
 class NoiseEstimator:

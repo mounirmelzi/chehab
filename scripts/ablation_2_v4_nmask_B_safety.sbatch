@@ -31,7 +31,7 @@ mkdir -p "$PROJ_ROOT/RL/test_results"
 # Purpose: prove Margin Barrier + Safety > Noise Masking + Safety
 MODEL="$PROJ_ROOT/RL/eval/best_model_model_14385924_noise_masking/best_model.zip"
 OUTPUT="$PROJ_ROOT/RL/test_results/test_v2_v4_nmask_B_safety.xlsx"
-BUDGETS="230,236,369,372,9000000"
+BUDGETS="230,236,369,372,9000"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  ABLATION 2: V4 Noise Masking B + Safety Rollback"

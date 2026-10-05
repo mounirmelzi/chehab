@@ -29,7 +29,7 @@ mkdir -p "$PROJ_ROOT/RL/test_results"
 
 MODEL="$PROJ_ROOT/RL/eval/best_model_model_14385920_margin_barrier/best_model.zip"
 OUTPUT="$PROJ_ROOT/RL/test_results/test_v2_v4_mb_B_safety.xlsx"
-BUDGETS="230,236,369,372,9000000"
+BUDGETS="230,236,369,372,9000"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  Testing V4 MB_B with safety rollback (test_mode v2)"

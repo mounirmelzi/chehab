@@ -16,7 +16,7 @@ infos.extend(operations)
 infos.extend(additional_infos)
 
 try:
-    print("run=> cmake', '-S', '.', '-B', 'build' ")
+    print("run=> cmake -S . -B build")
     result = subprocess.run(
         ['cmake', '-S', '.', '-B', 'build'], 
         check=True, 
@@ -24,7 +24,7 @@ try:
         stderr=subprocess.PIPE, 
         universal_newlines=True
     )
-    print("run=> 'cmake', '--build', 'build'")
+    print("run=> cmake --build build")
     result = subprocess.run(
         ['cmake', '--build', 'build'], 
         check=True, 
@@ -34,8 +34,14 @@ try:
     )  
 except subprocess.CalledProcessError as e:
     print(f"Command failed with error:\n{e.stderr}")   
+    raise
 
-benchmark_folders = ["lin_reg"]
+benchmark_folders = [
+    "lin_reg", "box_blur", "matrix_mul", "max", "sort",
+    "dot_product", "gx_kernel", "gy_kernel", "hamming_dist",
+    "l2_distance", "poly_reg", "roberts_cross"
+]
+
 exceptions = ["max", "sort", "discrete_cosin_transform", "poly_derivative"]
 benchmarks_slot_counts = {
     "max": [3, 4, 5],
@@ -48,14 +54,15 @@ optimization_method = 1
 cse_enabled = 1
 vectorize_code = 1
 slot_counts = [4, 8, 16, 32]
-pref_list = [[0.8, 0.2],[1.0, 0.0]]
+# Utilisation de la liste de préférences d'Imed
+pref_list = generate_pref_list(3)
 iterations = 1
 window_size = 0
-depths = [5]
-regimes = ["100-50"]
+depths = [5, 10]
+regimes = ["50-50", "100-50", "100-100"]
 number_instances_each_polynomial_configuration = 1
 compile_time_timeout_seconds = 7200
-output_csv = f"results_{'RL' if optimization_method == 1 else 'EGraph'}.csv"
+output_csv = f"results_RL_MORL.csv"
 
 # ── adaptive bisection config ──────────────────────────────────────────────────
 BASE_UNIT = 18          # known spacing between key-size levels
@@ -87,12 +94,14 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
         "final_ops_cost": [], "final_keys_cost": []
     }
 
-    if not subfolder_name in exceptions:
-        pro = subprocess.Popen(['python3', 'generate_{}.py'.format(subfolder_name), '--slot_count', str(slot_count)], cwd=build_path)
-        pro.wait()
+    if subfolder_name not in exceptions:
+        if os.path.exists(os.path.join(build_path, f"generate_{subfolder_name}.py")):
+            pro = subprocess.Popen(['python3', f'generate_{subfolder_name}.py', '--slot_count', str(slot_count)], cwd=build_path)
+            pro.wait()
 
     for iteration in range(iterations):
         print(f"===> Running iteration : {iteration + 1}")
+        # Commande unifiée compatible avec le framework arg_idx
         benchmark_run_command = f"./{subfolder_name} {vectorize_code} {slot_count} morl {optimization_method} {window_size} 1 {cse_enabled} 1 0 {w_ops} {w_keys}"
         try:
             result = subprocess.run(
@@ -117,16 +126,15 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
                         operation_stats["final_keys_cost"].append(float(clean_line.split(':')[1].strip()))
                     except (IndexError, ValueError):
                         pass
-                if ' ms' in line:
+                if ' ms' in line and not compile_time_found:
                     optimization_time = float(line.split()[0])
                     operation_stats["compile_time (s)"].append(optimization_time)
                     compile_time_found = True
                 if 'poly_mod:' in line:
-                    print(f"======> poly_mod : {line}")
-                    poly_mod = float(line.split()[1])
                     poly_mod_found = True
                 if compile_time_found and poly_mod_found:
                     break
+                    
             depth_match = re.search(r'max:\s*\((\d+),\s*(\d+)\)', result.stdout)
             depth = int(depth_match.group(1)) if depth_match else None
             multiplicative_depth = int(depth_match.group(2)) if depth_match else None
@@ -168,7 +176,6 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
                         if counter > 0 or iterations == 1:
                             lines = result.stdout.splitlines()
                             comp = 0
-                            print(f"returned lines : \n {lines} \n\n")
                             for line in lines:
                                 if 'circuit_execution_time_(ms):' in line:
                                     operation_stats["circuit_execution_time (s)"].append(float(line.split()[1]))
@@ -186,11 +193,12 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
                     print(f"Failed in building fhe_code for benchmark: {subfolder_name}")
 
         file_name = os.path.join(build_path_he, "_gen_he_fhe.cpp")
-        with open(file_name, "r") as file:
-            file_content = file.read()
-            for op in operations:
-                nb_occurrences = len(re.findall(rf'\b{op}', file_content))
-                operation_stats[op].append(int(nb_occurrences))
+        if os.path.exists(file_name):
+            with open(file_name, "r") as file:
+                file_content = file.read()
+                for op in operations:
+                    nb_occurrences = len(re.findall(rf'\b{op}', file_content))
+                    operation_stats[op].append(int(nb_occurrences))
 
     # ── build row ──────────────────────────────────────────────────────────────
     bench_name = subfolder_name + "_" + str(slot_count)
@@ -211,9 +219,8 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
                 if key == "final_keys_cost":
                     raw_key_size = statistics.median(values)   # keep raw float for level comparison
                 row.append(result)
-            print(f"{key} {values} {result}")
 
-    # ── write immediately (open → write → close, same as original) ────────────
+    # ── write immediately ────────────
     if w_ops not in written_w_ops:
         with open(output_csv, mode='a', newline='') as file:
             writer = csv.writer(file)
@@ -232,11 +239,6 @@ def run_benchmark(subfolder_name, slot_count, w_ops, w_keys, build_path, build_p
 def _bisect_one_target(subfolder_name, slot_count, w_hi, ks_hi, w_lo, ks_lo,
                        build_path, build_path_he, build_path_he_build,
                        target, found, depth=0):
-    """
-    Search for a single integer key-size level `target` in (w_lo, w_hi).
-    `found` is a shared set — if the target (or any level) gets discovered
-    by a mid-point probe it is added there so sibling searches can skip it.
-    """
     if depth >= MAX_BISECT_DEPTH:
         print(f"    [max depth] target={target} stopping at [{w_lo:.6f}, {w_hi:.6f}]")
         return
@@ -245,7 +247,7 @@ def _bisect_one_target(subfolder_name, slot_count, w_hi, ks_hi, w_lo, ks_lo,
           f"endpoints=[{ks_lo}, {ks_hi}]  target={target}")
 
     w_mid = (w_hi + w_lo) / 2
-    w_mid = round(w_mid, 10)  # avoid floating point precision issues
+    w_mid = round(w_mid, 10)  
     w_mid_keys = round(1.0 - w_mid, 10)
 
     row, ks_mid = run_benchmark(subfolder_name, slot_count, w_mid, w_mid_keys,
@@ -257,16 +259,14 @@ def _bisect_one_target(subfolder_name, slot_count, w_hi, ks_hi, w_lo, ks_lo,
     found.add(ks_mid)
 
     if ks_mid == target:
-        return  # found — done for this target
+        return  
 
     elif ks_mid < target:
-        # target is in the upper half [w_mid, w_hi]
         _bisect_one_target(subfolder_name, slot_count, w_hi, ks_hi, w_mid, ks_mid,
                            build_path, build_path_he, build_path_he_build,
                            target, found, depth=depth + 1)
 
-    else:  # ks_mid > target
-        # target is in the lower half [w_lo, w_mid]
+    else: 
         _bisect_one_target(subfolder_name, slot_count, w_mid, ks_mid, w_lo, ks_lo,
                            build_path, build_path_he, build_path_he_build,
                            target, found, depth=depth + 1)
@@ -274,18 +274,13 @@ def _bisect_one_target(subfolder_name, slot_count, w_hi, ks_hi, w_lo, ks_lo,
 
 def bisect_search(subfolder_name, slot_count, w_hi, ks_hi, w_lo, ks_lo,
                   build_path, build_path_he, build_path_he_build):
-    """
-    Entry point: search independently for every integer level between ks_lo
-    and ks_hi. Each target gets its own MAX_BISECT_DEPTH budget.
-    Targets already discovered by a previous probe are skipped.
-    """
     lo, hi = min(ks_lo, ks_hi), max(ks_lo, ks_hi)
-    missing_targets = list(range(lo + 1, hi))   # e.g. ks=1,ks=4 → [2, 3]
+    missing_targets = list(range(lo + 1, hi))   
 
     if not missing_targets:
         return
 
-    found = set()   # levels discovered by any probe, shared across targets
+    found = set()   
 
     for target in missing_targets:
         if target in found:
@@ -297,22 +292,22 @@ def bisect_search(subfolder_name, slot_count, w_hi, ks_hi, w_lo, ks_lo,
                            build_path, build_path_he, build_path_he_build,
                            target, found)
         
-# ── main loop (your original structure) ───────────────────────────────────────
+# ── main loop ───────────────────────────────────────
 for subfolder_name in benchmark_folders:
     benchmark_path = os.path.join(benchmarks_folder, subfolder_name)
     build_path = os.path.join(build_folder, subfolder_name)
     if os.path.isdir(build_path):
         updated_slot_counts = slot_counts
         if subfolder_name in exceptions:
-            updated_slot_counts = benchmarks_slot_counts[subfolder_name]
+            updated_slot_counts = benchmarks_slot_counts.get(subfolder_name, slot_counts)
 
         for slot_count in updated_slot_counts:
             build_path_he = os.path.join(build_path, "he")
             build_path_he_build = os.path.join(build_path_he, "build")
 
-            # ── Phase 1: coarse grid (your original pref_list loop) ───────────
+            # ── Phase 1: coarse grid ───────────
             written_w_ops = set()
-            known_points = []   # list of (w_ops, ks_level)
+            known_points = []   
             for w in pref_list:
                 w_ops, w_keys = w
                 print("****************************************************************")
@@ -328,7 +323,7 @@ for subfolder_name in benchmark_folders:
 
             # ── Phase 2: bisect every interval where levels differ ─────────────
             print(f"\n--- Adaptive bisection for {subfolder_name} slot_count={slot_count} ---")
-            known_points.sort(key=lambda x: x[0])  # ascending w_ops
+            known_points.sort(key=lambda x: x[0])  
             for i in range(len(known_points) - 1):
                 w_lo, ks_lo = known_points[i]
                 w_hi, ks_hi = known_points[i + 1]
@@ -339,16 +334,13 @@ for subfolder_name in benchmark_folders:
                     except Exception as e:
                         print(f"Bisect failed for {subfolder_name} [{w_lo}, {w_hi}]: {e}")
                         continue
+
 #################################################################################################
 # ── poly-tree helpers ──────────────────────────────────────────────────────────
 
 def run_poly_benchmark(subfolder_name, build_path, build_path_he, build_path_he_build,
                        benchmark_name, tree_depth, instance, regime,
                        w_ops, w_keys):
-    """
-    Run one (benchmark_name, w_ops, w_keys) point for polynomial trees.
-    Returns (row, ks_ops_level, ks_keys_level) or (None, None, None) on timeout.
-    """
     benchmark_compilation_timed_out = False
     operation_stats = {
         "add": [], "sub": [], "multiply_plain": [], "rotate_rows": [],
@@ -369,6 +361,7 @@ def run_poly_benchmark(subfolder_name, build_path, build_path_he, build_path_he_
             continue
 
         print(f"=========> Iteration : {iteration + 1}")
+        # Commande unifiée compatible avec le framework arg_idx
         command = (f"./{subfolder_name} {tree_depth} {instance} {regime} "
                    f"{vectorize_code} {optimization_method} {window_size} "
                    f"1 {cse_enabled} 1 0 {w_ops} {w_keys}")
@@ -395,12 +388,11 @@ def run_poly_benchmark(subfolder_name, build_path, build_path_he, build_path_he_
                         operation_stats["final_keys_cost"].append(float(clean_lower.split(':')[1].strip()))
                     except (IndexError, ValueError):
                         pass
-                if ' ms' in line:
+                if ' ms' in line and not compile_time_found:
                     optimization_time = float(line.split()[0])
                     operation_stats["compile_time (s)"].append(optimization_time)
                     compile_time_found = True
                 if 'poly_mod:' in line:
-                    print(f"======> poly_mod : {line}")
                     poly_mod_found = True
                 if compile_time_found and poly_mod_found:
                     break
@@ -444,7 +436,6 @@ def run_poly_benchmark(subfolder_name, build_path, build_path_he, build_path_he_
                     if counter > 0 or iterations == 1:
                         lines = result.stdout.splitlines()
                         comp = 0
-                        print(f"returned lines : \n {lines} \n\n")
                         for line in lines:
                             if 'circuit_execution_time_(ms):' in line:
                                 operation_stats["circuit_execution_time (s)"].append(float(line.split()[1]))
@@ -463,11 +454,12 @@ def run_poly_benchmark(subfolder_name, build_path, build_path_he, build_path_he_
 
         # parse operation counts from generated C++ file
         file_name = os.path.join(build_path_he, "_gen_he_fhe.cpp")
-        with open(file_name, "r") as f:
-            file_content = f.read()
-            for op in operations:
-                nb_occurrences = len(re.findall(rf'\b{op}', file_content))
-                operation_stats[op].append(int(nb_occurrences))
+        if os.path.exists(file_name):
+            with open(file_name, "r") as f:
+                file_content = f.read()
+                for op in operations:
+                    nb_occurrences = len(re.findall(rf'\b{op}', file_content))
+                    operation_stats[op].append(int(nb_occurrences))
 
     # ── build row ──────────────────────────────────────────────────────────────
     row = [benchmark_name, w_ops, w_keys]
@@ -490,7 +482,6 @@ def run_poly_benchmark(subfolder_name, build_path, build_path_he, build_path_he_
                 if key == "final_keys_cost":
                     raw_keys_cost = statistics.median(values)
             row.append(result_val)
-            print(f"{key} {values} {result_val}")
 
     with open(output_csv, mode='a', newline='') as f:
         writer = csv.writer(f)
@@ -509,10 +500,6 @@ def _poly_bisect_one_target(subfolder_name, build_path, build_path_he, build_pat
                              w_hi, ks_ops_hi, ks_keys_hi,
                              w_lo, ks_ops_lo, ks_keys_lo,
                              target_ops, target_keys, found, depth=0):
-    """
-    Search for a single (target_ops, target_keys) level pair.
-    Bisects on w_ops; w_keys = 1 - w_ops.
-    """
     if depth >= MAX_BISECT_DEPTH:
         print(f"    [max depth] targets=({target_ops},{target_keys}) "
               f"stopping at [{w_lo:.6f}, {w_hi:.6f}]")
@@ -523,7 +510,7 @@ def _poly_bisect_one_target(subfolder_name, build_path, build_path_he, build_pat
           f"target=({target_ops},{target_keys})")
 
     w_mid = (w_hi + w_lo) / 2
-    w_mid = round(w_mid, 10)  # avoid floating point precision issues
+    w_mid = round(w_mid, 10)  
     w_mid_keys = round(1.0 - w_mid, 10)
 
     row, ops_mid, keys_mid = run_poly_benchmark(
@@ -538,9 +525,8 @@ def _poly_bisect_one_target(subfolder_name, build_path, build_path_he, build_pat
     found.add((ops_mid, keys_mid))
 
     if ops_mid == target_ops and keys_mid == target_keys:
-        return  # found — done for this target
+        return  
 
-    # use ops cost as the primary bisection axis (same convention as first script)
     if ops_mid < target_ops:
         _poly_bisect_one_target(
             subfolder_name, build_path, build_path_he, build_path_he_build,
@@ -561,15 +547,9 @@ def poly_bisect_search(subfolder_name, build_path, build_path_he, build_path_he_
                        benchmark_name, tree_depth, instance, regime,
                        w_hi, ks_ops_hi, ks_keys_hi,
                        w_lo, ks_ops_lo, ks_keys_lo):
-    """
-    Entry point for poly-tree bisection between two adjacent coarse-grid points.
-    Searches independently for every missing (ops, keys) level pair.
-    Each target gets its own MAX_BISECT_DEPTH budget.
-    """
     ops_lo,  ops_hi  = min(ks_ops_lo,  ks_ops_hi),  max(ks_ops_lo,  ks_ops_hi)
     keys_lo, keys_hi = min(ks_keys_lo, ks_keys_hi), max(ks_keys_lo, ks_keys_hi)
 
-    # build all missing (ops, keys) integer pairs between the two endpoints
     missing_targets = [
         (o, k)
         for o in range(ops_lo + 1, ops_hi)
@@ -611,7 +591,7 @@ for subfolder_name in polynomial_folders:
                 print(f"\nBenchmark '{benchmark_name}' will be run...")
 
                 # ── Phase 1: coarse grid ───────────────────────────────────────
-                known_points = []   # list of (w_ops, ops_level, keys_level)
+                known_points = []   
                 written_w_ops_poly = set()
 
                 for w in pref_list:
@@ -633,7 +613,7 @@ for subfolder_name in polynomial_folders:
 
                 # ── Phase 2: adaptive bisection ────────────────────────────────
                 print(f"\n--- Adaptive bisection for {benchmark_name} ---")
-                known_points.sort(key=lambda x: x[0])   # ascending w_ops
+                known_points.sort(key=lambda x: x[0])   
 
                 for i in range(len(known_points) - 1):
                     w_lo, ops_lo, keys_lo = known_points[i]
@@ -648,4 +628,4 @@ for subfolder_name in polynomial_folders:
                         except Exception as e:
                             print(f"Poly bisect failed for {benchmark_name} "
                                   f"[{w_lo}, {w_hi}]: {e}")
-                            continue                    
+                            continue

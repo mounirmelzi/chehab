@@ -1,0 +1,177 @@
+run=> cmake', '-S', '.', '-B', 'build' 
+run=> 'cmake', '--build', 'build'
+****************************************************************
+*****run lin_reg , for slot_count : 4******
+===> Running iteration : 1
+Depth=>None, multiplicative_depth=>None
+add [0] 0
+sub [0] 0
+multiply_plain [0] 0
+rotate_rows [0] 0
+negate [0] 0
+multiply [0] 0
+Depth [None] None
+Multiplicative Depth [None] None
+Warning: No values found for compile_time (s) in lin_reg with slot_count 4.
+compile_time (s) [] N/A
+Warning: No values found for circuit_execution_time (s) in lin_reg with slot_count 4.
+circuit_execution_time (s) [] N/A
+Warning: No values found for galois_keys_generation_time (s) in lin_reg with slot_count 4.
+galois_keys_generation_time (s) [] N/A
+Warning: No values found for total_execution_time (s) in lin_reg with slot_count 4.
+total_execution_time (s) [] N/A
+Warning: No values found for Remaining_noise_budget in lin_reg with slot_count 4.
+Remaining_noise_budget [] N/A
+Warning: No values found for rotation_keys_size (MB) in lin_reg with slot_count 4.
+rotation_keys_size (MB) [] N/A
+Warning: No values found for final_ops_cost in lin_reg with slot_count 4.
+final_ops_cost [] N/A
+Warning: No values found for final_keys_cost in lin_reg with slot_count 4.
+final_keys_cost [] N/A
+
+--- Adaptive bisection for lin_reg slot_count=4 ---
+****************************************************************
+*****run lin_reg , for slot_count : 8******
+===> Running iteration : 1
+Depth=>None, multiplicative_depth=>None
+add [0] 0
+sub [0] 0
+multiply_plain [0] 0
+rotate_rows [0] 0
+negate [0] 0
+multiply [0] 0
+Depth [None] None
+Multiplicative Depth [None] None
+Warning: No values found for compile_time (s) in lin_reg with slot_count 8.
+compile_time (s) [] N/A
+Warning: No values found for circuit_execution_time (s) in lin_reg with slot_count 8.
+circuit_execution_time (s) [] N/A
+Warning: No values found for galois_keys_generation_time (s) in lin_reg with slot_count 8.
+galois_keys_generation_time (s) [] N/A
+Warning: No values found for total_execution_time (s) in lin_reg with slot_count 8.
+total_execution_time (s) [] N/A
+Warning: No values found for Remaining_noise_budget in lin_reg with slot_count 8.
+Remaining_noise_budget [] N/A
+Warning: No values found for rotation_keys_size (MB) in lin_reg with slot_count 8.
+rotation_keys_size (MB) [] N/A
+Warning: No values found for final_ops_cost in lin_reg with slot_count 8.
+final_ops_cost [] N/A
+Warning: No values found for final_keys_cost in lin_reg with slot_count 8.
+final_keys_cost [] N/A
+
+--- Adaptive bisection for lin_reg slot_count=8 ---
+****************************************************************
+*****run lin_reg , for slot_count : 16******
+===> Running iteration : 1
+Depth=>None, multiplicative_depth=>None
+add [0] 0
+sub [0] 0
+multiply_plain [0] 0
+rotate_rows [0] 0
+negate [0] 0
+multiply [0] 0
+Depth [None] None
+Multiplicative Depth [None] None
+Warning: No values found for compile_time (s) in lin_reg with slot_count 16.
+compile_time (s) [] N/A
+Warning: No values found for circuit_execution_time (s) in lin_reg with slot_count 16.
+circuit_execution_time (s) [] N/A
+Warning: No values found for galois_keys_generation_time (s) in lin_reg with slot_count 16.
+galois_keys_generation_time (s) [] N/A
+Warning: No values found for total_execution_time (s) in lin_reg with slot_count 16.
+total_execution_time (s) [] N/A
+Warning: No values found for Remaining_noise_budget in lin_reg with slot_count 16.
+Remaining_noise_budget [] N/A
+Warning: No values found for rotation_keys_size (MB) in lin_reg with slot_count 16.
+rotation_keys_size (MB) [] N/A
+Warning: No values found for final_ops_cost in lin_reg with slot_count 16.
+final_ops_cost [] N/A
+Warning: No values found for final_keys_cost in lin_reg with slot_count 16.
+final_keys_cost [] N/A
+
+--- Adaptive bisection for lin_reg slot_count=16 ---
+****************************************************************
+*****run lin_reg , for slot_count : 32******
+===> Running iteration : 1
+Depth=>None, multiplicative_depth=>None
+add [0] 0
+sub [0] 0
+multiply_plain [0] 0
+rotate_rows [0] 0
+negate [0] 0
+multiply [0] 0
+Depth [None] None
+Multiplicative Depth [None] None
+Warning: No values found for compile_time (s) in lin_reg with slot_count 32.
+compile_time (s) [] N/A
+Warning: No values found for circuit_execution_time (s) in lin_reg with slot_count 32.
+circuit_execution_time (s) [] N/A
+Warning: No values found for galois_keys_generation_time (s) in lin_reg with slot_count 32.
+galois_keys_generation_time (s) [] N/A
+Warning: No values found for total_execution_time (s) in lin_reg with slot_count 32.
+total_execution_time (s) [] N/A
+Warning: No values found for Remaining_noise_budget in lin_reg with slot_count 32.
+Remaining_noise_budget [] N/A
+Warning: No values found for rotation_keys_size (MB) in lin_reg with slot_count 32.
+rotation_keys_size (MB) [] N/A
+Warning: No values found for final_ops_cost in lin_reg with slot_count 32.
+final_ops_cost [] N/A
+Warning: No values found for final_keys_cost in lin_reg with slot_count 32.
+final_keys_cost [] N/A
+
+--- Adaptive bisection for lin_reg slot_count=32 ---
+Run polynomial benchmarks !!!!!!
+
+Benchmark 'tree_100-50_5_1' will be run...
+****************************************************************
+=========> Iteration : 1
+Command for polynomials_coyote failed with error:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/Users/smara/chehab-unified/RL/fhe_rl/__main__.py", line 4, in <module>
+    from .run import run_agent
+  File "/mnt/c/Users/smara/chehab-unified/RL/fhe_rl/run.py", line 8, in <module>
+    from .utils import load_expressions, create_rules, parse_sexpr, calc_vec_sizes
+  File "/mnt/c/Users/smara/chehab-unified/RL/fhe_rl/utils.py", line 3, in <module>
+    from pytrs import (
+    ...<3 lines>...
+    )
+  File "/mnt/c/Users/smara/chehab-unified/RL/pytrs/__init__.py", line 5, in <module>
+    from .noise_estimator import NoiseEstimator
+  File "/mnt/c/Users/smara/chehab-unified/RL/pytrs/noise_estimator.py", line 3, in <module>
+    from sklearn.linear_model import LinearRegression
+ModuleNotFoundError: No module named 'sklearn'
+Vectorizer exited with status 256
+Segmentation fault (core dumped)
+
+Failed in building fhe_code for benchmark: polynomials_coyote
+Failed in running fhe_code for benchmark: polynomials_coyote
+add [0] 0
+sub [0] 0
+multiply_plain [0] 0
+rotate_rows [0] 0
+negate [0] 0
+multiply [0] 0
+Warning: No values found for Depth in tree_100-50_5_1.
+Depth [] N/A
+Warning: No values found for Multiplicative Depth in tree_100-50_5_1.
+Multiplicative Depth [] N/A
+Warning: No values found for compile_time (s) in tree_100-50_5_1.
+compile_time (s) [] N/A
+Warning: No values found for circuit_execution_time (s) in tree_100-50_5_1.
+circuit_execution_time (s) [] N/A
+Warning: No values found for galois_keys_generation_time (s) in tree_100-50_5_1.
+galois_keys_generation_time (s) [] N/A
+Warning: No values found for total_execution_time (s) in tree_100-50_5_1.
+total_execution_time (s) [] N/A
+Warning: No values found for Remaining_noise_budget in tree_100-50_5_1.
+Remaining_noise_budget [] N/A
+Warning: No values found for rotation_keys_size (MB) in tree_100-50_5_1.
+rotation_keys_size (MB) [] N/A
+Warning: No values found for final_ops_cost in tree_100-50_5_1.
+final_ops_cost [] N/A
+Warning: No values found for final_keys_cost in tree_100-50_5_1.
+final_keys_cost [] N/A
+
+--- Adaptive bisection for tree_100-50_5_1 ---

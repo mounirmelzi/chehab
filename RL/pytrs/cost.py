@@ -1,7 +1,8 @@
-from expr import Expr, Var, Const, Op
-from serializer import expr_to_str
+from .expr import Expr, Var, Const, Op
+from .serializer import expr_to_str
 import subprocess
-from rules import create_rules
+from .rules import create_rules
+from .parser import parse_sexpr
 try:
     from . import config as pytrs_config
 except ImportError:
@@ -83,6 +84,7 @@ def _operations_cost_mo(expr: Expr) -> int:
     return node_cost
 
 def operations_cost(expr: Expr) -> int:
+    """Dynamically switches cost calculation based on the active framework[cite: 17]."""
     if getattr(pytrs_config, "framework", "constrained") == "morl":
         return _operations_cost_mo(expr)
     return _operations_cost_constrained(expr)

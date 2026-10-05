@@ -192,4 +192,3 @@ inline std::string get_plain_var(std::size_t id) {
 }
 
 } // namespace fheco::code_gen::lattigo
-

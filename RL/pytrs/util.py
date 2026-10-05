@@ -2,8 +2,8 @@
 from typing import Set, Dict, Any, List
 import random
 
-from expr    import Expr, Var, Const, Op
-from veclang import SCALAR_OPS, VECTOR_OPS
+from .expr import Expr, Var, Const, Op
+from .veclang import SCALAR_OPS, VECTOR_OPS
 
 # ---------------------------------------------------------------------------
 # variable collection / random assignment helpers

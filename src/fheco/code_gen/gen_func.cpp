@@ -16,7 +16,7 @@ namespace fheco::code_gen
 
 void gen_func(
   const shared_ptr<ir::Func> &func, const unordered_set<int> &rotataion_steps, ostream &header_os,
-  string_view header_name, ostream &source_os,param_select::EncParams::SecurityLevel security_level,bool automatic_enc_params_enabled)
+  string_view header_name, ostream &source_os, param_select::EncParams::SecurityLevel security_level, bool automatic_enc_params_enabled)
 {
   passes::prepare_code_gen(func);
   header_os << header_includes;
@@ -24,8 +24,7 @@ void gen_func(
   gen_func_decl(func->name(), header_os);
   header_os << '\n';
   gen_rotation_steps_getter_decl(func->name(), header_os);
-  /*************************************************************/
-  /*************************************************************/
+  
   source_os << source_includes;
   source_os << "#include \"" << header_name << "\"\n";
   source_os << '\n';
@@ -44,25 +43,19 @@ void gen_func(
   source_os << '\n';
   gen_rotation_steps_getter_def(func->name(), rotataion_steps, source_os);
   source_os << '\n';
-  /****************************************************************/
-  //std::cout<<"\n ==>Welcome in encryption params selection : \n";
+  
   param_select::ParameterSelector selector(func, security_level);
-  bool use_mod_switch = false ;
-  if(automatic_enc_params_enabled){
+  bool use_mod_switch = false;
+  if (automatic_enc_params_enabled) {
     param_select::EncParams params = selector.select_params(use_mod_switch); 
     params.print_params(std::cout); 
-    //std::cout<<"Encryption params have been printed succefully\n";
-    gen_main_code(params,security_level,automatic_enc_params_enabled);
-  }else{ 
-    int poly_modulus_degree = 16384 ; 
-    param_select::EncParams params = param_select::EncParams(poly_modulus_degree,func->plain_modulus()); 
-    gen_main_code(params,security_level,automatic_enc_params_enabled);
+    gen_main_code(params, security_level, automatic_enc_params_enabled);
+  } else { 
+    int poly_modulus_degree = 16384; 
+    param_select::EncParams params = param_select::EncParams(poly_modulus_degree, func->plain_modulus()); 
+    gen_main_code(params, security_level, automatic_enc_params_enabled);
   }
-  //std::cout<<"Gen main code has been done \n";
 }
-
-/**************************************************************************************/
-/**************************************************************************************/
 
 void gen_func_decl(const string &func_name, ostream &os)
 {
@@ -179,7 +172,6 @@ void gen_op_terms(const shared_ptr<ir::Func> &func, ostream &os, TermsCtxtObject
 
       auto multip = ++operands_multip[operand->id()];
       auto operand_object_info_it = terms_ctxt_objects_info.find(operand->id());
-      // operand with multiplicity > 1 selected for overwrite
       if (operand_object_info_it == terms_ctxt_objects_info.end())
       {
         operands_ctxt_objects_ids[i] = term_object_id;
@@ -238,7 +230,6 @@ void gen_op_terms(const shared_ptr<ir::Func> &func, ostream &os, TermsCtxtObject
     {
       os << evaluator_id << "." << operation_mapping.at(ir::OpType{term->op_code().type(), move(operands_types)})
          << "(";
-      // operation term needs operands so operands_ctxt_objects_ids cannot be empty
       for (size_t i = 0;; ++i)
       {
         auto operand = term->operands()[i];
@@ -288,7 +279,6 @@ void gen_output_terms(
     if (term->type() == ir::Term::Type::cipher)
     {
       auto ctxt_object_id = terms_ctxt_objects_info.at(term->id()).id_;
-      // an output term has at least one label
       for (auto it = output_info.second.labels_.cbegin();;)
       {
         const auto &label = *it;
@@ -335,126 +325,129 @@ void gen_rotation_steps_getter_def(const string &func_name, const unordered_set<
   os << "}\n";
 }
 
-void gen_main_code(fheco::param_select::EncParams params,param_select::EncParams::SecurityLevel security_level,bool automatic_enc_params_enabled)
+void gen_main_code(fheco::param_select::EncParams params, param_select::EncParams::SecurityLevel security_level, bool automatic_enc_params_enabled)
 {
     ofstream out("./he/main.cpp");
     string_view str_1{ 
             R"(#include <chrono>
-    #include <cstddef>
-    #include <fstream>
-    #include <iostream>
-    #include <ostream> 
-    #include "_gen_he_fhe.hpp"
-    #include "utils.hpp"
+#include <cstddef>
+#include <fstream>
+#include <iostream>
+#include <ostream> 
+#include "_gen_he_fhe.hpp"
+#include "utils.hpp"
 
-    using namespace std;
-    using namespace seal;
+using namespace std;
+using namespace seal;
 
-    void print_bool_arg(bool arg, const string &name, ostream &os)
-    {
-      os << (arg ? name : "no" + name); 
-    }
+void print_bool_arg(bool arg, const string &name, ostream &os)
+{
+  os << (arg ? name : "no" + name); 
+}
 
-    int main(int argc, char **argv)
-    {
-      bool opt = true;
-      if (argc > 1)
-        opt = stoi(argv[1]);
+int main(int argc, char **argv)
+{
+  bool opt = true;
+  if (argc > 1)
+    opt = stoi(argv[1]);
 
-      print_bool_arg(opt, "opt", clog);
-      clog << '\n';
+  print_bool_arg(opt, "opt", clog);
+  clog << '\n';
 
-      string app_name = "fhe";
-      ifstream is("../" + app_name + "_io_example_adapted.txt");
-      if (!is)
-        throw invalid_argument("failed to open io example file");
-      )"
+  string app_name = "fhe";
+  ifstream is("../" + app_name + "_io_example_adapted.txt");
+  if (!is)
+    throw invalid_argument("failed to open io example file");
+  )"
       };
+      
       string str_1_converted{str_1};
-      out<<str_1_converted ;
-      out<<"  EncryptionParameters params(scheme_type::bfv); \n";
-      out<<"  size_t n ="<<params.poly_mod_degree()<<" ;\n";
-      out<<"  params.set_poly_modulus_degree(n);\n";
-      out<<"  params.set_plain_modulus(PlainModulus::Batching(n, "<<params.plain_mod_bit_size()<<")); \n";
-      if(automatic_enc_params_enabled){
-        out<<"  params.set_coeff_modulus(CoeffModulus::Create(n, {";
-        gen_sequence(params.coeff_mod_bit_sizes().cbegin(),params.coeff_mod_bit_sizes().cend(), line_threshold, out);
-        out<<" }));\n";
-      }else{
-        out<<"params.set_coeff_modulus(CoeffModulus::BFVDefault("<<params.poly_mod_degree()<<"));\n";
+      out << str_1_converted;
+      out << "  EncryptionParameters params(scheme_type::bfv); \n";
+      out << "  size_t n = " << params.poly_mod_degree() << " ;\n";
+      out << "  params.set_poly_modulus_degree(n);\n";
+      out << "  params.set_plain_modulus(PlainModulus::Batching(n, " << params.plain_mod_bit_size() << ")); \n";
+      
+      if (automatic_enc_params_enabled) {
+        out << "  params.set_coeff_modulus(CoeffModulus::Create(n, {";
+        gen_sequence(params.coeff_mod_bit_sizes().cbegin(), params.coeff_mod_bit_sizes().cend(), line_threshold, out);
+        out << " }));\n";
+      } else {
+        out << "  params.set_coeff_modulus(CoeffModulus::BFVDefault(" << params.poly_mod_degree() << "));\n";
       }
+      
       string security_level_label = "tc128";
-      switch (security_level){
-        case param_select::EncParams::SecurityLevel::tc128 :
+      switch (security_level) {
+        case param_select::EncParams::SecurityLevel::tc128:
             security_level_label = "tc128";
             break;
-        case param_select::EncParams::SecurityLevel::tc192 :
+        case param_select::EncParams::SecurityLevel::tc192:
             security_level_label = "tc192";
             break;
-        case param_select::EncParams::SecurityLevel::tc256 :
+        case param_select::EncParams::SecurityLevel::tc256:
             security_level_label = "tc256";
             break;
-        default :
+        default:
           throw invalid_argument("Unsupported Security level");
       }
-      out<<"  SEALContext context(params, true, sec_level_type::"<<security_level_label<<");\n";
+      out << "  SEALContext context(params, true, sec_level_type::" << security_level_label << ");\n";
+      
       string_view str_2{ 
             R"(
-      ClearArgsInfo clear_inputs, clear_outputs;
-      size_t func_slot_count;
-      BatchEncoder batch_encoder(context);
-      KeyGenerator keygen(context);
-      const SecretKey &secret_key = keygen.secret_key();
-      PublicKey public_key;
-      keygen.create_public_key(public_key);
-      RelinKeys relin_keys;
-      keygen.create_relin_keys(relin_keys);
-      GaloisKeys galois_keys; 
-      chrono::high_resolution_clock::time_point keys_time;
-      chrono::duration<double, milli> keys_elapsed;
-      keys_time = chrono::high_resolution_clock::now();      
-      //keygen.create_galois_keys(galois_keys);
-      keygen.create_galois_keys(get_rotation_steps_fhe(), galois_keys);
-      keys_elapsed = chrono::high_resolution_clock::now() - keys_time;
+  ClearArgsInfo clear_inputs, clear_outputs;
+  size_t func_slot_count;
+  BatchEncoder batch_encoder(context);
+  KeyGenerator keygen(context);
+  const SecretKey &secret_key = keygen.secret_key();
+  PublicKey public_key;
+  keygen.create_public_key(public_key);
+  RelinKeys relin_keys;
+  keygen.create_relin_keys(relin_keys);
+  GaloisKeys galois_keys; 
+  chrono::high_resolution_clock::time_point keys_time;
+  chrono::duration<double, milli> keys_elapsed;
+  keys_time = chrono::high_resolution_clock::now();      
+  
+  keygen.create_galois_keys(get_rotation_steps_fhe(), galois_keys);
+  keys_elapsed = chrono::high_resolution_clock::now() - keys_time;
 
-      size_t galois_keys_total_size = galois_keys.save_size();
-      cout << "rotation_keys_size_(MB): " << galois_keys_total_size / (1024.0 * 1024.0) << endl;
-      Encryptor encryptor(context, public_key);
-      Evaluator evaluator(context);
-      Decryptor decryptor(context, secret_key);
-      EncryptedArgs encrypted_inputs;
-      EncodedArgs encoded_inputs;
-      
-      chrono::high_resolution_clock::time_point t;
-      chrono::duration<double, milli> elapsed;
-      t = chrono::high_resolution_clock::now();
+  size_t galois_keys_total_size = galois_keys.save_size();
+  cout << "rotation_keys_size_(MB): " << galois_keys_total_size / (1024.0 * 1024.0) << endl;
+  Encryptor encryptor(context, public_key);
+  Evaluator evaluator(context);
+  Decryptor decryptor(context, secret_key);
+  EncryptedArgs encrypted_inputs;
+  EncodedArgs encoded_inputs;
+  
+  chrono::high_resolution_clock::time_point t;
+  chrono::duration<double, milli> elapsed;
+  t = chrono::high_resolution_clock::now();
 
-      parse_inputs_outputs_file(is, params.plain_modulus().value(), clear_inputs, clear_outputs, func_slot_count);
-      prepare_he_inputs(batch_encoder, encryptor, clear_inputs, encrypted_inputs, encoded_inputs);
-      EncryptedArgs encrypted_outputs;
-      EncodedArgs encoded_outputs;
+  parse_inputs_outputs_file(is, params.plain_modulus().value(), clear_inputs, clear_outputs, func_slot_count);
+  prepare_he_inputs(batch_encoder, encryptor, clear_inputs, encrypted_inputs, encoded_inputs);
+  EncryptedArgs encrypted_outputs;
+  EncodedArgs encoded_outputs;
 
-      fhe(
-        encrypted_inputs, encoded_inputs, encrypted_outputs, encoded_outputs, batch_encoder, encryptor, evaluator,
-        relin_keys, galois_keys);
+  fhe(
+    encrypted_inputs, encoded_inputs, encrypted_outputs, encoded_outputs, batch_encoder, encryptor, evaluator,
+    relin_keys, galois_keys);
 
-      elapsed = chrono::high_resolution_clock::now() - t;
+  elapsed = chrono::high_resolution_clock::now() - t;
 
-      ClearArgsInfo obtained_clear_outputs;
-      get_clear_outputs(
-        batch_encoder, decryptor, encrypted_outputs, encoded_outputs, func_slot_count, obtained_clear_outputs);
-      print_encrypted_outputs_info(context, decryptor, encrypted_outputs, clog);
-      cout <<"circuit_execution_time_(ms): "<<elapsed.count() <<"\n"<<std::flush;
-      cout <<"galois_keys_generation_time_(ms): "<<keys_elapsed.count() <<"\n"<<std::flush;
-      double total_time = elapsed.count() + keys_elapsed.count();
-      cout <<"total_execution_time_(ms): "<<total_time <<"\n"<<std::flush;
-      print_variables_values(obtained_clear_outputs, std::cout);
-    }
+  ClearArgsInfo obtained_clear_outputs;
+  get_clear_outputs(
+    batch_encoder, decryptor, encrypted_outputs, encoded_outputs, func_slot_count, obtained_clear_outputs);
+  print_encrypted_outputs_info(context, decryptor, encrypted_outputs, clog);
+  cout << "circuit_execution_time_(ms): " << elapsed.count() << "\n" << std::flush;
+  cout << "galois_keys_generation_time_(ms): " << keys_elapsed.count() << "\n" << std::flush;
+  double total_time = elapsed.count() + keys_elapsed.count();
+  cout << "total_execution_time_(ms): " << total_time << "\n" << std::flush;
+  print_variables_values(obtained_clear_outputs, std::cout);
+}
     )"
     }; 
       string str_2_converted{str_2};
-      out<<str_2_converted ;
+      out << str_2_converted;
       out.close();
-  }
+}
 } // namespace fheco::code_gen
- 

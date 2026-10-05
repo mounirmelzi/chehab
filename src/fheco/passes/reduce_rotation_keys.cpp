@@ -124,11 +124,9 @@ vector<int> naf(int value)
 {
   vector<int> res;
 
-  // Record the sign of the original value and compute abs
   bool sign = value < 0;
   value = abs(value);
 
-  // Transform to non-adjacent form (NAF)
   for (int i = 0; value; i++)
   {
     int zi = (value & int(0x1)) ? 2 - (value & int(0x3)) : 0;

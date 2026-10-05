@@ -63,64 +63,54 @@ void fhe(int slot_count)
     output = cond(c12, (cond(c23,o123,cond(c13, o132, o312))), (cond(c13,o213,cond(c23, o231, o321))) );
   } else if (slot_count == 4){
     output =  cond(c12,
-        // Case 1: v1 ≤ v2
         cond(c13,
-          // Subcase 1.1: v1 ≤ v2 and v1 ≤ v3 → v1 is smallest
           cond(c23,
-            // Subcase 1.1.1: v1 ≤ v2 ≤ v3 → now insert v4
             cond(c14,
               cond(c24,
-                cond(c34, o1234, o1243),  // v1 ≤ v2 ≤ v3 ≤ v4 or v1 ≤ v2 ≤ v4 ≤ v3
-                cond(c14, o1423, o4123)   // v1 ≤ v4 ≤ v2 ≤ v3 or v4 ≤ v1 ≤ v2 ≤ v3
+                cond(c34, o1234, o1243),
+                cond(c14, o1423, o4123)
               ),
-              o1234  // Fallback (shouldn't occur if comparisons are consistent)
+              o1234
             ),
-            // Subcase 1.1.2: v1 ≤ v3 ≤ v2 → insert v4
             cond(c14,
               cond(c34,
-                cond(c24, o1324, o1342),  // v1 ≤ v3 ≤ v2 ≤ v4 or v1 ≤ v3 ≤ v4 ≤ v2
-                cond(c14, o1432, o4132)    // v1 ≤ v4 ≤ v3 ≤ v2 or v4 ≤ v1 ≤ v3 ≤ v2
+                cond(c24, o1324, o1342),
+                cond(c14, o1432, o4132)
               ),
-              o1324  // Fallback
+              o1324
             )
           ),
-          // Subcase 1.2: v1 ≤ v2 and v3 ≤ v1 → v3 ≤ v1 ≤ v2 → insert v4
           cond(c34,
             cond(c14,
-              cond(c24, o3124, o3142),  // v3 ≤ v1 ≤ v2 ≤ v4 or v3 ≤ v1 ≤ v4 ≤ v2
-              cond(c34, o3412, o4312)    // v3 ≤ v4 ≤ v1 ≤ v2 or v4 ≤ v3 ≤ v1 ≤ v2
+              cond(c24, o3124, o3142),
+              cond(c34, o3412, o4312)
             ),
-            o3124  // Fallback
+            o3124
           )
         ),
-        // Case 2: v2 ≤ v1
         cond(c23,
-          // Subcase 2.1: v2 ≤ v1 and v2 ≤ v3 → v2 is smallest
           cond(c13,
-            // Subcase 2.1.1: v2 ≤ v1 ≤ v3 → insert v4
             cond(c24,
               cond(c14,
-                cond(c34, o2134, o2143),  // v2 ≤ v1 ≤ v3 ≤ v4 or v2 ≤ v1 ≤ v4 ≤ v3
-                cond(c24, o2413, o4213)    // v2 ≤ v4 ≤ v1 ≤ v3 or v4 ≤ v2 ≤ v1 ≤ v3
+                cond(c34, o2134, o2143),
+                cond(c24, o2413, o4213)
               ),
-              o2134  // Fallback
+              o2134
             ),
-            // Subcase 2.1.2: v2 ≤ v3 ≤ v1 → insert v4
             cond(c24,
               cond(c34,
-                cond(c14, o2314, o2341),  // v2 ≤ v3 ≤ v1 ≤ v4 or v2 ≤ v3 ≤ v4 ≤ v1
-                cond(c24, o2431, o4231)    // v2 ≤ v4 ≤ v3 ≤ v1 or v4 ≤ v2 ≤ v3 ≤ v1
+                cond(c14, o2314, o2341),
+                cond(c24, o2431, o4231)
               ), 
-              o2314  // Fallback
+              o2314
             )
           ),
-          // Subcase 2.2: v2 ≤ v1 and v3 ≤ v2 → v3 ≤ v2 ≤ v1 → insert v4
           cond(c34,
             cond(c24,
-              cond(c14, o3214, o3241),  // v3 ≤ v2 ≤ v1 ≤ v4 or v3 ≤ v2 ≤ v4 ≤ v1
-              cond(c34, o3421, o4321)    // v3 ≤ v4 ≤ v2 ≤ v1 or v4 ≤ v3 ≤ v2 ≤ v1
+              cond(c14, o3214, o3241),
+              cond(c34, o3421, o4321)
             ),
-            o3214  // Fallback
+            o3214
           )
         )
       );
@@ -128,73 +118,71 @@ void fhe(int slot_count)
   output.set_output("output");
 }
 /******************************************************************************************/
-/******************************************************************************************/
 void print_bool_arg(bool arg, const string &name, ostream &os)
 {
   os << (arg ? name : "no_" + name);
 }
+
 int main(int argc, char **argv)
 {
   bool vectorize_code = true;
-  if (argc > 1)
-    vectorize_code = stoi(argv[1]);
-  
-  int slot_count = 1 ;
-  if (argc > 2)
-    slot_count = stoi(argv[2]);
+  if (argc > 1) vectorize_code = stoi(argv[1]);
+  int slot_count = 1;
+  if (argc > 2) slot_count = stoi(argv[2]);
+
+  int arg_idx = 3;
   std::string framework = "constrained";
-  if (argc > 3) framework = argv[3];
+  if (argc > 3) {
+    std::string third_arg = argv[3];
+    if (third_arg == "constrained" || third_arg == "mo" || third_arg == "morl" || !isdigit(third_arg[0])) {
+      framework = third_arg;
+      arg_idx = 4;
+    }
+  }
 
-
-  int optimization_method = 0;  // 0 = egraph (default), 1 = RL
-  if (argc > 4)
-    optimization_method = stoi(argv[4]); 
+  int optimization_method = 0;
+  if (argc > arg_idx) optimization_method = stoi(argv[arg_idx]); 
 
   int window = 0;
-  if (argc > 5) 
-    window = stoi(argv[5]); 
+  if (argc > arg_idx + 1) window = stoi(argv[arg_idx + 1]);
 
   bool call_quantifier = true;
-  if (argc > 6)
-    call_quantifier = stoi(argv[6]);
+  if (argc > arg_idx + 2) call_quantifier = stoi(argv[arg_idx + 2]);
 
   bool cse = true;
-  if (argc > 7)
-    cse = stoi(argv[7]);
+  if (argc > arg_idx + 3) cse = stoi(argv[arg_idx + 3]);
    
   bool const_folding = true; 
-  if (argc > 8)
-    const_folding = stoi(argv[8]);
+  if (argc > arg_idx + 4) const_folding = stoi(argv[arg_idx + 4]);
 
-  int backend = 0;  // 0 = SEAL (default), 1 = Lattigo (Go/CKKS)
-  if (argc > 9)
-    backend = stoi(argv[9]);
+  int backend = 0;
+  if (argc > arg_idx + 5) backend = stoi(argv[arg_idx + 5]);
 
   float w_ops = 0.5;
   float w_keys = 0.5;
+  if (argc > arg_idx + 7) {
+    w_ops = stof(argv[arg_idx + 6]);
+    w_keys = stof(argv[arg_idx + 7]);
+  } else if (argc > arg_idx + 6) {
+    w_ops = stof(argv[arg_idx + 6]);
+  }
 
-  if (argc > 10) w_ops = stof(argv[10]);
-  if (argc > 11) w_keys = stof(argv[11]);
-if (cse)
-  {
+  if (cse) {
     Compiler::enable_cse();
     Compiler::enable_order_operands();
-  }
-  else
-  {
+  } else {
     Compiler::disable_cse();
     Compiler::disable_order_operands();
   }
 
-  if (const_folding)
-    Compiler::enable_const_folding();
-  else
-    Compiler::disable_const_folding(); 
-  //Compiler::enable_auto_enc_params_selection();
+  if (const_folding) Compiler::enable_const_folding();
+  else Compiler::disable_const_folding(); 
+
   chrono::high_resolution_clock::time_point t;
   chrono::duration<double, milli> elapsed;
   string func_name = "fhe";
-  /**************/t = chrono::high_resolution_clock::now();
+  
+  t = chrono::high_resolution_clock::now();
   if (vectorize_code)
   { 
     const auto &func = Compiler::create_func(func_name, 1, 20, false, true);
@@ -202,45 +190,36 @@ if (cse)
     string gen_name = "_gen_he_" + func_name;
     string gen_path = "he/" + gen_name;
     ofstream header_os(gen_path + ".hpp");
-    if (!header_os)
-      throw logic_error("failed to create header file");
     ofstream source_os(gen_path + ".cpp");
-    if (!source_os)
-      throw logic_error("failed to create source file");
     cout << " window is " << window << endl;
-    /********** vectorization Part *******************************/
+    
     if(VECTORIZATION_ENABLED){
-    Compiler::gen_vectorized_code(func, window, optimization_method, w_ops, w_keys, framework);  // add a flag to specify if the benchmark is structured or no
+      Compiler::gen_vectorized_code(func, window, optimization_method, w_ops, w_keys, framework);
     }
-    /********** Simplification & depth reduction Part ************/
     if(SIMPLIFICATION_ENABLED){ 
-    auto ruleset = Compiler::Ruleset::depth;
-    auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
-    Compiler::compile(func, ruleset, rewrite_heuristic);
+      auto ruleset = Compiler::Ruleset::depth;
+      auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
+      Compiler::compile(func, ruleset, rewrite_heuristic);
     }
-    /********** FHE code generation  *****************************/
     if (backend == 0) {
       Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
       cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
     } else if (backend == 1) {
       string go_path = "generated_" + func_name + ".go";
       ofstream go_os(go_path);
-      if (!go_os) throw logic_error("failed to create Go file");
       Compiler::gen_lattigo_code(func, go_os);
       go_os.close();
       cout << "Generated Lattigo code: " << go_path << endl;
     } else if (backend == 2) {
       string cu_path = "generated_" + func_name + ".cu";
       ofstream cu_os(cu_path);
-      if (!cu_os) throw logic_error("failed to create CUDA file");
       Compiler::gen_heongpu_code(func, cu_os, 1);
       cu_os.close();
       cout << "Generated HEonGPU code: " << cu_path << endl;
     }
-    /************/elapsed = chrono::high_resolution_clock::now() - t;
+    elapsed = chrono::high_resolution_clock::now() - t;
     cout << elapsed.count() << " ms\n";
-    if (call_quantifier)
-    {
+    if (call_quantifier) {
         util::Quantifier quantifier{func};
         quantifier.run_all_analysis();
         quantifier.print_info(cout);
@@ -249,7 +228,6 @@ if (cse)
   else
   {
     const auto &func = Compiler::create_func(func_name, 1, 20, false, true);
-    // update_io_file 
     std::string updated_inputs_file_name = "fhe_io_example_adapted.txt" ;
     std::string inputs_file_name = "fhe_io_example.txt";
     util::copyFile(inputs_file_name,updated_inputs_file_name);
@@ -257,38 +235,32 @@ if (cse)
     string gen_name = "_gen_he_" + func_name;
     string gen_path = "he/" + gen_name;
     ofstream header_os(gen_path + ".hpp");
-    if (!header_os)
-      throw logic_error("failed to create header file");
     ofstream source_os(gen_path + ".cpp");
-    if (!source_os)
-      throw logic_error("failed to create source file");
     cout << " window is " << window << endl;
     auto ruleset = Compiler::Ruleset::simplification_ruleset;
     auto rewrite_heuristic = trs::RewriteHeuristic::bottom_up;
     Compiler::compile(func, ruleset, rewrite_heuristic);
+    
     if (backend == 0) {
       Compiler::gen_he_code(func, header_os, gen_name + ".hpp", source_os);
       cout << "Generated SEAL code: " << gen_path << ".hpp/.cpp" << endl;
     } else if (backend == 1) {
       string go_path = "generated_" + func_name + ".go";
       ofstream go_os(go_path);
-      if (!go_os) throw logic_error("failed to create Go file");
       Compiler::gen_lattigo_code(func, go_os);
       go_os.close();
       cout << "Generated Lattigo code: " << go_path << endl;
     } else if (backend == 2) {
       string cu_path = "generated_" + func_name + ".cu";
       ofstream cu_os(cu_path);
-      if (!cu_os) throw logic_error("failed to create CUDA file");
       Compiler::gen_heongpu_code(func, cu_os, 1);
       cu_os.close();
       cout << "Generated HEonGPU code: " << cu_path << endl;
     }
-    /************/elapsed = chrono::high_resolution_clock::now() - t;
+    elapsed = chrono::high_resolution_clock::now() - t;
     cout<<"Compile time : \n";
     cout << elapsed.count() << " ms\n";
-    if (call_quantifier)
-    {
+    if (call_quantifier) {
       util::Quantifier quantifier{func};
       quantifier.run_all_analysis();
       quantifier.print_info(cout);

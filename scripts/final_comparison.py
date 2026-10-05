@@ -252,7 +252,7 @@ def main():
         ours_better_cr = (all_detail["CR Advantage (%)"] > 0).sum()
         unc_better_cr = (all_detail["CR Advantage (%)"] < 0).sum()
 
-        b9m = all_detail[all_detail["Budget"] == 9000000]
+        b9m = all_detail[all_detail["Budget"] == 9000]
         cr_9m_unc = b9m["Unc CR (%)"].mean() if len(b9m) > 0 else 0
         cr_9m_ours = b9m["Ours CR (%)"].mean() if len(b9m) > 0 else 0
 

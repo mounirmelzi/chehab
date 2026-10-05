@@ -120,8 +120,8 @@ SAFETY_FILES = {
     "V5 FOCOPS": "test_results/test_v2_v5_focops_natosc.xlsx",
 }
 
-BUDGETS = [230, 236, 369, 9000000]
-BUDGET_LABELS = {230: "230", 236: "236", 369: "369", 9000000: "9M"}
+BUDGETS = [230, 369, 9000]
+BUDGET_LABELS = {230: "230", 236: "236", 369: "369", 9000: "9M"}
 
 ALL_AGENTS = ["Unconstrained", "V3 MB 3b", "V4 NMask B", "V4 MB FiLM B",
               "V4 MB_B", "V5 FOCOPS", "V5 PPO-A", "V5 Lag-PID"]
@@ -180,7 +180,7 @@ def get_filtered_cr(agent_name, budget, threshold_pct=NOISE_RATIO_THRESHOLD):
     crs = []
     for eid, d in data.items():
         inoise = float(d.get("Initial Noise", 0) or 0)
-        if budget < 9000000 and inoise < budget * threshold_pct / 100:
+        if budget < 9000 and inoise < budget * threshold_pct / 100:
             continue
         cr = float(d.get("Safe Cost Reduction (%)", 0) or 0)
         crs.append(cr)
@@ -197,7 +197,7 @@ def get_filtered_viol(agent_name, budget, threshold_pct=NOISE_RATIO_THRESHOLD):
     total = 0
     for eid, d in data.items():
         inoise = float(d.get("Initial Noise", 0) or 0)
-        if budget < 9000000 and inoise < budget * threshold_pct / 100:
+        if budget < 9000 and inoise < budget * threshold_pct / 100:
             continue
         total += 1
         safe_viol = d.get("Safe Violated", False)
@@ -215,7 +215,7 @@ def get_filtered_agent_cr(agent_name, budget, threshold_pct=NOISE_RATIO_THRESHOL
     crs = []
     for eid, d in data.items():
         inoise = float(d.get("Initial Noise", 0) or 0)
-        if budget < 9000000 and inoise < budget * threshold_pct / 100:
+        if budget < 9000 and inoise < budget * threshold_pct / 100:
             continue
         cr = float(d.get("Agent Cost Reduction (%)", 0) or 0)
         crs.append(cr)
@@ -232,7 +232,7 @@ def get_filtered_agent_viol(agent_name, budget, threshold_pct=NOISE_RATIO_THRESH
     total = 0
     for eid, d in data.items():
         inoise = float(d.get("Initial Noise", 0) or 0)
-        if budget < 9000000 and inoise < budget * threshold_pct / 100:
+        if budget < 9000 and inoise < budget * threshold_pct / 100:
             continue
         total += 1
         agt_viol = d.get("Agent Violated", False)
@@ -457,7 +457,7 @@ for c, h in enumerate(headers3, 1):
 style_header_row(ws3, r3, len(headers3))
 
 row3 = r3
-FINITE_BUDGETS = [b for b in BUDGETS if b < 9000000]
+FINITE_BUDGETS = [b for b in BUDGETS if b < 9000]
 for budget in FINITE_BUDGETS:
     strat = stratify(budget)
     for g_name in ["< 20%", "20-40%", "40-60%", "60-80%", "> 80%"]:

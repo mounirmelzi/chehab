@@ -112,4 +112,3 @@ void gen_cipher_var_id_go(std::size_t term_id, std::ostream &os);
 void gen_plain_var_id_go(std::size_t term_id, std::ostream &os);
 
 } // namespace fheco::code_gen::lattigo
-

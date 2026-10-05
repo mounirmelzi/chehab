@@ -47,7 +47,7 @@ if [ -f "$DNN_SCALED" ]; then
 fi
 
 BENCH="$COMBINED"
-TEST_BUDGETS="230,236,369,9000000"
+TEST_BUDGETS="230,369,9000"
 
 TOTAL_EXPR=$(wc -l < "$BENCH")
 echo "═══════════════════════════════════════════════════════════"
@@ -112,32 +112,32 @@ if [ $? -eq 0 ]; then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); fi
 
 # ─── 2. V4 Margin Barrier B ─────────────────────────────────
 run_constrained "v4_mb_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "best_model_model_14385920_margin_barrier"
 
 # ─── 3. V4 Noise Masking B ──────────────────────────────────
 run_constrained "v4_nmask_B" \
-    noise_masking "230,236,369,372,9000000" \
+    noise_masking "230,236,369,372,9000" \
     "best_model_model_14385924_noise_masking"
 
 # ─── 4. V4 MB + FiLM B ─────────────────────────────────────
 run_constrained "v4_mb_film_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "best_model_model_14385922_margin_barrier"
 
 # ─── 5. V5 FOCOPS + NATO-SC ─────────────────────────────────
 run_constrained "v5_focops_natosc" \
-    nato_sc "230,236,369,9000000" \
+    nato_sc "230,369,9000" \
     "best_model_model_14544615_nato_sc"
 
 # ─── 6. V5 PPO + NATO-SC A ──────────────────────────────────
 run_constrained "v5_ppo_natosc_A" \
-    nato_sc "230,233,236,369,9000000" \
+    nato_sc "230,233,236,369,9000" \
     "best_model_model_14529413_nato_sc"
 
 # ─── 7. V5 Lag-PID + NATO-SC (BEST) ─────────────────────────
 run_constrained "v5_lagpid_natosc" \
-    nato_sc "230,236,369,9000000" \
+    nato_sc "230,369,9000" \
     "best_model_model_14529416_nato_sc"
 
 

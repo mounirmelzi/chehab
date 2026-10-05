@@ -69,56 +69,56 @@ run_test() {
 }
 
 # ─── margin_barrier models ────────────────────────────────────
-run_test 14085678 "margin_barrier_3b_8envs"    margin_barrier "240,300,9000000" \
+run_test 14085678 "margin_barrier_3b_8envs"    margin_barrier "240,300,9000" \
     "best_model_model_14085678_margin_barrier"
 
-run_test 14085682 "margin_barrier_5b_8envs"    margin_barrier "300,400,500,1000,9000000" \
+run_test 14085682 "margin_barrier_5b_8envs"    margin_barrier "300,400,500,1000,9000" \
     "best_model_model_14085682_margin_barrier"
 
-run_test 14085683 "margin_barrier_10b_8envs"   margin_barrier "240,300,400,500,600,700,800,900,1000,9000000" \
+run_test 14085683 "margin_barrier_10b_8envs"   margin_barrier "240,300,400,500,600,700,800,900,1000,9000" \
     "best_model_model_14085683_margin_barrier"
 
 # ─── margin_barrier + FiLM ────────────────────────────────────
-run_test 14085784 "mb_film_3b_8envs"           margin_barrier "240,300,9000000" \
+run_test 14085784 "mb_film_3b_8envs"           margin_barrier "240,300,9000" \
     "best_model_model_14085784_margin_barrier"
 
 # ─── lagrangian_od_ov models ─────────────────────────────────
-run_test 14085679 "lagrangian_od_ov_3b_8envs"  lagrangian_od_ov "240,300,9000000" \
+run_test 14085679 "lagrangian_od_ov_3b_8envs"  lagrangian_od_ov "240,300,9000" \
     "best_model_model_14085679_lagrangian_od_ov"
 
-run_test 14085684 "lagrangian_od_ov_5b_8envs"  lagrangian_od_ov "300,400,500,1000,9000000" \
+run_test 14085684 "lagrangian_od_ov_5b_8envs"  lagrangian_od_ov "300,400,500,1000,9000" \
     "best_model_model_14085684_lagrangian_od_ov"
 
 # ─── lagrangian_od_ov + embed ────────────────────────────────
-run_test 14085785 "lodov_embed_3b_8envs"       lagrangian_od_ov "240,300,9000000" \
+run_test 14085785 "lodov_embed_3b_8envs"       lagrangian_od_ov "240,300,9000" \
     "best_model_model_14085785_lagrangian_od_ov"
 
 # ─── lagrangian_od_ov 12envs (noise fix) ─────────────────────
-run_test 14088790 "lagrangian_od_ov_5b_12envs" lagrangian_od_ov "300,400,500,1000,9000000" \
+run_test 14088790 "lagrangian_od_ov_5b_12envs" lagrangian_od_ov "300,400,500,1000,9000" \
     "best_model_model_14088790_lagrangian_od_ov"
 
-run_test 14088795 "lodov_embed_3b_12envs"      lagrangian_od_ov "240,300,9000000" \
+run_test 14088795 "lodov_embed_3b_12envs"      lagrangian_od_ov "240,300,9000" \
     "best_model_model_14088795_lagrangian_od_ov"
 
 # ─── lagrangian_always_done models ───────────────────────────
-run_test 14085686 "lagrangian_always_done_5b_8envs" lagrangian_always_done "300,400,500,1000,9000000" \
+run_test 14085686 "lagrangian_always_done_5b_8envs" lagrangian_always_done "300,400,500,1000,9000" \
     "best_model_model_14085686_lagrangian_always_done"
 
 # ─── lagrangian_perstep models ───────────────────────────────
-run_test 14085688 "lagrangian_perstep_5b_8envs" lagrangian_perstep "300,400,500,1000,9000000" \
+run_test 14085688 "lagrangian_perstep_5b_8envs" lagrangian_perstep "300,400,500,1000,9000" \
     "best_model_model_14085688_lagrangian_perstep"
 
 # ─── old training scripts (before unified codebase) ──────────
-run_test 14085644 "old_5budgets_8envs"         lagrangian_od_ov "300,400,500,1000,9000000" \
+run_test 14085644 "old_5budgets_8envs"         lagrangian_od_ov "300,400,500,1000,9000" \
     "best_model_model_14085644"
 
-run_test 14085645 "old_10budgets_8envs"        lagrangian_od_ov "240,300,400,500,600,700,800,900,1000,9000000" \
+run_test 14085645 "old_10budgets_8envs"        lagrangian_od_ov "240,300,400,500,600,700,800,900,1000,9000" \
     "best_model_model_14085645"
 
-run_test 14085649 "old_5budgets_denom2_8envs"  lagrangian_od_ov "300,400,500,1000,9000000" \
+run_test 14085649 "old_5budgets_denom2_8envs"  lagrangian_od_ov "300,400,500,1000,9000" \
     "best_model_model_14085649"
 
-run_test 14085650 "old_10budgets_denom2_8envs" lagrangian_od_ov "240,300,400,500,600,700,800,900,1000,9000000" \
+run_test 14085650 "old_10budgets_denom2_8envs" lagrangian_od_ov "240,300,400,500,600,700,800,900,1000,9000" \
     "best_model_model_14085650"
 
 # ═══════════════════════════════════════════════════════════════

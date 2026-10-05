@@ -31,8 +31,8 @@ mkdir -p "$PROJ_ROOT/RL/test_results"
 # Purpose: prove V4 budgets > V3 budgets (even with safety)
 MODEL="$PROJ_ROOT/RL/eval/best_model_model_14270907_margin_barrier/best_model.zip"
 OUTPUT="$PROJ_ROOT/RL/test_results/test_v2_v3_mb_3b_safety.xlsx"
-TRAIN_BUDGETS="200,300,9000000"
-TEST_BUDGETS="230,236,369,372,9000000"
+TRAIN_BUDGETS="200,300,9000"
+TEST_BUDGETS="230,236,369,372,9000"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  ABLATION 3: V3 Margin Barrier (3 budgets) + Safety"

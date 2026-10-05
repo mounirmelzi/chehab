@@ -66,8 +66,38 @@ class PIDLagrangianWrapper(VecEnvWrapper):
                 continue
             noise = info.get("noise", 0.0)
             budget = info.get("budget", 1)
-            delta = noise - budget
+            delta = (noise - budget) / max(budget, 1)  # normalized, matches PID controller units
+
             if delta > 0:
                 rewards[env_idx] -= self.lambda_penalty * delta
             self.update_lambda_penalty(noise, budget)
         return obs, rewards, dones, infos
+
+    def save_state(self, filepath: str):
+        """Save PID controller state alongside a model checkpoint."""
+        import json
+        state = {
+            "lambda_penalty": float(self.lambda_penalty),
+            "_integral": float(self._integral),
+            "_prev_error": float(self._prev_error),
+            "Kp": float(self.Kp),
+            "Ki": float(self.Ki),
+            "Kd": float(self.Kd),
+            "lambda_max": float(self.lambda_max),
+        }
+        with open(filepath, "w") as f:
+            json.dump(state, f, indent=2)
+
+    def load_state(self, filepath: str):
+        """Load PID controller state from file."""
+        import json, os
+        if not os.path.exists(filepath):
+            print(f"[PIDLagrangianWrapper] No PID state file found at {filepath}, keeping defaults.")
+            return
+        with open(filepath, "r") as f:
+            state = json.load(f)
+        self.lambda_penalty = float(state.get("lambda_penalty", self.lambda_penalty))
+        self._integral = float(state.get("_integral", self._integral))
+        self._prev_error = float(state.get("_prev_error", self._prev_error))
+        print(f"[PIDLagrangianWrapper] Loaded PID state from {filepath}: "
+              f"lambda={self.lambda_penalty:.4f}, integral={self._integral:.4f}, prev_error={self._prev_error:.4f}")

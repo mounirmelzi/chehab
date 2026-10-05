@@ -69,31 +69,31 @@ run_test_v2() {
 # ─── 1. V4 MB_B + Safety (our best agent) ────────────────────────
 run_test_v2 "v4_mb_B_safety" \
     margin_barrier \
-    "230,236,369,372,9000000" \
+    "230,236,369,372,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385920_margin_barrier/best_model.zip"
 
 # ─── 2. V5-A: PPO + NATO-SC ─────────────────────────────────────
 run_test_v2 "v5_ppo_natosc_A" \
     nato_sc \
-    "230,233,236,369,9000000" \
+    "230,233,236,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14529413_nato_sc/best_model.zip"
 
 # ─── 3. V5-B: PPO + NATO-SC ─────────────────────────────────────
 run_test_v2 "v5_ppo_natosc_B" \
     nato_sc \
-    "230,236,369,372,9000000" \
+    "230,236,369,372,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14529414_nato_sc/best_model.zip"
 
 # ─── 4. V5-C: FOCOPS + NATO-SC ──────────────────────────────────
 run_test_v2 "v5_focops_natosc" \
     nato_sc \
-    "230,236,369,9000000" \
+    "230,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14544615_nato_sc/best_model.zip"
 
 # ─── 5. V5-D: Lagrangian-PID + NATO-SC ──────────────────────────
 run_test_v2 "v5_lagpid_natosc" \
     nato_sc \
-    "230,236,369,9000000" \
+    "230,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14529416_nato_sc/best_model.zip"
 
 echo ""

@@ -60,4 +60,6 @@ commands.txt
 
 manuscript writing/
 manuscript writing/*
-hpc_results/logs/
+hpc_results/logs/RL/*.log
+*.log
+*Zone.Identifier

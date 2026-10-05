@@ -664,4 +664,3 @@ void gen_main_go(
 }
 
 } // namespace fheco::code_gen::lattigo
-

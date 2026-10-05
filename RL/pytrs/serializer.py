@@ -1,5 +1,5 @@
 
-from expr import Expr, Const, Var, Op
+from .expr import Expr, Const, Var, Op
 
 # 0 and 1 are reserved for consts values 
 OP_CODES = {

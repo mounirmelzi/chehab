@@ -162,7 +162,7 @@ def main():
     apply_style(ws, r, 4, font=HEADER_FONT)
     r += 1
 
-    for budget in [172, 230, 233, 236, 369, 372, 9000000]:
+    for budget in [172, 230, 233, 236, 369, 372, 9000]:
         pre_above = sum(1 for n in pre_noises if n > budget)
         post_above = sum(1 for n in post_noises if n > budget)
         pre_pct = round(pre_above / len(pre_noises) * 100, 2)
@@ -338,7 +338,7 @@ def main():
     apply_style(ws5, 1, len(bt_headers), font=HEADER_FONT)
 
     budgets_full = [40, 60, 80, 100, 120, 150, 172, 200, 230, 233, 236, 240,
-                    300, 369, 372, 500, 700, 1000, 9000000]
+                    300, 369, 372, 500, 700, 1000, 9000]
     for i, budget in enumerate(budgets_full, 2):
         pre_above = sum(1 for n in pre_noises if n > budget)
         post_above = sum(1 for n in post_noises if n > budget)
@@ -389,7 +389,7 @@ def main():
     print(f"\n  Budget constraint activation (% of dataset with noise > budget):")
     print(f"  {'Budget':>10s}  {'Pre':>8s}  {'Post':>8s}  {'Change':>8s}")
     print(f"  {'─'*10}  {'─'*8}  {'─'*8}  {'─'*8}")
-    for budget in [172, 230, 233, 236, 369, 372, 9000000]:
+    for budget in [172, 230, 233, 236, 369, 372, 9000]:
         pre_above = sum(1 for n in pre_noises if n > budget)
         post_above = sum(1 for n in post_noises if n > budget)
         pre_pct = pre_above / len(pre_noises) * 100

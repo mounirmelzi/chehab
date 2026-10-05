@@ -105,41 +105,41 @@ echo "╚═══════════════════════�
 
 # 6-budget models
 run_test "v3_mb_6b" \
-    margin_barrier "180,200,220,240,300,9000000" \
+    margin_barrier "180,200,220,240,300,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270905_margin_barrier/best_model.zip"
 
 run_test "v3_nmask_6b" \
-    noise_masking "180,200,220,240,300,9000000" \
+    noise_masking "180,200,220,240,300,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270906_noise_masking/best_model.zip"
 
 # 3-budget models
 run_test "v3_mb_3b" \
-    margin_barrier "200,300,9000000" \
+    margin_barrier "200,300,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270907_margin_barrier/best_model.zip"
 
 run_test "v3_nmask_3b" \
-    noise_masking "200,300,9000000" \
+    noise_masking "200,300,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270909_noise_masking/best_model.zip"
 
 run_test "v3_nmask_cur_3b" \
-    noise_masking "200,300,9000000" \
+    noise_masking "200,300,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270912_noise_masking/best_model.zip"
 
 run_test "v3_mb_film_3b" \
-    margin_barrier "200,300,9000000" \
+    margin_barrier "200,300,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270914_margin_barrier/best_model.zip"
 
 # 5-budget models
 run_test "v3_mb_5b" \
-    margin_barrier "180,200,220,240,9000000" \
+    margin_barrier "180,200,220,240,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270908_margin_barrier/best_model.zip"
 
 run_test "v3_nmask_5b" \
-    noise_masking "180,200,220,240,9000000" \
+    noise_masking "180,200,220,240,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270911_noise_masking/best_model.zip"
 
 run_test "v3_mb_film_5b" \
-    margin_barrier "180,200,220,240,9000000" \
+    margin_barrier "180,200,220,240,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14270915_margin_barrier/best_model.zip"
 
 
@@ -153,42 +153,42 @@ echo "╚═══════════════════════�
 
 # Group A: Margin Barrier [230,233,236,369,9M]
 run_test "v4_mb_A" \
-    margin_barrier "230,233,236,369,9000000" \
+    margin_barrier "230,233,236,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385919_margin_barrier/best_model.zip"
 
 # Group B: Margin Barrier [230,236,369,372,9M]
 run_test "v4_mb_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385920_margin_barrier/best_model.zip"
 
 # Group A: MB+FiLM [230,233,236,369,9M]
 run_test "v4_mb_film_A" \
-    margin_barrier "230,233,236,369,9000000" \
+    margin_barrier "230,233,236,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385921_margin_barrier/best_model.zip"
 
 # Group B: MB+FiLM [230,236,369,372,9M]
 run_test "v4_mb_film_B" \
-    margin_barrier "230,236,369,372,9000000" \
+    margin_barrier "230,236,369,372,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385922_margin_barrier/best_model.zip"
 
 # Group A: Noise Masking [230,233,236,369,9M]
 run_test "v4_nmask_A" \
-    noise_masking "230,233,236,369,9000000" \
+    noise_masking "230,233,236,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385923_noise_masking/best_model.zip"
 
 # Group B: Noise Masking [230,236,369,372,9M]
 run_test "v4_nmask_B" \
-    noise_masking "230,236,369,372,9000000" \
+    noise_masking "230,236,369,372,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385924_noise_masking/best_model.zip"
 
 # Group C: MB+FiLM [172,230,236,369,9M]
 run_test "v4_mb_film_C" \
-    margin_barrier "172,230,236,369,9000000" \
+    margin_barrier "172,230,369,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385925_margin_barrier/best_model.zip"
 
 # Group C: Noise Masking [172,233,369,372,9M]
 run_test "v4_nmask_C" \
-    noise_masking "172,233,369,372,9000000" \
+    noise_masking "172,233,369,372,9000" \
     "$PROJ_ROOT/RL/eval/best_model_model_14385926_noise_masking/best_model.zip"
 
 

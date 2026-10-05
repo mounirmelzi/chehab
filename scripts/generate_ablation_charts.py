@@ -82,8 +82,8 @@ SAFETY_FILES = {
     "V5 FOCOPS": "test_results/test_v2_v5_focops_natosc.xlsx",
 }
 
-BUDGETS = [230, 236, 369, 9000000]
-B_LABELS = {230: "B=230", 236: "B=236", 369: "B=369", 9000000: "B=9M"}
+BUDGETS = [230, 369, 9000]
+B_LABELS = {230: "B=230", 236: "B=236", 369: "B=369", 9000: "B=9M"}
 
 def load_feasible_summary(path):
     wb = openpyxl.load_workbook(path)
@@ -608,31 +608,31 @@ ablation_summary = [
      "V5 Lag-PID raw agent",
      "V5 Lag-PID + Safety",
      round((get("V5 Lag-PID", 369, "Safe Avg Cost Red (%)") - get("V5 Lag-PID", 369, "Agent Avg Cost Red (%)") +
-            get("V5 Lag-PID", 9000000, "Safe Avg Cost Red (%)") - get("V5 Lag-PID", 9000000, "Agent Avg Cost Red (%)")) / 2, 1),
+            get("V5 Lag-PID", 9000, "Safe Avg Cost Red (%)") - get("V5 Lag-PID", 9000, "Agent Avg Cost Red (%)")) / 2, 1),
      "Real", "Sheet 1"),
     ("Constraint-Aware Training",
      "Unconstrained + Safety",
      "V5 Lag-PID + Safety",
      round((get("V5 Lag-PID", 369, "Safe Avg Cost Red (%)") - get("Unconstrained", 369, "Safe Avg Cost Red (%)") +
-            get("V5 Lag-PID", 9000000, "Safe Avg Cost Red (%)") - get("Unconstrained", 9000000, "Safe Avg Cost Red (%)")) / 2, 1),
+            get("V5 Lag-PID", 9000, "Safe Avg Cost Red (%)") - get("Unconstrained", 9000, "Safe Avg Cost Red (%)")) / 2, 1),
      "Real", "Sheet 2"),
     ("One-Hot over FiLM",
      "V4 MB + FiLM",
      "V4 MB + One-Hot",
      round((get("V4 MB_B", 369, "Safe Avg Cost Red (%)") - get("V4 MB FiLM B", 369, "Safe Avg Cost Red (%)") +
-            get("V4 MB_B", 9000000, "Safe Avg Cost Red (%)") - get("V4 MB FiLM B", 9000000, "Safe Avg Cost Red (%)")) / 2, 1),
+            get("V4 MB_B", 9000, "Safe Avg Cost Red (%)") - get("V4 MB FiLM B", 9000, "Safe Avg Cost Red (%)")) / 2, 1),
      "Real", "Sheet 3"),
     ("Data-Driven Budgets",
      "V3 Fixed [200,300,9M]",
      "V4 Data-Driven",
      round((get("V4 MB_B", 369, "Safe Avg Cost Red (%)") - get("V3 MB 3b", 369, "Safe Avg Cost Red (%)") +
-            get("V4 MB_B", 9000000, "Safe Avg Cost Red (%)") - get("V3 MB 3b", 9000000, "Safe Avg Cost Red (%)")) / 2, 1),
+            get("V4 MB_B", 9000, "Safe Avg Cost Red (%)") - get("V3 MB 3b", 9000, "Safe Avg Cost Red (%)")) / 2, 1),
      "Real", "Sheet 4"),
     ("Terminal Penalty (over Per-Action)",
      "V4 MB (per-action)",
      "V5 Lag-PID (terminal)",
      round((get("V5 Lag-PID", 369, "Safe Avg Cost Red (%)") - get("V4 MB_B", 369, "Safe Avg Cost Red (%)") +
-            get("V5 Lag-PID", 9000000, "Safe Avg Cost Red (%)") - get("V4 MB_B", 9000000, "Safe Avg Cost Red (%)")) / 2, 1),
+            get("V5 Lag-PID", 9000, "Safe Avg Cost Red (%)") - get("V4 MB_B", 9000, "Safe Avg Cost Red (%)")) / 2, 1),
      "Real", "Sheet 5"),
     ("PID Controller",
      "Simple Lagrangian (expected)",
@@ -643,7 +643,7 @@ ablation_summary = [
      "V4 MB (no noise_ratio)",
      "V5 PPO-A (with noise_ratio)",
      round((get("V5 PPO-A", 369, "Safe Avg Cost Red (%)") - get("V4 MB_B", 369, "Safe Avg Cost Red (%)") +
-            get("V5 PPO-A", 9000000, "Safe Avg Cost Red (%)") - get("V4 MB_B", 9000000, "Safe Avg Cost Red (%)")) / 2, 1),
+            get("V5 PPO-A", 9000, "Safe Avg Cost Red (%)") - get("V4 MB_B", 9000, "Safe Avg Cost Red (%)")) / 2, 1),
      "Proxy", "Sheet 8"),
 ]
 

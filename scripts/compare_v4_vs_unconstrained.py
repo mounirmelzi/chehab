@@ -23,35 +23,35 @@ THIN_BORDER = Border(
 AGENTS = {
     "v4_mb_A": {
         "label": "Margin Barrier — A [230,233,236,369,9M]",
-        "budgets": [230, 233, 236, 369, 9000000],
+        "budgets": [230, 233, 236, 369, 9000],
     },
     "v4_mb_B": {
         "label": "Margin Barrier — B [230,236,369,372,9M]",
-        "budgets": [230, 236, 369, 372, 9000000],
+        "budgets": [230, 236, 369, 372, 9000],
     },
     "v4_mb_film_A": {
         "label": "Margin Barrier + FiLM — A [230,233,236,369,9M]",
-        "budgets": [230, 233, 236, 369, 9000000],
+        "budgets": [230, 233, 236, 369, 9000],
     },
     "v4_mb_film_B": {
         "label": "Margin Barrier + FiLM — B [230,236,369,372,9M]",
-        "budgets": [230, 236, 369, 372, 9000000],
+        "budgets": [230, 236, 369, 372, 9000],
     },
     "v4_mb_film_C": {
         "label": "Margin Barrier + FiLM — C [172,230,236,369,9M]",
-        "budgets": [172, 230, 236, 369, 9000000],
+        "budgets": [172, 230, 369, 9000],
     },
     "v4_nmask_A": {
         "label": "Noise Masking — A [230,233,236,369,9M]",
-        "budgets": [230, 233, 236, 369, 9000000],
+        "budgets": [230, 233, 236, 369, 9000],
     },
     "v4_nmask_B": {
         "label": "Noise Masking — B [230,236,369,372,9M]",
-        "budgets": [230, 236, 369, 372, 9000000],
+        "budgets": [230, 236, 369, 372, 9000],
     },
     "v4_nmask_C": {
         "label": "Noise Masking — C [172,233,369,372,9M]",
-        "budgets": [172, 233, 369, 372, 9000000],
+        "budgets": [172, 233, 369, 372, 9000],
     },
 }
 
@@ -93,7 +93,7 @@ def load_unconstrained_noises():
     ws = wb["all_results"]
     noises = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[0] == 9000000:
+        if row[0] == 9000:
             noises.append(row[6])
     return noises
 
@@ -192,7 +192,7 @@ def main():
         unc_viol_rates.append(row_data[5])
     unc_overall_cr = 86.91
     unc_overall_viol = round(sum(unc_viol_rates) / len(unc_viol_rates), 2)
-    constrained_budgets = [b for b in unc_budgets_for_summary if b < 9000000]
+    constrained_budgets = [b for b in unc_budgets_for_summary if b < 9000]
     unc_constr_viol_rates = []
     for b in constrained_budgets:
         row_data = unconstrained_at_budget(noises, b)
@@ -217,7 +217,7 @@ def main():
         overall_cr = round(sum(all_cr) / len(all_cr), 2)
         overall_viol = round(sum(all_viol) / len(all_viol), 2)
 
-        constr_rows = [(row[2], row[5]) for row in summary if row[0] < 9000000]
+        constr_rows = [(row[2], row[5]) for row in summary if row[0] < 9000]
         if constr_rows:
             constr_cr = round(sum(c for c, _ in constr_rows) / len(constr_rows), 2)
             constr_viol = round(sum(v for _, v in constr_rows) / len(constr_rows), 2)
@@ -225,7 +225,7 @@ def main():
             constr_cr = overall_cr
             constr_viol = overall_viol
 
-        unconstr_rows = [row for row in summary if row[0] >= 9000000]
+        unconstr_rows = [row for row in summary if row[0] >= 9000]
         unconstr_cr = unconstr_rows[0][2] if unconstr_rows else overall_cr
 
         quick_rows.append((

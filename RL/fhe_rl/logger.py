@@ -2,10 +2,8 @@ import os
 import datetime
 import pandas as pd
 
-
 TRAINING_LOG_FILE = "job_logs.xlsx"
 TEST_LOG_FILE = "test_results.xlsx"
-
 
 def log_training_details(model_params, job_id, num_data, num_actions, total_timesteps, output_model_name, notes=""):
     log_entry = {

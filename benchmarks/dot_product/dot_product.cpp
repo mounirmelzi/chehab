@@ -91,6 +91,8 @@ int main(int argc, char **argv)
 int scheme = 1; // 0 = BFV, 1 = CKKS
   if (argc > 12) scheme = stoi(argv[12]);
 
+ 
+
   if (cse)
   {
     Compiler::enable_cse();

@@ -3,9 +3,9 @@
 from typing import List, Dict, Union, Tuple, Optional
 import re
 
-from expr import Expr, Const, Var, Op
-from veclang import SCALAR_OPS, VECTOR_OPS
-from util import generate_random_assignments, evaluate_expr
+from .expr import Expr, Const, Var, Op
+from .veclang import SCALAR_OPS, VECTOR_OPS
+from .util import generate_random_assignments, evaluate_expr
 
 
 class Pattern:

@@ -1,0 +1,2 @@
+benchmark,w_ops,w_keys,add,sub,multiply_plain,rotate_rows,negate,multiply,Depth,Multiplicative Depth,compile_time (s),circuit_execution_time (s),galois_keys_generation_time (s),total_execution_time (s),Remaining_noise_budget,rotation_keys_size (MB),final_ops_cost,final_keys_cost
+tree_100-50_5_1,0.0,1.0,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A

@@ -1,16 +1,18 @@
-from expr import Const, Var, Op
-from rewrite_rule import RewriteRule
 import re
-from typing import List
-from rule_parser import parse_rules_from_text
-from expr import Expr, Const, Var
-from parser import parse_sexpr
 import subprocess
-
+from typing import List
 
 try:
+    from .expr import Expr, Const, Var, Op
+    from .rewrite_rule import RewriteRule
+    from .rule_parser import parse_rules_from_text
+    from .parser import parse_sexpr
     from . import config as pytrs_config
 except ImportError:
+    from expr import Expr, Const, Var, Op
+    from rewrite_rule import RewriteRule
+    from rule_parser import parse_rules_from_text
+    from parser import parse_sexpr
     import config as pytrs_config
 
 
@@ -42,10 +44,12 @@ def _create_rules_mo(rules_path: str = None, rotations_rules_path: str = None) -
     return rules_dict
 
 
-def create_rules(path: str = None, rotations_rules_path: str = None) -> dict:
+def create_rules(path: str = None, rotations_rules_path: str = None, rules_path: str = None) -> dict:
+    """Charge les règles en supportant les frameworks 'constrained' et 'morl'."""
+    target_path = rules_path if rules_path is not None else path
     if getattr(pytrs_config, "framework", "constrained") == "morl":
-        return _create_rules_mo(path, rotations_rules_path)
-    return _create_rules_constrained(path, rotations_rules_path)
+        return _create_rules_mo(target_path, rotations_rules_path)
+    return _create_rules_constrained(target_path, rotations_rules_path)
 
 
 def group_rules_from_dict(rules_dict):

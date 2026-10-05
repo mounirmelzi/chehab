@@ -1,14 +1,11 @@
 # main.py
 
-from serializer import expr_to_str
-from parser import parse_sexpr
-from rules import create_rules
-from util import evaluate_expr, generate_random_assignments
-from cost import calculate_cost
+from .serializer import expr_to_str
+from .parser import parse_sexpr
+from .rules import create_rules
+from .util import evaluate_expr, generate_random_assignments
+from .cost import calculate_cost
 
-
-
-    
 
 def example_usage():
     
@@ -22,10 +19,7 @@ def example_usage():
     V2 = f"(VecMinus {V1} (<< {V1} 4))"
     expr_str = f"(VecAdd {V2} (<< {V2} 2))"
     
-    
-    
     a = rule.find_matching_subexpressions(parse_sexpr(expr_str))
-    
     
     expr = parse_sexpr(expr_str) # parse from string 
     print("Parsed expression:", expr)  # convert to string

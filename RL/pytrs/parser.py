@@ -1,6 +1,6 @@
 # parser.py
 
-from expr import Const, Var, Op
+from .expr import Const, Var, Op
 
 def parse_sexpr(s):
     """

@@ -3,9 +3,9 @@
 import re
 from typing import List
 
-from expr import Expr, Const, Var
-from rewrite_rule import RewriteRule
-from parser import parse_sexpr
+from .expr import Expr, Const, Var
+from .rewrite_rule import RewriteRule
+from .parser import parse_sexpr
 
 
 def parse_rules_from_text(rules_text: str) -> List[RewriteRule]:
