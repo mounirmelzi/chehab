@@ -278,8 +278,8 @@ class fheEnv(gym.Env):
                 else:
                     reward = cost_reward
 
-        # ── NATO-SC: quadratic terminal penalty, allows intermediate violations ──
-        if self.constraint_method == "nato_sc" and (terminated or truncated):
+               # ── NATO-SC / HYBRID: quadratic terminal penalty, allows intermediate violations ──
+        if self.constraint_method in ("nato_sc", "lagrangian_pid_nato") and (terminated or truncated):
             cost_reward = self.calculate_final_reward()
             if noise > self.budget:
                 violation_ratio = (noise - self.budget) / max(self.budget, 1)

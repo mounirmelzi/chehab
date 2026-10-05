@@ -92,10 +92,9 @@ def train_agent(
             )
             return Monitor(env)
         return _init  
-
     env = SubprocVecEnv([make_env(i, expressions) for i in range(num_envs)], start_method='spawn')
     pid_wrapper = None
-    if constraint_method == "lagrangian_pid":
+    if constraint_method in ("lagrangian_pid", "lagrangian_pid_nato"):
         from .algos.lagrangian_pid import PIDLagrangianWrapper
         pid_wrapper = PIDLagrangianWrapper(env)
         env = pid_wrapper
@@ -106,6 +105,7 @@ def train_agent(
                 pid_wrapper.load_state(pid_state_file)
     val_env = DummyVecEnv([make_env(0, benchmarks)])
     val_env.seed(seed)
+   
 
     # PPO model params
     ent_schedule = linear_schedule(ent_coef)

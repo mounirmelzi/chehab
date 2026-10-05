@@ -90,7 +90,7 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_pid',
-        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc', 'lagrangian_pid'],
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc', 'lagrangian_pid', 'lagrangian_pid_nato'],
         help='Constraint enforcement method (default: lagrangian_pid)'
     )
     train_parser.add_argument(
@@ -177,7 +177,7 @@ def parse_arguments(args=None):
         '--method',
         type=str,
         default='lagrangian_pid',
-        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc', 'lagrangian_pid'],
+        choices=['none', 'lagrangian_od_ov', 'lagrangian_perstep', 'lagrangian_always_done', 'margin_barrier', 'noise_masking', 'nato_sc', 'lagrangian_pid', 'lagrangian_pid_nato'],
         help='Constraint method the model was trained with (default: lagrangian_pid)'
     )
     test_parser.add_argument(
