@@ -70,8 +70,8 @@ class VeclangRunner:
 
             run_command("make")
 
-            result = run_command("./main")
-            self._parse_execution_outputs(result.stdout)
+            result = run_command("/usr/bin/time -f Peak_RAM_usage_(KB):%M ./main")
+            self._parse_execution_outputs(stdout=result.stdout, stderr=result.stderr)
         finally:
             os.chdir(cwd)
 
@@ -114,12 +114,16 @@ class VeclangRunner:
         self._stats["Depth"] = int(depth_match.group(1)) if depth_match else None
         self._stats["Multiplicative Depth"] = int(depth_match.group(2)) if depth_match else None
 
-    def _parse_execution_outputs(self, stdout: str) -> None:
+    def _parse_execution_outputs(self, stdout: str, stderr: str = "") -> None:
         for line in stdout.splitlines():
             if "execution_time_(ms):" in line:
                 self._stats["execution_time (s)"] = format(float(line.split()[1]) / 1000, ".3f")
             elif "Remaining_noise_budget:" in line:
                 self._stats["Remaining_noise_budget"] = int(line.split()[1])
+        # /usr/bin/time writes its report to stderr
+        for line in stderr.splitlines():
+            if line.startswith("Peak_RAM_usage_(KB):"):
+                self._stats["peak_ram_usage (KB)"] = int(line.split(":", 1)[1])
 
     def _parse_lattigo_outputs(self, stdout: str) -> None:
         for line in stdout.splitlines():
