@@ -3,6 +3,7 @@ from expr import Expr,Const,Var,Op
 from rules import create_rules,group_rules_from_dict
 from cost import calculate_cost, get_multiplicative_depth, get_normal_depth,rotations_cost,operations_cost
 from noise_estimator import NoiseEstimator
+from ckks_memory_estimator import CKKSMemoryEstimator, estimate_expression_memory, estimate_peak_memory, chehab_params
 from parser import parse_sexpr,tokenize
 from veclang import ALL_OPS
 from util import evaluate_expr, generate_random_assignments
