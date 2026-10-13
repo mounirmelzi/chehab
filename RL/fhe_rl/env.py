@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, expr_to_str
+from pytrs import parse_sexpr, calculate_cost, NoiseEstimator, MemoryEstimator, expr_to_str
 import torch
 from .config import get_tokenizer_type
 
@@ -36,6 +36,7 @@ class fheEnv(gym.Env):
         self.rules = rules_list
         self.expressions = expressions
         self.noise_estimator = NoiseEstimator()
+        self.memory_estimator = MemoryEstimator()
         self.max_positions = max_positions
         self.embeddings_model = embeddings_model
         self.constraint_method = constraint_method
@@ -83,6 +84,7 @@ class fheEnv(gym.Env):
         self.set_noise_budget(budget)
 
         noise = self.noise_estimator.estimate(self.expression)
+        memory = self.memory_estimator.estimate(self.expression)
 
         obs = {
             "observation": self._embed_expression(self.expression),
@@ -99,6 +101,7 @@ class fheEnv(gym.Env):
             "expression": self.expression,
             "budget": self.budget,
             "noise": noise,
+            "memory": memory,
         }
 
 
@@ -139,6 +142,7 @@ class fheEnv(gym.Env):
             "expression": self.expression,
             "budget": self.budget,
             "noise": self.noise_estimator.estimate(self.expression),
+            "memory": self.memory_estimator.estimate(self.expression),
             "cost": self.current_cost,
         }
 
@@ -150,8 +154,9 @@ class fheEnv(gym.Env):
             print(f"{BOLD}{MAGENTA}Reward        {RESET}: {reward_color}{reward}{RESET}")
             print(f"{BOLD}{MAGENTA}Rule name     {RESET}: {CYAN}{rule_name}{RESET}")
             print(f"{BOLD}{MAGENTA}At position   {RESET}: {BLUE}{pos_idx}{RESET}")
-            print(f"{BOLD}{MAGENTA}Budget         {RESET}: {YELLOW}{info['budget']}{RESET}")
+            print(f"{BOLD}{MAGENTA}Budget        {RESET}: {YELLOW}{info['budget']}{RESET}")
             print(f"{BOLD}{MAGENTA}Noise         {RESET}: {YELLOW}{info['noise']}{RESET}")
+            print(f"{BOLD}{MAGENTA}Memory        {RESET}: {YELLOW}{info['memory']} (KB) {RESET}")
             print(f"{CYAN}{'-'*100}{RESET}")
 
         embedding = self._embed_expression(self.expression)

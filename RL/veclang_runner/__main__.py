@@ -21,6 +21,7 @@ COLUMNS = [
     "Multiplicative Depth",
     "execution_time (s)",
     "Remaining_noise_budget",
+    "peak_ram_usage (KB)",
 ]
 
 
